@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KEMPY — Your Personal AI Robot for eBay Dropshipping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050708;
+  --bg-2: #0a0d10;
+  --surface: #0e1316;
+  --surface-2: #131a1e;
+  --border: #1a2329;
+  --border-cyan: #1e3a44;
+  --cyan: #00e5ff;
+  --cyan-glow: #00e5ff40;
+  --cyan-dim: #4ad4e4;
+  --green: #00ff9d;
+  --green-dim: #00cc7a;
+  --amber: #ffb800;
+  --red: #ff4d6d;
+  --text: #e6f1f5;
+  --text-dim: #8a9ba3;
+  --text-muted: #5a6970;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Atmospheric background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,229,255,0.12), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 30%, rgba(0,229,255,0.06), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 10% 60%, rgba(0,255,157,0.05), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.015'/></svg>");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Layout */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+section { position: relative; padding: 96px 0; z-index: 1; }
+@media (max-width: 720px) { section { padding: 64px 0; } }
+
+/* Nav */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(5,7,8,0.7);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid var(--border);
+}
+nav .container { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
+.logo { display: flex; align-items: center; gap: 14px; }
+.logo-mark {
+  width: 44px; height: 44px; border-radius: 10px;
+  background:
+    linear-gradient(135deg, #00f4ff 0%, #00b8d4 45%, #006e80 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  position: relative;
+  transform: perspective(400px) rotateX(8deg) rotateY(-12deg);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.4),
+    inset 0 -3px 0 rgba(0,0,0,0.25),
+    0 4px 0 #004552,
+    0 6px 0 #003540,
+    0 8px 16px rgba(0,229,255,0.4),
+    0 0 32px rgba(0,229,255,0.5);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.3);
+}
+.logo:hover .logo-mark {
+  transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1.05);
+}
+.brand-wordmark {
+  font-family: 'Archivo Black', 'Sora', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #ffffff 0%, #b8eef5 50%, #5fc7d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    0 1px 0 rgba(0,229,255,0.4),
+    0 2px 0 rgba(0,170,200,0.3),
+    0 3px 0 rgba(0,110,140,0.2),
+    0 4px 8px rgba(0,229,255,0.5);
+  filter: drop-shadow(0 0 12px rgba(0,229,255,0.3));
+  position: relative;
+}
+
+/* Hero giant 3D wordmark */
+.hero-brand {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(80px, 15vw, 180px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  margin-bottom: 24px;
+  display: inline-block;
+  position: relative;
+  background: linear-gradient(180deg,
+    #ffffff 0%,
+    #d4f7fc 30%,
+    #5fd4e0 60%,
+    #00a8c0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    0 1px 0 rgba(0,229,255,0.5),
+    0 2px 0 rgba(0,200,225,0.45),
+    0 3px 0 rgba(0,170,200,0.4),
+    0 4px 0 rgba(0,140,170,0.35),
+    0 5px 0 rgba(0,110,140,0.3),
+    0 6px 0 rgba(0,80,110,0.25),
+    0 7px 0 rgba(0,50,80,0.2),
+    0 8px 0 rgba(0,30,50,0.15),
+    0 12px 24px rgba(0,229,255,0.35),
+    0 20px 40px rgba(0,229,255,0.2);
+  filter: drop-shadow(0 0 28px rgba(0,229,255,0.35));
+  transform: perspective(800px) rotateX(8deg);
+  animation: heroFloat 6s ease-in-out infinite;
+}
+@keyframes heroFloat {
+  0%, 100% { transform: perspective(800px) rotateX(8deg) translateY(0); }
+  50% { transform: perspective(800px) rotateX(8deg) translateY(-6px); }
+}
+.hero-brand::after {
+  content: 'KEMPY';
+  position: absolute;
+  inset: 0;
+  -webkit-text-fill-color: transparent;
+  background: none;
+  text-shadow: none;
+  filter: none;
+  background: linear-gradient(180deg, transparent 0%, transparent 45%, rgba(255,255,255,0.5) 50%, transparent 55%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  pointer-events: none;
+  animation: shine 3.5s ease-in-out infinite;
+}
+@keyframes shine {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.nav-links { display: flex; gap: 32px; align-items: center; }
+.nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  padding: 8px 16px; border-radius: 8px;
+  background: var(--cyan); color: #000 !important; font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.3), 0 0 20px rgba(0,229,255,0.4);
+  transition: all 0.2s;
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(0,229,255,0.5), 0 0 30px rgba(0,229,255,0.6); }
+@media (max-width: 720px) { .nav-links a:not(.nav-cta) { display: none; } }
+
+/* Hero */
+.hero { padding-top: 80px; padding-bottom: 80px; text-align: center; }
+.deal-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; border-radius: 100px;
+  background: rgba(255,77,109,0.08);
+  border: 1px solid rgba(255,77,109,0.25);
+  font-size: 13px; font-weight: 500;
+  color: #ff8fa3;
+  margin-bottom: 40px;
+  font-family: var(--font-mono);
+}
+.deal-badge::before { content: '🔥'; }
+
+h1 {
+  font-size: clamp(44px, 7vw, 84px);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  margin-bottom: 28px;
+}
+h1 .accent {
+  background: linear-gradient(135deg, #00e5ff 0%, #00ff9d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  display: inline-block;
+}
+.hero p.lead {
+  max-width: 620px; margin: 0 auto 40px;
+  font-size: clamp(15px, 1.6vw, 18px);
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.hero-cta {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 18px 36px;
+  background: var(--cyan); color: #000;
+  border: none; border-radius: 12px;
+  font-family: var(--font-sans); font-weight: 700; font-size: 17px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.4), 0 8px 32px rgba(0,229,255,0.35);
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.hero-cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(0,229,255,0.6), 0 12px 40px rgba(0,229,255,0.5); }
+.hero-cta::after { content: '→'; transition: transform 0.2s; }
+.hero-cta:hover::after { transform: translateX(4px); }
+.hero-guarantee { margin-top: 24px; font-size: 14px; color: var(--text-dim); display: flex; align-items: center; gap: 10px; justify-content: center; }
+.hero-guarantee::before { content: '✓'; color: var(--green); font-weight: 700; }
+.hero-includes { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+
+/* Workflow demo */
+.workflow-demo {
+  margin-top: 64px;
+  background: var(--surface);
+  border: 1px solid var(--border-cyan);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 80px rgba(0,229,255,0.08);
+}
+.workflow-demo::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at top, rgba(0,229,255,0.08), transparent 50%);
+  pointer-events: none;
+}
+.workflow-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+@media (max-width: 820px) {
+  .workflow-grid { grid-template-columns: 1fr; }
+  .workflow-arrow { transform: rotate(90deg); margin: 0 auto; }
+}
+.workflow-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  text-align: left;
+}
+.workflow-card.kempy { border-color: var(--cyan); box-shadow: inset 0 0 30px rgba(0,229,255,0.06), 0 0 24px rgba(0,229,255,0.12); }
+.wf-label {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+  color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;
+}
+.wf-product { display: flex; align-items: center; gap: 12px; }
+.wf-thumb {
+  width: 44px; height: 44px; border-radius: 8px;
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  border: 1px solid var(--border);
+}
+.wf-info { flex: 1; min-width: 0; }
+.wf-title { font-size: 13px; font-weight: 500; line-height: 1.3; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wf-price { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.wf-price.amazon { color: var(--text); }
+.wf-price.ebay { color: var(--green); }
+.wf-price.ebay-old { color: var(--text-muted); text-decoration: line-through; font-size: 12px; margin-left: 4px; font-weight: 400; }
+.wf-tag {
+  display: inline-block; font-family: var(--font-mono); font-size: 10px;
+  padding: 2px 6px; border-radius: 4px;
+  background: rgba(0,229,255,0.1); color: var(--cyan);
+  margin-left: 6px;
+}
+.wf-arrow {
+  color: var(--cyan);
+  font-size: 24px;
+  font-weight: 300;
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(4px); }
+}
+.kempy-fields { font-family: var(--font-mono); font-size: 12px; }
+.kempy-fields .row { display: flex; padding: 4px 0; }
+.kempy-fields .key { color: var(--text-muted); width: 64px; }
+.kempy-fields .val { color: var(--text); flex: 1; }
+.kempy-fields .chip {
+  display: inline-block; padding: 2px 8px; margin-right: 4px; margin-top: 2px;
+  border: 1px solid var(--border-cyan); border-radius: 4px;
+  background: rgba(0,229,255,0.05); color: var(--cyan); font-size: 10px;
+}
+.live-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); margin-right: 6px;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+.listing-live { display: flex; align-items: center; font-size: 12px; color: var(--green); margin-top: 8px; font-family: var(--font-mono); }
+
+/* Section headings */
+.section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+h2 {
+  font-size: clamp(32px, 4.5vw, 52px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-bottom: 20px;
+}
+.section-lead {
+  max-width: 600px;
+  font-size: 17px;
+  color: var(--text-dim);
+  margin-bottom: 56px;
+}
+
+/* Steps grid */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.step-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  transition: all 0.3s;
+  overflow: hidden;
+}
+.step-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.step-card:hover { border-color: var(--border-cyan); transform: translateY(-2px); }
+.step-card:hover::before { opacity: 1; }
+.step-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: rgba(0,229,255,0.08);
+  border: 1px solid var(--border-cyan);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cyan); font-size: 20px;
+  margin-bottom: 16px;
+}
+.step-num {
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--text-muted); margin-bottom: 4px;
+}
+.step-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
+.step-desc { font-size: 14px; color: var(--text-dim); line-height: 1.55; }
+
+/* Feature blocks - alternating layout */
+.feature-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  margin-bottom: 96px;
+}
+@media (max-width: 820px) {
+  .feature-block { grid-template-columns: 1fr; gap: 32px; margin-bottom: 64px; }
+}
+.feature-block.reverse .feature-text { order: 2; }
+@media (max-width: 820px) {
+  .feature-block.reverse .feature-text { order: 0; }
+}
+.feature-text h3 {
+  font-size: clamp(28px, 3.5vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+.feature-text p { color: var(--text-dim); font-size: 16px; line-height: 1.6; margin-bottom: 16px; }
+.feature-text ul { list-style: none; margin-top: 20px; }
+.feature-text li {
+  display: flex; align-items: start; gap: 10px;
+  padding: 8px 0; font-size: 15px; color: var(--text);
+}
+.feature-text li::before {
+  content: ''; flex-shrink: 0;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(0,255,157,0.12); color: var(--green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  margin-top: 3px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%2300ff9d' stroke-width='2'><polyline points='2,6 5,9 10,3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Demo widget shared */
+.demo-widget {
+  background: linear-gradient(180deg, rgba(0,229,255,0.04) 0%, transparent 100%), var(--surface);
+  border: 1px solid var(--border-cyan);
+  border-radius: 16px;
+  padding: 20px;
+  font-family: var(--font-mono);
+  position: relative;
+  box-shadow: 0 0 40px rgba(0,229,255,0.06);
+}
+.demo-widget::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(0,229,255,0.15), transparent 40%);
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+  opacity: 0.5;
+}
+.widget-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--text-muted);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.widget-header .live-indicator { color: var(--green); display: flex; align-items: center; }
+
+/* Profit tracker */
+.profit-tracker .row {
+  display: grid; grid-template-columns: 80px 1fr 1fr 1fr;
+  gap: 12px; padding: 8px 0; font-size: 13px;
+  border-bottom: 1px dashed var(--border);
+}
+.profit-tracker .row.head { color: var(--text-muted); font-size: 11px; padding-bottom: 6px; }
+.profit-tracker .row .pos { color: var(--green); text-align: right; }
+.profit-tracker .row .num { color: var(--text); text-align: right; }
+.profit-tracker .row .order { color: var(--text-dim); }
+.profit-tracker .total {
+  display: flex; justify-content: space-between;
+  padding-top: 12px; font-size: 13px;
+}
+.profit-tracker .total .amount {
+  color: var(--green); font-weight: 600; font-size: 16px;
+  text-shadow: 0 0 12px rgba(0,255,157,0.4);
+}
+
+/* Calculator */
+.calculator {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+}
+.calc-title {
+  font-size: 14px; font-weight: 600; color: var(--cyan);
+  font-family: var(--font-mono); letter-spacing: 0.05em;
+  margin-bottom: 20px;
+}
+.calc-controls { display: grid; gap: 18px; }
+.calc-control { display: grid; gap: 6px; }
+.calc-control label {
+  display: flex; justify-content: space-between;
+  font-size: 13px; color: var(--text-dim);
+}
+.calc-control label .val { color: var(--cyan); font-family: var(--font-mono); font-weight: 600; }
+.calc-control input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px;
+  border-radius: 3px;
+  background: var(--bg-2);
+  outline: none;
+}
+.calc-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-glow);
+  cursor: pointer;
+}
+.calc-control input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--cyan); border: none;
+  box-shadow: 0 0 12px var(--cyan-glow);
+  cursor: pointer;
+}
+.calc-result {
+  margin-top: 24px; padding: 18px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-cyan);
+  border-radius: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.calc-result .stat .label { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; }
+.calc-result .stat .num { font-size: 22px; font-weight: 700; margin-top: 4px; font-family: var(--font-mono); }
+.calc-result .stat.profit .num { color: var(--green); }
+.calc-result .stat.roi .num { color: var(--cyan); }
+
+/* Product research tool */
+.research-tool {
+  background: var(--surface);
+  border: 1px solid var(--border-cyan);
+  border-radius: 20px;
+  padding: 32px;
+  margin-top: 32px;
+  box-shadow: 0 0 60px rgba(0,229,255,0.08);
+}
+.research-search {
+  display: flex; gap: 8px; margin-bottom: 24px;
+}
+.research-search input {
+  flex: 1; padding: 14px 18px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-mono); font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+}
+.research-search input:focus { border-color: var(--cyan); }
+.research-search button {
+  padding: 14px 24px;
+  background: var(--cyan); color: #000;
+  border: none; border-radius: 10px;
+  font-family: var(--font-sans); font-weight: 600; font-size: 14px;
+  cursor: pointer; transition: all 0.2s;
+}
+.research-search button:hover { transform: translateY(-1px); box-shadow: 0 4px 16px var(--cyan-glow); }
+.research-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.research-suggestion {
+  padding: 6px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 12px; color: var(--text-dim);
+  cursor: pointer; transition: all 0.2s;
+  font-family: var(--font-mono);
+}
+.research-suggestion:hover { border-color: var(--cyan); color: var(--cyan); }
+.research-results { display: grid; gap: 12px; }
+
+/* View toggles (research / watchlist) */
+.view-toggle {
+  padding: 8px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.view-toggle:hover { color: var(--text); border-color: var(--border-cyan); }
+.view-toggle.active {
+  background: rgba(0,229,255,0.08);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* Save button on research cards */
+.rc-save {
+  background: transparent;
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.2s;
+}
+.rc-save:hover { background: rgba(0,229,255,0.08); }
+.rc-save.saved { background: rgba(0,255,157,0.08); border-color: rgba(0,255,157,0.4); color: var(--green); cursor: default; }
+.rc-save.saved::before { content: '✓ '; }
+
+/* Watchlist drift indicator */
+.wl-drift { font-family: var(--font-mono); font-size: 11px; padding: 2px 8px; border-radius: 100px; margin-left: 8px; }
+.wl-drift.up { background: rgba(0,255,157,0.1); color: var(--green); }
+.wl-drift.down { background: rgba(255,77,109,0.1); color: var(--red); }
+.wl-drift.flat { background: var(--bg-2); color: var(--text-muted); }
+.wl-delete {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); padding: 4px 8px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 11px; cursor: pointer;
+}
+.wl-delete:hover { color: var(--red); border-color: var(--red); }
+
+/* Account chip in nav */
+#nav-account { display: flex; align-items: center; gap: 8px; }
+.nav-user-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+.nav-user-chip .avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #000;
+}
+.nav-user-chip .signout {
+  color: var(--text-muted); text-decoration: none; margin-left: 4px;
+  border-left: 1px solid var(--border); padding-left: 8px;
+  cursor: pointer;
+}
+.nav-user-chip .signout:hover { color: var(--red); }
+
+/* Auth modal */
+.auth-modal { position: fixed; inset: 0; z-index: 1000; }
+.auth-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(5,7,8,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.auth-panel {
+  position: relative;
+  max-width: 420px; width: calc(100% - 32px);
+  margin: 10vh auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border-cyan);
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 20px 80px rgba(0,229,255,0.15), 0 0 0 1px rgba(0,229,255,0.05);
+  animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalIn {
+  from { transform: translateY(20px) scale(0.96); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.auth-close {
+  position: absolute; top: 12px; right: 16px;
+  background: none; border: none;
+  color: var(--text-muted); font-size: 28px;
+  cursor: pointer; line-height: 1;
+  transition: color 0.2s;
+}
+.auth-close:hover { color: var(--text); }
+.auth-tabs {
+  display: flex; gap: 4px;
+  background: var(--bg-2);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-tab.active {
+  background: var(--surface);
+  color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--border-cyan);
+}
+.auth-panel h3 {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.auth-sub { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+.auth-field { display: block; margin-bottom: 14px; }
+.auth-field span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-bottom: 6px;
+}
+.auth-field input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+}
+.auth-field input:focus { border-color: var(--cyan); }
+.auth-submit {
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: var(--cyan);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.3);
+}
+.auth-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px var(--cyan-glow); }
+.auth-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(255,77,109,0.08);
+  border: 1px solid rgba(255,77,109,0.25);
+  border-radius: 8px;
+  color: #ff8fa3;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+/* Sign-in required state for watchlist */
+.auth-required {
+  text-align: center; padding: 40px 20px;
+  color: var(--text-dim);
+}
+.auth-required button {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: var(--cyan); color: #000;
+  border: none; border-radius: 8px;
+  font-family: var(--font-sans); font-weight: 600; font-size: 13px;
+  cursor: pointer;
+}
+.research-empty {
+  text-align: center; padding: 40px 20px;
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 13px;
+}
+.research-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+  transition: all 0.2s;
+}
+.research-card:hover { border-color: var(--border-cyan); }
+@media (max-width: 640px) {
+  .research-card { grid-template-columns: 1fr; }
+}
+.research-card.excellent { border-color: rgba(0,255,157,0.3); box-shadow: inset 0 0 20px rgba(0,255,157,0.04); }
+.research-card.poor { opacity: 0.7; }
+.rc-product .rc-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.01em; }
+.rc-product .rc-cat { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 12px; }
+.rc-pricing { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; font-family: var(--font-mono); font-size: 12px; }
+.rc-pricing .item .l { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2px; }
+.rc-pricing .item .v { color: var(--text); font-weight: 600; }
+.rc-pricing .item .v.pos { color: var(--green); }
+.rc-pricing .item .v.neg { color: var(--red); }
+.rc-verdict {
+  text-align: right;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+}
+@media (max-width: 640px) {
+  .rc-verdict { text-align: left; align-items: flex-start; }
+  .rc-pricing { grid-template-columns: repeat(2, 1fr); }
+}
+.rc-roi {
+  font-size: 28px; font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+.rc-roi.excellent { color: var(--green); text-shadow: 0 0 16px rgba(0,255,157,0.4); }
+.rc-roi.good { color: var(--cyan); }
+.rc-roi.medium { color: var(--amber); }
+.rc-roi.poor { color: var(--red); }
+.rc-tag {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 4px 10px; border-radius: 100px;
+}
+.rc-tag.excellent { background: rgba(0,255,157,0.1); color: var(--green); }
+.rc-tag.good { background: rgba(0,229,255,0.1); color: var(--cyan); }
+.rc-tag.medium { background: rgba(255,184,0,0.1); color: var(--amber); }
+.rc-tag.poor { background: rgba(255,77,109,0.1); color: var(--red); }
+
+/* Scaling slider */
+.scaling-card {
+  background: var(--surface);
+  border: 1px solid var(--border-cyan);
+  border-radius: 16px;
+  padding: 28px;
+  font-family: var(--font-mono);
+}
+.scaling-display {
+  text-align: center;
+  padding: 28px 0 20px;
+}
+.scaling-display .num {
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 32px rgba(0,229,255,0.5);
+  line-height: 1;
+}
+.scaling-display .lbl {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 8px;
+}
+.scaling-bar {
+  width: 100%; height: 6px;
+  background: var(--bg-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 16px 0 24px;
+}
+.scaling-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  border-radius: 3px;
+  box-shadow: 0 0 12px var(--cyan-glow);
+  transition: width 0.3s ease;
+}
+.scaling-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-top: 24px;
+  padding-top: 20px; border-top: 1px dashed var(--border);
+}
+.scaling-stat { text-align: center; }
+.scaling-stat .num {
+  font-size: 18px; font-weight: 700;
+  color: var(--green);
+  letter-spacing: -0.02em;
+}
+.scaling-stat .lbl {
+  font-size: 10px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+/* Stock monitor */
+.stock-monitor .item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.stock-monitor .item .name { color: var(--text); }
+.stock-monitor .item .status { font-family: var(--font-mono); font-size: 12px; }
+.stock-monitor .item .status.in { color: var(--green); }
+.stock-monitor .item .status.out { color: var(--red); }
+.stock-monitor .item .status.checking { color: var(--amber); }
+
+/* Auto-fulfill */
+.fulfill-progress {
+  background: var(--bg-2);
+  border: 1px solid var(--border-cyan);
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--cyan);
+  margin: 12px 0;
+  position: relative;
+  overflow: hidden;
+}
+.fulfill-progress::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.15), transparent);
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.fulfill-progress .spinner {
+  display: inline-block; margin-right: 6px;
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.fulfill-list .order {
+  display: flex; justify-content: space-between;
+  padding: 6px 0; font-size: 12px;
+}
+.fulfill-list .order .id { color: var(--text-dim); }
+.fulfill-list .order .status.shipped { color: var(--green); }
+.fulfill-list .order .status.ordering { color: var(--amber); }
+
+/* Auto-list demo */
+.autolist-form {
+  background: var(--bg-2);
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-cyan);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.autolist-form .field {
+  display: grid; grid-template-columns: 60px 1fr;
+  gap: 8px; padding: 6px 0; align-items: center;
+}
+.autolist-form .field .label { color: var(--text-muted); }
+.autolist-form .field .input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text);
+  height: 24px;
+}
+.autolist-form .typing::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: var(--cyan);
+}
+@keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.autolist-form .submit {
+  margin-top: 8px;
+  background: var(--cyan); color: #000;
+  border: none; padding: 6px 12px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  cursor: pointer; float: right;
+}
+
+/* Pricing CTA */
+.pricing-cta {
+  background: linear-gradient(135deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--border-cyan);
+  border-radius: 24px;
+  padding: 64px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 80px rgba(0,229,255,0.1);
+}
+.pricing-cta::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at top, rgba(0,229,255,0.15), transparent 60%);
+  pointer-events: none;
+}
+.price-old { font-size: 18px; color: var(--text-muted); text-decoration: line-through; font-family: var(--font-mono); }
+.price-new {
+  font-size: 80px; font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  margin: 8px 0;
+}
+.price-period { color: var(--text-dim); font-size: 14px; }
+.pricing-features {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  justify-content: center;
+  margin: 32px 0 40px;
+  font-size: 14px; color: var(--text-dim);
+}
+.pricing-features span { display: flex; align-items: center; gap: 8px; }
+.pricing-features span::before { content: '✓'; color: var(--green); font-weight: 700; }
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  margin-top: 64px;
+}
+footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+.footer-links a { color: var(--text-dim); font-size: 13px; text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--text); }
+.footer-copy { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--surface);
+  border: 1px solid var(--cyan);
+  color: var(--text);
+  padding: 14px 22px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-family: var(--font-mono);
+  box-shadow: 0 8px 32px rgba(0,229,255,0.3);
+  z-index: 200;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Reveal */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.7s, transform 0.7s; }
+.reveal.in { opacity: 1; transform: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-cyan); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-mark">🤖</div>
+      <span class="brand-wordmark">KEMPY</span>
+    </div>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#research">Research</a>
+      <a href="#calculator">Calculator</a>
+      <span id="nav-account">
+        <a href="#" id="nav-signin">Sign in</a>
+      </span>
+      <a href="#pricing" class="nav-cta">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="deal-badge">50% off Month 1 — $50 today</div>
+    <div class="hero-brand">KEMPY</div>
+    <h1>
+      Your Personal <span class="accent">AI Robot</span><br>
+      for eBay Dropshipping
+    </h1>
+    <p class="lead">
+      KEMPY finds winning products on Amazon and automatically lists them on eBay.
+      No inventory, no listing by hand, no experience needed. Just follow our proven system and start getting sales.
+    </p>
+    <a href="#pricing" class="hero-cta">Get Started for $50</a>
+    <div class="hero-guarantee">First sale in 30 days or your money back</div>
+    <div class="hero-includes">Includes the full beginner course + Discord support + help desk</div>
+
+    <!-- Animated Workflow Demo -->
+    <div class="workflow-demo">
+      <div class="workflow-grid">
+        <div class="workflow-card">
+          <div class="wf-label">Amazon</div>
+          <div class="wf-product" id="wf-amazon">
+            <div class="wf-thumb">🎧</div>
+            <div class="wf-info">
+              <div class="wf-title">Sony WH-1000XM5</div>
+              <div class="wf-price amazon">$278.00 <span class="wf-tag">Prime</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="wf-arrow">→</div>
+        <div class="workflow-card kempy">
+          <div class="wf-label" style="color: var(--cyan); font-family: 'Archivo Black', sans-serif; letter-spacing: 0.05em; font-size: 13px;">🤖 KEMPY</div>
+          <div class="kempy-fields">
+            <div class="row"><span class="key">URL:</span><span class="val" id="wf-url">amazon.com/dp/B0CYDJQX</span></div>
+            <div class="row"><span class="key">Title:</span><span class="val" id="wf-title-typed">Sony WH-1000XM5</span></div>
+            <div class="row"><span class="key">Specs:</span><span class="val">
+              <span class="chip">Bluetooth 5.3</span><span class="chip">30hr Battery</span><span class="chip">ANC</span>
+            </span></div>
+            <div class="row"><span class="key">Desc:</span><span class="val">Premium noise-cancelling, 30h</span></div>
+          </div>
+        </div>
+        <div class="wf-arrow">→</div>
+        <div class="workflow-card">
+          <div class="wf-label">eBay</div>
+          <div class="wf-product">
+            <div class="wf-thumb">🎧</div>
+            <div class="wf-info">
+              <div class="wf-title" id="wf-ebay-title">Sony WH-1000XM5 — Black</div>
+              <div class="wf-price ebay">$349.99<span class="wf-price ebay-old">$399.99</span></div>
+              <div class="listing-live"><span class="live-dot"></span>Listing Live</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="section-eyebrow">▸ How it works</div>
+    <h2>Five clicks. One robot.<br>A real eBay business.</h2>
+    <p class="section-lead">Amazon is the supplier. eBay is your store. KEMPY is everything in between.</p>
+
+    <div class="steps">
+      <div class="step-card reveal">
+        <div class="step-icon">⚙️</div>
+        <div class="step-num">01</div>
+        <div class="step-title">Set Up Once</div>
+        <div class="step-desc">Connect your eBay seller account in under 60 seconds. The robot handles the rest.</div>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-icon">🔍</div>
+        <div class="step-num">02</div>
+        <div class="step-title">Find Products</div>
+        <div class="step-desc">Robot finds Amazon products that are actually selling on eBay right now.</div>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-icon">⚡</div>
+        <div class="step-num">03</div>
+        <div class="step-title">Click to List</div>
+        <div class="step-desc">Robot fills title, photos, specifics, and description — listed at a higher price for profit.</div>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-icon">💰</div>
+        <div class="step-num">04</div>
+        <div class="step-title">Make a Sale</div>
+        <div class="step-desc">Robot buys it from Amazon and ships it straight to your eBay buyer — with one click.</div>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-icon">🔁</div>
+        <div class="step-num">05</div>
+        <div class="step-title">Repeat ×1,000</div>
+        <div class="step-desc">Post more listings fast to increase your chances of daily sales.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCT RESEARCH TOOL -->
+<section id="research">
+  <div class="container">
+    <div class="section-eyebrow">▸ Product Research</div>
+    <h2>Try the research engine.<br>Live data, real numbers.</h2>
+    <p class="section-lead">Search any keyword. The robot pulls Amazon supplier prices, eBay sold prices, fees, and shipping — and tells you exactly what's worth listing.</p>
+
+    <div class="research-tool reveal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="view-research" class="view-toggle active">🔍 Research</button>
+          <button id="view-watchlist" class="view-toggle">⭐ Watchlist <span id="watchlist-count" style="opacity:0.6;"></span></button>
+        </div>
+        <button id="refresh-watchlist" style="display:none;padding:8px 14px;background:transparent;border:1px solid var(--border-cyan);color:var(--cyan);border-radius:8px;font-family:var(--font-mono);font-size:12px;cursor:pointer;">↻ Refresh prices</button>
+      </div>
+
+      <div id="panel-research">
+        <div class="research-search">
+          <input type="text" id="search-input" placeholder="Try: headphones, USB cable, watch, handbag..." />
+          <button id="search-btn">Search</button>
+        </div>
+        <div class="research-suggestions">
+          <span class="research-suggestion" data-q="headphones">headphones</span>
+          <span class="research-suggestion" data-q="cable">USB cable</span>
+          <span class="research-suggestion" data-q="watch">vintage watch</span>
+          <span class="research-suggestion" data-q="handbag">designer handbag</span>
+          <span class="research-suggestion" data-q="charger">phone charger</span>
+          <span class="research-suggestion" data-q="webcam">webcam</span>
+          <span class="research-suggestion" data-q="all">show all</span>
+        </div>
+        <div class="research-results" id="research-results">
+          <div class="research-empty">Type a keyword above or pick a suggestion to see profit opportunities.</div>
+        </div>
+      </div>
+
+      <div id="panel-watchlist" style="display:none;">
+        <div id="watchlist-results">
+          <div class="research-empty">Loading watchlist…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROFIT CALCULATOR -->
+<section id="calculator">
+  <div class="container">
+    <div class="feature-block">
+      <div class="feature-text">
+        <div class="section-eyebrow">▸ Profit Calculator</div>
+        <h3>Know your margin before you list.</h3>
+        <p>Move the sliders. Watch your profit, eBay fees, and ROI recalculate instantly. The same engine runs on every listing the robot creates.</p>
+        <ul>
+          <li>Standard 12.9% eBay final value fee, baked in</li>
+          <li>Adjustable shipping and packaging cost</li>
+          <li>Live ROI verdict: skip it, list it, or scale it</li>
+        </ul>
+      </div>
+      <div class="calculator">
+        <div class="calc-title">profit-calculator.exe</div>
+        <div class="calc-controls">
+          <div class="calc-control">
+            <label>eBay Selling Price <span class="val" id="lbl-sell">$349.99</span></label>
+            <input type="range" id="sell" min="10" max="999" step="1" value="350" />
+          </div>
+          <div class="calc-control">
+            <label>Amazon Cost <span class="val" id="lbl-cost">$278.00</span></label>
+            <input type="range" id="cost" min="5" max="800" step="1" value="278" />
+          </div>
+          <div class="calc-control">
+            <label>Shipping Cost <span class="val" id="lbl-ship">$15.00</span></label>
+            <input type="range" id="ship" min="0" max="50" step="1" value="15" />
+          </div>
+          <div class="calc-control">
+            <label>Packaging Cost <span class="val" id="lbl-pack">$5.00</span></label>
+            <input type="range" id="pack" min="0" max="20" step="1" value="5" />
+          </div>
+        </div>
+        <div class="calc-result">
+          <div class="stat profit">
+            <div class="label">Net Profit</div>
+            <div class="num" id="out-profit">$0.00</div>
+          </div>
+          <div class="stat roi">
+            <div class="label">ROI</div>
+            <div class="num" id="out-roi">0%</div>
+          </div>
+          <div class="stat" style="grid-column: span 2; padding-top: 12px; border-top: 1px dashed var(--border);">
+            <div class="label">Verdict</div>
+            <div class="num" id="out-verdict" style="font-size: 16px; margin-top: 6px;">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROFIT TRACKER + SCALING -->
+<section>
+  <div class="container">
+    <div class="feature-block reverse">
+      <div class="feature-text">
+        <div class="section-eyebrow">▸ Profit Tracker</div>
+        <h3>A live spreadsheet that books itself.</h3>
+        <p>Every sale, every cost, every shipping fee — automatically tracked from your fulfillment data. No more midnight Excel wars.</p>
+        <ul>
+          <li>Per-order profit attribution</li>
+          <li>Daily, weekly, monthly views</li>
+          <li>Export-ready for tax season</li>
+        </ul>
+      </div>
+      <div class="demo-widget profit-tracker">
+        <div class="widget-header">
+          <span>profit-tracker</span>
+          <span class="live-indicator"><span class="live-dot"></span>live</span>
+        </div>
+        <div class="row head">
+          <span>Order</span><span class="num">Sold</span><span class="num">Cost</span><span class="num">Profit</span>
+        </div>
+        <div id="tracker-rows"></div>
+        <div class="total">
+          <span>Today's Profit</span>
+          <span class="amount" id="tracker-total">+$0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-block">
+      <div class="feature-text">
+        <div class="section-eyebrow">▸ Scaling Engine</div>
+        <h3>From 1 listing to 10,000.</h3>
+        <p>Drag the slider. See exactly what your store could look like at scale. The robot scales — you don't.</p>
+        <ul>
+          <li>Proven step-by-step ramping system</li>
+          <li>Automatic listing throttling to stay under eBay limits</li>
+          <li>The more listings, the higher the daily-sale probability</li>
+        </ul>
+      </div>
+      <div class="scaling-card">
+        <div class="widget-header">
+          <span>scaling-engine</span>
+          <span style="color: var(--cyan);">▲</span>
+        </div>
+        <div class="scaling-display">
+          <div class="num" id="scale-num">10,000</div>
+          <div class="lbl">active listings</div>
+        </div>
+        <div class="scaling-bar"><div class="fill" id="scale-fill" style="width:100%"></div></div>
+        <input type="range" id="scale-slider" min="1" max="10000" value="10000" style="width:100%; margin-top: 8px;" />
+        <div class="scaling-stats">
+          <div class="scaling-stat">
+            <div class="num" id="scale-monthly">$25,200</div>
+            <div class="lbl">est. monthly</div>
+          </div>
+          <div class="scaling-stat">
+            <div class="num" id="scale-daily">28</div>
+            <div class="lbl">daily sales</div>
+          </div>
+          <div class="scaling-stat">
+            <div class="num" id="scale-yearly">$302K</div>
+            <div class="lbl">est. yearly</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STOCK + AUTO-FULFILL -->
+<section>
+  <div class="container">
+    <div class="feature-block reverse">
+      <div class="feature-text">
+        <div class="section-eyebrow">▸ Stock Tracking</div>
+        <h3>Never sell what you can't deliver.</h3>
+        <p>The robot checks Amazon stock for every active eBay listing — every few minutes. The second something goes out of stock, it's pulled from your store automatically.</p>
+        <ul>
+          <li>Continuous Amazon stock monitoring</li>
+          <li>Auto-removal when items go unavailable</li>
+          <li>Defect-rate protection built in</li>
+        </ul>
+      </div>
+      <div class="demo-widget stock-monitor">
+        <div class="widget-header">
+          <span>stock-monitor</span>
+          <span class="live-indicator"><span class="live-dot"></span>Live</span>
+        </div>
+        <div id="stock-list"></div>
+      </div>
+    </div>
+
+    <div class="feature-block">
+      <div class="feature-text">
+        <div class="section-eyebrow">▸ Auto-Fulfillment</div>
+        <h3>One click. Every order ships.</h3>
+        <p>When an eBay sale comes in, the robot opens Amazon, places the order with the buyer's address, and ships it. You hit one button. Three orders disappear.</p>
+        <ul>
+          <li>Buyer name and address auto-piped to Amazon</li>
+          <li>Tracking auto-uploaded back to eBay</li>
+          <li>Bulk processing — clear the queue in seconds</li>
+        </ul>
+      </div>
+      <div class="demo-widget">
+        <div class="widget-header">
+          <span>auto-fulfill</span>
+          <span id="fulfill-pending">3 pending</span>
+        </div>
+        <div class="fulfill-progress" id="fulfill-bar"><span class="spinner">↻</span> <span id="fulfill-status">Fulfilling…</span></div>
+        <div class="fulfill-list" id="fulfill-list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AUTO-LIST + RESEARCH -->
+<section>
+  <div class="container">
+    <div class="feature-block reverse">
+      <div class="feature-text">
+        <div class="section-eyebrow">▸ Auto-Generated Listings</div>
+        <h3>One click auto-lists hundreds of products.</h3>
+        <p>Photos, titles, item specifics, descriptions — all filled for you. Watch the robot do in seconds what would take you hours.</p>
+        <ul>
+          <li>Optimized titles for eBay search</li>
+          <li>Item specifics auto-mapped from Amazon</li>
+          <li>Photos directly imported from product page</li>
+        </ul>
+      </div>
+      <div class="demo-widget">
+        <div class="widget-header">
+          <span>auto-lister</span>
+          <span id="autolist-progress">1/100 listed</span>
+        </div>
+        <div class="autolist-form">
+          <div class="field"><span class="label">Title</span><div class="input" id="al-title"><span class="typing"></span></div></div>
+          <div class="field"><span class="label">Price</span><div class="input" id="al-price"></div></div>
+          <div class="field"><span class="label">Cat</span><div class="input" id="al-cat"></div></div>
+          <div class="field"><span class="label">Desc</span><div class="input" id="al-desc"></div></div>
+          <div style="display: flex; justify-content: flex-end;"><button class="submit" id="al-submit">Submit</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING CTA -->
+<section id="pricing">
+  <div class="container">
+    <div class="pricing-cta reveal">
+      <div class="section-eyebrow" style="position: relative; z-index: 2;">▸ Start today</div>
+      <h2 style="position: relative; z-index: 2;">Skip the 12-month learning curve.</h2>
+      <div style="position: relative; z-index: 2; margin-top: 24px;">
+        <div class="price-old">$100/mo</div>
+        <div class="price-new">$50</div>
+        <div class="price-period">first month — then $100/mo, cancel anytime</div>
+      </div>
+      <div class="pricing-features">
+        <span>The full beginner course</span>
+        <span>Discord support community</span>
+        <span>1-on-1 help desk</span>
+        <span>Unlimited listings</span>
+        <span>30-day guarantee</span>
+      </div>
+      <a href="#" class="hero-cta" style="position: relative; z-index: 2;">Get Started for $50</a>
+      <div class="hero-guarantee" style="position: relative; z-index: 2;">First sale in 30 days or your money back</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-mark">🤖</div>
+      <span class="brand-wordmark">KEMPY</span>
+    </div>
+    <div class="footer-links">
+      <a href="#how">How it works</a>
+      <a href="#research">Research</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#">Discord</a>
+      <a href="#">Help Desk</a>
+      <a href="#">Terms</a>
+    </div>
+    <div class="footer-copy">// KEMPY · built for demo</div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============= API-BACKED RESEARCH =============
+// Live data comes from POST /api/search. The server orchestrates eBay (Browse
+// API) + Amazon (Keepa) + profit math and returns ranked opportunities.
+// When API keys aren't configured the server returns the same sample data
+// the demo originally shipped with — so this works out of the box.
+
+const FEE_RATE = 0.129; // kept client-side for the calculator below
+
+function verdictFor(roi) {
+  if (roi >= 50) return { label: "🚀 Premium opportunity", cls: "excellent" };
+  if (roi >= 30) return { label: "✓ Excellent — list it", cls: "excellent" };
+  if (roi >= 20) return { label: "✓ Good opportunity", cls: "good" };
+  if (roi >= 10) return { label: "⚠ Marginal — needs volume", cls: "medium" };
+  return { label: "✗ Skip — ROI too low", cls: "poor" };
+}
+
+function fmt$(n) { return "$" + (n == null ? "—" : Number(n).toFixed(2)); }
+
+// ============= TOAST =============
+const toast = document.getElementById('toast');
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+// ============= REVEAL ON SCROLL =============
+const io = new IntersectionObserver(es => {
+  es.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// ============= RESEARCH TOOL =============
+const searchInput = document.getElementById('search-input');
+const searchBtn = document.getElementById('search-btn');
+const results = document.getElementById('research-results');
+
+function renderResults(prods, meta) {
+  if (!prods || !prods.length) {
+    results.innerHTML = '<div class="research-empty">No matching products. Try another keyword.</div>';
+    return;
+  }
+  const sourceBadge = meta && meta.sources
+    ? `<div style="text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">
+         ${meta.cached ? '<span style="color:var(--green);">⚡ cached</span> · ' : ''}
+         eBay: <span style="color:${meta.sources.ebay==='live'?'var(--green)':'var(--amber)'};">${meta.sources.ebay}</span>
+         · Amazon: <span style="color:${meta.sources.amazon==='live'?'var(--green)':'var(--amber)'};">${meta.sources.amazon}</span>
+         · Matcher: <span style="color:${meta.sources.matcher==='claude'?'var(--green)':'var(--amber)'};">${meta.sources.matcher||'first-result'}</span>
+         · ${meta.ms || 0}ms
+       </div>`
+    : '';
+
+  results.innerHTML = sourceBadge + prods.map(p => {
+    const v = verdictFor(p.roi || 0);
+    const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
+    const ebayLink = p.ebayUrl ? `<a href="${p.ebayUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
+    const amazonLink = p.amazonUrl ? `<a href="${p.amazonUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
+    const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
+      ? `<span title="${p.matchReasoning || ''}" style="font-size:10px;font-family:var(--font-mono);color:var(--cyan);margin-left:8px;border:1px solid var(--border-cyan);padding:1px 6px;border-radius:100px;">🤖 ${Math.round(p.matchConfidence * 100)}%</span>`
+      : '';
+    return `
+      <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
+        <div class="rc-product">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <div class="wf-thumb">${p.emoji || '📦'}</div>
+            <div>
+              <div class="rc-name">${p.name}${matchBadge}</div>
+              <div class="rc-cat">${p.cat} · ${p.vol || '?'}/mo · ${p.comp || '?'} comp · ${p.trend || '?'}</div>
+            </div>
+          </div>
+          <div class="rc-pricing">
+            <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
+            <div class="item"><div class="l">Amazon ${amazonLink}</div><div class="v">${fmt$(p.amazonPrice)}</div></div>
+            <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${p.fees != null ? '−' + fmt$((p.fees||0) + (p.shipping||0) + (p.packaging||0)) : '—'}</div></div>
+            <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(p.profit)}</div></div>
+          </div>
+        </div>
+        <div class="rc-verdict">
+          <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
+          <div class="rc-tag ${v.cls}">${v.label}</div>
+          <button class="rc-save" data-action="save">⭐ Save</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+async function search(q) {
+  q = (q || '').trim();
+  if (!q) {
+    results.innerHTML = '<div class="research-empty">Type a keyword above or pick a suggestion to see profit opportunities.</div>';
+    return;
+  }
+  results.innerHTML = '<div class="research-empty">🤖 Searching eBay and Amazon...</div>';
+  try {
+    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    const data = await r.json();
+    renderResults(data.products, data.meta);
+  } catch (err) {
+    results.innerHTML = `<div class="research-empty">⚠ Search failed: ${err.message}<br><span style="font-size:11px;">Make sure the backend is running (npm start)</span></div>`;
+  }
+}
+
+searchBtn.addEventListener('click', () => search(searchInput.value));
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(searchInput.value); });
+document.querySelectorAll('.research-suggestion').forEach(s => {
+  s.addEventListener('click', () => {
+    searchInput.value = s.dataset.q === 'all' ? '' : s.dataset.q;
+    search(s.dataset.q);
+  });
+});
+
+// Auto-load default
+search('headphones');
+
+// ============= WATCHLIST =============
+const panelResearch = document.getElementById('panel-research');
+const panelWatchlist = document.getElementById('panel-watchlist');
+const viewResearchBtn = document.getElementById('view-research');
+const viewWatchlistBtn = document.getElementById('view-watchlist');
+const watchlistResults = document.getElementById('watchlist-results');
+const watchlistCountEl = document.getElementById('watchlist-count');
+const refreshBtn = document.getElementById('refresh-watchlist');
+
+let savedAsins = new Set();
+
+viewResearchBtn.addEventListener('click', () => switchView('research'));
+viewWatchlistBtn.addEventListener('click', () => switchView('watchlist'));
+
+function switchView(view) {
+  if (view === 'research') {
+    panelResearch.style.display = '';
+    panelWatchlist.style.display = 'none';
+    viewResearchBtn.classList.add('active');
+    viewWatchlistBtn.classList.remove('active');
+    refreshBtn.style.display = 'none';
+  } else {
+    panelResearch.style.display = 'none';
+    panelWatchlist.style.display = '';
+    viewResearchBtn.classList.remove('active');
+    viewWatchlistBtn.classList.add('active');
+    refreshBtn.style.display = '';
+    loadWatchlist();
+  }
+}
+
+// Delegated Save handler
+results.addEventListener('click', async (e) => {
+  if (e.target.dataset.action !== 'save') return;
+  const btn = e.target;
+  if (btn.classList.contains('saved')) return;
+
+  const card = btn.closest('.research-card');
+  let product;
+  try {
+    product = JSON.parse(card.dataset.product.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+  } catch (err) {
+    showToast('⚠ Could not save: bad product data');
+    return;
+  }
+
+  // Gate on sign-in — open modal instead of trying to save
+  if (!currentUser) {
+    openAuthModal('signup');
+    showToast('Sign in or create an account to save products');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const r = await fetch('/api/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(product),
+    });
+    if (r.status === 401) {
+      btn.textContent = '⭐ Save';
+      btn.disabled = false;
+      currentUser = null;
+      renderAccount();
+      openAuthModal('login');
+      return;
+    }
+    if (r.status === 409) {
+      btn.classList.add('saved');
+      btn.textContent = 'Saved';
+      showToast('Already in your watchlist');
+      return;
+    }
+    if (r.status === 503) {
+      showToast('⚠ Watchlist needs DATABASE_URL + npm run migrate');
+      btn.textContent = '⭐ Save';
+      btn.disabled = false;
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+    btn.classList.add('saved');
+    btn.textContent = 'Saved';
+    if (product.asin) savedAsins.add(product.asin);
+    updateWatchlistCount();
+    showToast('⭐ Added to watchlist');
+  } catch (err) {
+    btn.textContent = '⭐ Save';
+    btn.disabled = false;
+    showToast('⚠ Save failed: ' + err.message);
+  }
+});
+
+async function updateWatchlistCount() {
+  if (!currentUser) {
+    watchlistCountEl.textContent = '';
+    savedAsins = new Set();
+    return;
+  }
+  try {
+    const r = await fetch('/api/watchlist', { credentials: 'include' });
+    if (!r.ok) return;
+    const data = await r.json();
+    watchlistCountEl.textContent = data.count ? `(${data.count})` : '';
+    savedAsins = new Set(data.items.filter(i => i.asin).map(i => i.asin));
+  } catch (_) { /* watchlist unavailable, leave count blank */ }
+}
+
+async function loadWatchlist() {
+  if (!currentUser) {
+    watchlistResults.innerHTML = `
+      <div class="auth-required">
+        <div style="font-size:32px;margin-bottom:8px;">🔒</div>
+        <div style="margin-bottom:4px;">Sign in to view your watchlist</div>
+        <div style="font-size:12px;color:var(--text-muted);">Save products, track prices, see drift over time.</div>
+        <button id="auth-required-cta">Sign in or create account</button>
+      </div>
+    `;
+    document.getElementById('auth-required-cta').addEventListener('click', () => openAuthModal('signup'));
+    return;
+  }
+  watchlistResults.innerHTML = '<div class="research-empty">Loading…</div>';
+  try {
+    const r = await fetch('/api/watchlist', { credentials: 'include' });
+    if (r.status === 401) {
+      currentUser = null;
+      renderAccount();
+      return loadWatchlist();
+    }
+    if (r.status === 503) {
+      watchlistResults.innerHTML = '<div class="research-empty">⚠ Watchlist requires a database.<br><span style="font-size:11px;">Set DATABASE_URL in .env and run <code>npm run migrate</code></span></div>';
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderWatchlist(data.items);
+  } catch (err) {
+    watchlistResults.innerHTML = `<div class="research-empty">⚠ ${err.message}</div>`;
+  }
+}
+
+function renderWatchlist(items) {
+  if (!items.length) {
+    watchlistResults.innerHTML = '<div class="research-empty">No saved items yet. Click ⭐ Save on a research card to track it.</div>';
+    return;
+  }
+  watchlistResults.innerHTML = items.map(item => {
+    const initialRoi = Number(item.initial_roi || 0);
+    const latestRoi = Number(item.latest_roi || initialRoi);
+    const drift = latestRoi - initialRoi;
+    const driftCls = drift > 0.5 ? 'up' : drift < -0.5 ? 'down' : 'flat';
+    const driftSign = drift > 0 ? '+' : '';
+    const v = verdictFor(latestRoi);
+    const cardCls = latestRoi >= 30 ? 'excellent' : latestRoi < 10 ? 'poor' : '';
+    const refreshedAgo = item.last_refreshed_at
+      ? timeAgo(new Date(item.last_refreshed_at))
+      : 'never';
+    return `
+      <div class="research-card ${cardCls}">
+        <div class="rc-product">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <div class="wf-thumb">📦</div>
+            <div>
+              <div class="rc-name">${item.ebay_title}</div>
+              <div class="rc-cat">${item.category || 'saved'} · refreshed ${refreshedAgo} · saved ${timeAgo(new Date(item.created_at))}</div>
+            </div>
+          </div>
+          <div class="rc-pricing">
+            <div class="item"><div class="l">eBay</div><div class="v">${fmt$(item.latest_ebay_price || item.initial_ebay_price)}</div></div>
+            <div class="item"><div class="l">Amazon</div><div class="v">${fmt$(item.latest_amazon_price || item.initial_amazon_price)}</div></div>
+            <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(item.latest_profit || item.initial_profit)}</div></div>
+            <div class="item"><div class="l">Initial ROI</div><div class="v">${Number(item.initial_roi).toFixed(1)}%</div></div>
+          </div>
+        </div>
+        <div class="rc-verdict">
+          <div class="rc-roi ${v.cls}">${latestRoi.toFixed(1)}%
+            <span class="wl-drift ${driftCls}">${driftSign}${drift.toFixed(1)}</span>
+          </div>
+          <div class="rc-tag ${v.cls}">${v.label}</div>
+          <button class="wl-delete" data-id="${item.id}">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
+}
+
+watchlistResults.addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('wl-delete')) return;
+  const id = e.target.dataset.id;
+  e.target.disabled = true;
+  try {
+    const r = await fetch(`/api/watchlist/${id}`, { method: 'DELETE', credentials: 'include' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showToast('Removed from watchlist');
+    loadWatchlist();
+    updateWatchlistCount();
+  } catch (err) {
+    showToast('⚠ Remove failed: ' + err.message);
+    e.target.disabled = false;
+  }
+});
+
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.disabled = true;
+  refreshBtn.textContent = '↻ Refreshing…';
+  try {
+    const r = await fetch('/api/watchlist/refresh', { method: 'POST', credentials: 'include' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    showToast(`✓ Refreshed ${data.refreshed}/${data.total}`);
+    loadWatchlist();
+  } catch (err) {
+    showToast('⚠ Refresh failed: ' + err.message);
+  } finally {
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Refresh prices';
+  }
+});
+
+// ============= AUTH =============
+let currentUser = null;
+
+const authModal = document.getElementById('auth-modal');
+const authClose = document.getElementById('auth-close');
+const authBackdrop = authModal.querySelector('.auth-backdrop');
+const authForm = document.getElementById('auth-form');
+const authTabs = authModal.querySelectorAll('.auth-tab');
+const authTitle = document.getElementById('auth-title');
+const authSub = document.getElementById('auth-sub');
+const authSubmit = document.getElementById('auth-submit');
+const authError = document.getElementById('auth-error');
+const fieldName = document.getElementById('field-name');
+const navAccount = document.getElementById('nav-account');
+
+let authMode = 'login';
+
+function openAuthModal(mode = 'login') {
+  setAuthMode(mode);
+  authModal.style.display = '';
+  authError.style.display = 'none';
+  authForm.reset();
+  setTimeout(() => authForm.querySelector('input[name=email]').focus(), 80);
+}
+function closeAuthModal() { authModal.style.display = 'none'; }
+
+function setAuthMode(mode) {
+  authMode = mode;
+  authTabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  if (mode === 'signup') {
+    authTitle.textContent = 'Create your account';
+    authSub.textContent = 'Save research, track price drift, and build a watchlist.';
+    authSubmit.textContent = 'Create account';
+    fieldName.style.display = '';
+    authForm.password.autocomplete = 'new-password';
+  } else {
+    authTitle.textContent = 'Welcome back';
+    authSub.textContent = 'Sign in to save research and track price drift.';
+    authSubmit.textContent = 'Sign in';
+    fieldName.style.display = 'none';
+    authForm.password.autocomplete = 'current-password';
+  }
+}
+
+authClose.addEventListener('click', closeAuthModal);
+authBackdrop.addEventListener('click', closeAuthModal);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && authModal.style.display !== 'none') closeAuthModal();
+});
+authTabs.forEach(t => t.addEventListener('click', () => setAuthMode(t.dataset.mode)));
+
+authForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  authError.style.display = 'none';
+  authSubmit.disabled = true;
+  authSubmit.textContent = authMode === 'signup' ? 'Creating…' : 'Signing in…';
+
+  const body = {
+    email: authForm.email.value,
+    password: authForm.password.value,
+  };
+  if (authMode === 'signup' && authForm.displayName.value) {
+    body.displayName = authForm.displayName.value;
+  }
+
+  try {
+    const r = await fetch(`/api/auth/${authMode}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      authError.textContent = data.error || 'Something went wrong.';
+      authError.style.display = '';
+      return;
+    }
+    currentUser = data.user;
+    renderAccount();
+    closeAuthModal();
+    showToast(authMode === 'signup' ? '✓ Account created' : '✓ Signed in');
+    updateWatchlistCount();
+    // If user opened the modal from the watchlist tab, refresh it
+    if (panelWatchlist.style.display !== 'none') loadWatchlist();
+  } catch (err) {
+    authError.textContent = err.message;
+    authError.style.display = '';
+  } finally {
+    authSubmit.disabled = false;
+    authSubmit.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
+  }
+});
+
+async function loadMe() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      currentUser = data.user;
+    }
+  } catch (_) {}
+  renderAccount();
+}
+
+function renderAccount() {
+  if (currentUser) {
+    const initial = (currentUser.display_name || currentUser.email).charAt(0).toUpperCase();
+    const label = currentUser.display_name || currentUser.email.split('@')[0];
+    navAccount.innerHTML = `
+      <span class="nav-user-chip">
+        <span class="avatar">${initial}</span>
+        <span>${label}</span>
+        <a class="signout" id="nav-signout">sign out</a>
+      </span>
+    `;
+    document.getElementById('nav-signout').addEventListener('click', signOut);
+  } else {
+    navAccount.innerHTML = '<a href="#" id="nav-signin">Sign in</a>';
+    document.getElementById('nav-signin').addEventListener('click', e => {
+      e.preventDefault();
+      openAuthModal('login');
+    });
+  }
+}
+
+async function signOut() {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  currentUser = null;
+  renderAccount();
+  showToast('Signed out');
+  watchlistCountEl.textContent = '';
+  savedAsins = new Set();
+  // If on watchlist tab, refresh to show sign-in prompt
+  if (panelWatchlist.style.display !== 'none') loadWatchlist();
+}
+
+// Boot
+loadMe().then(updateWatchlistCount);
+
+// ============= PROFIT CALCULATOR =============
+const sellEl = document.getElementById('sell');
+const costEl = document.getElementById('cost');
+const shipEl = document.getElementById('ship');
+const packEl = document.getElementById('pack');
+const lblSell = document.getElementById('lbl-sell');
+const lblCost = document.getElementById('lbl-cost');
+const lblShip = document.getElementById('lbl-ship');
+const lblPack = document.getElementById('lbl-pack');
+const outProfit = document.getElementById('out-profit');
+const outRoi = document.getElementById('out-roi');
+const outVerdict = document.getElementById('out-verdict');
+
+function recalc() {
+  const sell = +sellEl.value;
+  const cost = +costEl.value;
+  const ship = +shipEl.value;
+  const pack = +packEl.value;
+  lblSell.textContent = fmt$(sell);
+  lblCost.textContent = fmt$(cost);
+  lblShip.textContent = fmt$(ship);
+  lblPack.textContent = fmt$(pack);
+  const fees = sell * FEE_RATE;
+  const profit = sell - cost - fees - ship - pack;
+  const roi = cost > 0 ? (profit / cost) * 100 : 0;
+  outProfit.textContent = fmt$(profit);
+  outProfit.style.color = profit >= 0 ? 'var(--green)' : 'var(--red)';
+  outRoi.textContent = roi.toFixed(1) + '%';
+  const v = verdictFor(roi);
+  outVerdict.textContent = v.label;
+  outVerdict.style.color = v.cls === 'excellent' ? 'var(--green)' : v.cls === 'good' ? 'var(--cyan)' : v.cls === 'medium' ? 'var(--amber)' : 'var(--red)';
+}
+[sellEl, costEl, shipEl, packEl].forEach(el => el.addEventListener('input', recalc));
+recalc();
+
+// ============= SCALING =============
+const scaleSlider = document.getElementById('scale-slider');
+const scaleNum = document.getElementById('scale-num');
+const scaleFill = document.getElementById('scale-fill');
+const scaleMonthly = document.getElementById('scale-monthly');
+const scaleDaily = document.getElementById('scale-daily');
+const scaleYearly = document.getElementById('scale-yearly');
+
+function fmtBig(n) {
+  if (n >= 1_000_000) return '$' + (n/1_000_000).toFixed(1) + 'M';
+  if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
+}
+function fmtNumber(n) {
+  return n.toLocaleString('en-US');
+}
+function updateScale() {
+  const n = +scaleSlider.value;
+  // Roughly: each listing yields ~$0.28/day in profit at scale (industry avg ~3% sell-thru × $9.50 avg profit)
+  const daily = Math.round(n * 0.0028); // sales/day
+  const dailyProfit = n * 0.84; // ~$0.84 per listing per day
+  const monthly = dailyProfit * 30;
+  const yearly = dailyProfit * 365;
+  scaleNum.textContent = fmtNumber(n);
+  scaleFill.style.width = (n / 10000 * 100) + '%';
+  scaleMonthly.textContent = fmtBig(monthly);
+  scaleDaily.textContent = daily;
+  scaleYearly.textContent = fmtBig(yearly);
+}
+scaleSlider.addEventListener('input', updateScale);
+updateScale();
+
+// ============= PROFIT TRACKER (animated) =============
+const trackerOrders = [
+  { id: '#4829', sold: 389.99, cost: 278.00 },
+  { id: '#4830', sold: 189.99, cost: 139.99 },
+  { id: '#4831', sold: 249.99, cost: 179.00 },
+  { id: '#4832', sold: 79.99, cost: 49.00 },
+  { id: '#4833', sold: 449.99, cost: 339.00 },
+];
+const trackerEl = document.getElementById('tracker-rows');
+const trackerTotal = document.getElementById('tracker-total');
+let trackerVisible = 3;
+
+function profitOf(o) {
+  const fees = o.sold * FEE_RATE;
+  return o.sold - o.cost - fees - 8; // assume ~$8 ship+pack
+}
+
+function renderTracker() {
+  const rows = trackerOrders.slice(0, trackerVisible);
+  trackerEl.innerHTML = rows.map(o => `
+    <div class="row">
+      <span class="order">${o.id}</span>
+      <span class="num">${fmt$(o.sold)}</span>
+      <span class="num">${fmt$(o.cost)}</span>
+      <span class="pos">+${fmt$(profitOf(o))}</span>
+    </div>
+  `).join('');
+  const total = rows.reduce((s,o) => s + profitOf(o), 0);
+  trackerTotal.textContent = '+' + fmt$(total);
+}
+renderTracker();
+setInterval(() => {
+  trackerVisible = trackerVisible >= trackerOrders.length ? 3 : trackerVisible + 1;
+  renderTracker();
+}, 2400);
+
+// ============= STOCK MONITOR =============
+const stockItems = [
+  { name: 'Sony WH-1000XM5 Headphones', state: 'in' },
+  { name: 'Apple Watch Series 9', state: 'in' },
+  { name: 'Anker Soundcore Liberty', state: 'checking' },
+  { name: 'USB-C Charging Cable', state: 'in' },
+  { name: 'Designer Handbag — Black', state: 'in' },
+];
+const stockEl = document.getElementById('stock-list');
+function renderStock() {
+  stockEl.innerHTML = stockItems.map(s => {
+    const txt = s.state === 'in' ? '✓ In Stock' : s.state === 'out' ? '✗ Out of Stock' : '… Checking';
+    return `<div class="item"><span class="name">${s.name}</span><span class="status ${s.state}">${txt}</span></div>`;
+  }).join('');
+}
+renderStock();
+setInterval(() => {
+  // randomize a small state cycle
+  const i = Math.floor(Math.random() * stockItems.length);
+  const states = ['in','in','in','checking'];
+  stockItems[i].state = states[Math.floor(Math.random() * states.length)];
+  renderStock();
+}, 1800);
+
+// ============= AUTO-FULFILL =============
+const fulfillOrders = [
+  { id: '#4829', buyer: 'j***n', state: 'shipped' },
+  { id: '#4830', buyer: 'm***a', state: 'shipped' },
+  { id: '#4831', buyer: 'r***k', state: 'ordering' },
+  { id: '#4832', buyer: 's***p', state: 'queued' },
+  { id: '#4833', buyer: 'b***t', state: 'queued' },
+];
+const fulfillListEl = document.getElementById('fulfill-list');
+const fulfillStatus = document.getElementById('fulfill-status');
+const fulfillPending = document.getElementById('fulfill-pending');
+
+function renderFulfill() {
+  const visible = fulfillOrders.slice(0, 4);
+  fulfillListEl.innerHTML = visible.map(o => {
+    const cls = o.state === 'shipped' ? 'shipped' : 'ordering';
+    const lbl = o.state === 'shipped' ? '✓ shipped' : o.state === 'ordering' ? 'ordering…' : 'queued';
+    return `<div class="order"><span class="id">${o.id} · ${o.buyer}</span><span class="status ${cls}">${lbl}</span></div>`;
+  }).join('');
+  const pending = fulfillOrders.filter(o => o.state !== 'shipped').length;
+  fulfillPending.textContent = pending + ' pending';
+}
+renderFulfill();
+let fulfillTick = 0;
+setInterval(() => {
+  fulfillTick++;
+  // promote ordering→shipped, queued→ordering
+  const orderingIdx = fulfillOrders.findIndex(o => o.state === 'ordering');
+  if (orderingIdx >= 0) fulfillOrders[orderingIdx].state = 'shipped';
+  const queuedIdx = fulfillOrders.findIndex(o => o.state === 'queued');
+  if (queuedIdx >= 0) fulfillOrders[queuedIdx].state = 'ordering';
+  // reset cycle
+  if (!fulfillOrders.some(o => o.state !== 'shipped')) {
+    fulfillOrders.forEach((o,i) => { o.state = i < 2 ? 'shipped' : i < 3 ? 'ordering' : 'queued'; });
+  }
+  renderFulfill();
+  fulfillStatus.textContent = fulfillTick % 2 ? 'Placing Amazon order…' : 'Uploading tracking to eBay…';
+}, 2000);
+
+// ============= AUTO-LIST TYPING =============
+const alTitle = document.getElementById('al-title');
+const alPrice = document.getElementById('al-price');
+const alCat = document.getElementById('al-cat');
+const alDesc = document.getElementById('al-desc');
+const alProgress = document.getElementById('autolist-progress');
+
+const autolistProducts = [
+  { title: 'Logitech MX Master 3S Wireless Mouse', price: '$89.99', cat: 'Electronics', desc: 'Ergonomic, silent, 8K DPI' },
+  { title: 'Anker Soundcore Liberty 4 NC Earbuds', price: '$79.99', cat: 'Audio', desc: 'ANC, 50hr battery, IPX4' },
+  { title: 'Sony WH-1000XM5 Wireless Headphones', price: '$349.99', cat: 'Headphones', desc: 'Premium ANC, 30hr battery' },
+  { title: 'Apple AirPods Pro (2nd Generation)', price: '$249.99', cat: 'Audio', desc: 'Adaptive Audio, USB-C case' },
+  { title: 'Samsung 65" QN90C Neo QLED 4K TV', price: '$1,299.99', cat: 'Televisions', desc: '120Hz, HDR10+, Smart TV' },
+];
+let alIdx = 0, alListed = 1;
+async function typeText(el, text, speed = 20) {
+  el.innerHTML = '<span class="typing"></span>';
+  const span = el.querySelector('.typing');
+  for (let i = 0; i <= text.length; i++) {
+    span.textContent = text.slice(0, i);
+    await new Promise(r => setTimeout(r, speed));
+  }
+}
+
+async function autolistLoop() {
+  while (true) {
+    const p = autolistProducts[alIdx % autolistProducts.length];
+    alTitle.innerHTML = ''; alPrice.innerHTML = ''; alCat.innerHTML = ''; alDesc.innerHTML = '';
+    await typeText(alTitle, p.title, 25);
+    await typeText(alPrice, p.price, 30);
+    await typeText(alCat, p.cat, 30);
+    await typeText(alDesc, p.desc, 20);
+    await new Promise(r => setTimeout(r, 600));
+    document.getElementById('al-submit').style.background = 'var(--green)';
+    await new Promise(r => setTimeout(r, 400));
+    document.getElementById('al-submit').style.background = 'var(--cyan)';
+    alListed = Math.min(alListed + 1, 100);
+    alProgress.textContent = alListed + '/100 listed';
+    alIdx++;
+    await new Promise(r => setTimeout(r, 600));
+  }
+}
+autolistLoop();
+
+// ============= CTA TOAST =============
+document.querySelectorAll('a.hero-cta, a.nav-cta').forEach(a => {
+  a.addEventListener('click', e => {
+    if (a.getAttribute('href') === '#' || a.getAttribute('href') === '#pricing') {
+      if (a.getAttribute('href') === '#') {
+        e.preventDefault();
+        showToast('🤖 This is a demo — clone all yours to wire up Stripe');
+      }
+    }
+  });
+});
+</script>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal" class="auth-modal" style="display:none;">
+  <div class="auth-backdrop"></div>
+  <div class="auth-panel">
+    <button class="auth-close" id="auth-close">×</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-mode="login">Sign in</button>
+      <button class="auth-tab" data-mode="signup">Create account</button>
+    </div>
+    <h3 id="auth-title">Welcome back</h3>
+    <p class="auth-sub" id="auth-sub">Sign in to save research and track price drift.</p>
+    <form id="auth-form">
+      <label class="auth-field">
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="email" required />
+      </label>
+      <label class="auth-field" id="field-name" style="display:none;">
+        <span>Display name <em style="opacity:.5;">(optional)</em></span>
+        <input type="text" name="displayName" autocomplete="name" />
+      </label>
+      <label class="auth-field">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" minlength="8" required />
+      </label>
+      <button type="submit" class="auth-submit" id="auth-submit">Sign in</button>
+      <div class="auth-error" id="auth-error" style="display:none;"></div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>
