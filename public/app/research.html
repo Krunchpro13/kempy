@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Research — KEMPY</title>
+<script>
+  // Restore sidebar collapsed state before paint
+  if (window.innerWidth > 900 && localStorage.getItem('kempy_sidebar_collapsed') === '1') {
+    document.documentElement.classList.add('sb-collapsed');
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------- Design tokens ---------- */
+:root {
+  --bg: #050708;
+  --bg-2: #0a0d10;
+  --surface: #0e1316;
+  --surface-2: #131a1e;
+  --surface-3: #182025;
+  --border: #1a2329;
+  --border-cyan: #1e3a44;
+  --cyan: #00e5ff;
+  --cyan-glow: #00e5ff40;
+  --cyan-dim: #4ad4e4;
+  --green: #00ff9d;
+  --green-dim: #00cc7a;
+  --amber: #ffb800;
+  --red: #ff4d6d;
+  --text: #e6f1f5;
+  --text-dim: #8a9ba3;
+  --text-muted: #5a6970;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Archivo Black', sans-serif;
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 68px;
+  --topbar-h: 64px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgba(0,229,255,0.05), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 100% 100%, rgba(0,255,157,0.03), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.012'/></svg>");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- App layout (shared) ---------- */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+  transition: grid-template-columns 0.25s ease;
+}
+html.sb-collapsed .app { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+html.sb-collapsed .brand-text,
+html.sb-collapsed .nav-label,
+html.sb-collapsed .nav-item .label,
+html.sb-collapsed .nav-item .pill,
+html.sb-collapsed .user-info,
+html.sb-collapsed .user-menu { display: none; }
+html.sb-collapsed .nav-item { justify-content: center; padding: 11px 0; gap: 0; }
+html.sb-collapsed .brand { justify-content: center; padding: 18px 0; gap: 0; }
+html.sb-collapsed .sidebar-footer { justify-content: center; padding: 14px 8px; }
+html.sb-collapsed .nav { padding: 14px 8px; }
+html.sb-collapsed .nav-item { position: relative; }
+html.sb-collapsed .nav-item:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--border-cyan);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  background: rgba(10,13,16,0.72);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.brand {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: -1px;
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.brand::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--green); }
+  50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); }
+}
+.nav {
+  flex: 1;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+.nav::-webkit-scrollbar { width: 4px; }
+.nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.nav-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  padding: 14px 12px 6px;
+}
+.nav-label:first-child { padding-top: 4px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active {
+  background: rgba(0,229,255,0.08);
+  color: var(--cyan);
+  border-color: var(--border-cyan);
+  box-shadow: inset 0 0 20px rgba(0,229,255,0.04);
+}
+.nav-item.soon { opacity: 0.55; }
+.nav-item.soon:hover { opacity: 0.85; }
+.nav-item .icon { width: 18px; display: inline-flex; justify-content: center; flex-shrink: 0; opacity: 0.95; }
+.nav-item .pill {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.sidebar-footer {
+  padding: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--bg);
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-info .name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-info .role { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.user-menu { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 6px; border-radius: 6px; line-height: 1; transition: all 0.15s; }
+.user-menu:hover { background: var(--surface); color: var(--text); }
+
+/* ---------- Main ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+  height: var(--topbar-h);
+  padding: 0 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,7,8,0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar .crumb { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
+.topbar .crumb .arrow { margin: 0 8px; opacity: 0.5; }
+.topbar .crumb .current { color: var(--cyan); }
+.topbar .actions { display: flex; gap: 10px; align-items: center; }
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.btn-icon:hover { border-color: var(--border-cyan); color: var(--cyan); }
+
+.content { padding: 32px; flex: 1; max-width: 1400px; width: 100%; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--cyan);
+  color: var(--bg);
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+  font-family: var(--font-sans);
+}
+.btn:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; color: var(--cyan); border: 1px solid var(--border-cyan); }
+.btn.ghost:hover { background: rgba(0,229,255,0.06); box-shadow: none; }
+.btn.sm { padding: 7px 12px; font-size: 12px; }
+
+/* ---------- PAGE-SPECIFIC: Research ---------- */
+
+/* Hero search */
+.search-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.search-hero::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0,229,255,0.3), transparent 40%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.search-hero h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+.search-hero h1 .accent { color: var(--cyan); }
+.search-hero p {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 20px;
+  max-width: 560px;
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: stretch;
+}
+.search-input {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+}
+.search-go {
+  padding: 0 22px;
+  background: var(--cyan);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+.search-go:hover { background: var(--cyan-dim); box-shadow: 0 0 24px var(--cyan-glow); }
+.search-go:active { transform: translateY(1px); }
+.search-go:disabled { opacity: 0.6; cursor: wait; }
+
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
+.suggestion {
+  padding: 6px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  font-family: var(--font-mono);
+  user-select: none;
+}
+.suggestion:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.filter-bar.hidden { display: none; }
+.filter-bar .group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-bar label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+.filter-bar select {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.filter-bar select:hover { border-color: var(--border-cyan); }
+.filter-bar select:focus { border-color: var(--cyan); }
+.filter-bar .stats {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+.filter-bar .stats .v { color: var(--text); }
+.filter-bar .stats .pos { color: var(--green); }
+
+/* Results meta strip */
+.results-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding: 0 4px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.results-meta .ok { color: var(--green); }
+.results-meta .warn { color: var(--amber); }
+.results-meta .chip {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* Result grid */
+.results { display: grid; gap: 12px; }
+
+/* Research card — adapted from landing */
+.research-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.research-card:hover { border-color: var(--border-cyan); background: var(--surface-2); }
+@media (max-width: 720px) { .research-card { grid-template-columns: 1fr; } }
+.research-card.excellent { border-color: rgba(0,255,157,0.3); box-shadow: inset 0 0 24px rgba(0,255,157,0.04); }
+.research-card.poor { opacity: 0.65; }
+.research-card .head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.rc-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 2px; line-height: 1.3; }
+.rc-cat { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.3px; }
+.match-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  margin-left: 8px;
+  border: 1px solid var(--border-cyan);
+  padding: 1px 6px;
+  border-radius: 100px;
+  display: inline-block;
+  vertical-align: 2px;
+}
+.rc-pricing {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+@media (max-width: 720px) { .rc-pricing { grid-template-columns: repeat(2, 1fr); } }
+.rc-pricing .item .l { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.rc-pricing .item .v { color: var(--text); font-weight: 600; font-size: 13px; }
+.rc-pricing .item .v.pos { color: var(--green); }
+.rc-pricing .item .v.neg { color: var(--red); }
+.rc-pricing .item a { color: var(--cyan); text-decoration: none; opacity: 0.6; }
+.rc-pricing .item a:hover { opacity: 1; }
+
+.rc-verdict {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  .rc-verdict { text-align: left; align-items: flex-start; }
+}
+.rc-roi {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+.rc-roi.excellent { color: var(--green); text-shadow: 0 0 18px rgba(0,255,157,0.4); }
+.rc-roi.good { color: var(--cyan); }
+.rc-roi.medium { color: var(--amber); }
+.rc-roi.poor { color: var(--red); }
+.rc-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rc-tag.excellent { background: rgba(0,255,157,0.1); color: var(--green); }
+.rc-tag.good { background: rgba(0,229,255,0.1); color: var(--cyan); }
+.rc-tag.medium { background: rgba(255,184,0,0.1); color: var(--amber); }
+.rc-tag.poor { background: rgba(255,77,109,0.1); color: var(--red); }
+.rc-save {
+  background: transparent;
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rc-save:hover { background: rgba(0,229,255,0.08); }
+.rc-save.saved { background: rgba(0,255,157,0.08); border-color: rgba(0,255,157,0.4); color: var(--green); cursor: default; }
+.rc-save.saved::before { content: '✓ '; }
+
+/* Empty / loading states */
+.empty-state, .loading-state {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 60px 24px;
+  text-align: center;
+}
+.empty-state .icon { font-size: 48px; opacity: 0.4; margin-bottom: 14px; display: block; }
+.empty-state h3 { font-size: 18px; margin-bottom: 6px; font-weight: 600; }
+.empty-state p { color: var(--text-dim); font-size: 14px; max-width: 420px; margin: 0 auto; }
+
+.skeleton {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+}
+.sk-bar {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-l1 { height: 16px; width: 60%; margin-bottom: 8px; }
+.sk-l2 { height: 12px; width: 40%; margin-bottom: 14px; }
+.sk-l3 { height: 32px; width: 100%; }
+.sk-roi { height: 40px; width: 80px; margin-bottom: 6px; }
+.sk-tag { height: 16px; width: 100px; margin-bottom: 6px; }
+.sk-btn { height: 26px; width: 70px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--surface-2);
+  border: 1px solid var(--border-cyan);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { border-color: var(--red); }
+.toast.success { border-color: var(--green); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; left: -100%; top: 0; width: 280px; z-index: 100; transition: left 0.28s ease; }
+  .sidebar.open { left: 0; }
+  .sidebar.open + .main::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 50;
+  }
+  .content { padding: 20px; }
+  .topbar { padding: 0 16px; }
+  .search-hero { padding: 20px; }
+  .search-hero h1 { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============== SIDEBAR ============== -->
+  <aside class="sidebar" id="sidebar">
+    <a href="/" class="brand"><span class="brand-text">KEMPY</span></a>
+
+    <nav class="nav">
+      <div class="nav-label">Workspace</div>
+      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard">
+        <span class="icon">▣</span> <span class="label">Dashboard</span>
+      </a>
+      <a href="/app/research.html" class="nav-item active" data-label="Research">
+        <span class="icon">🔍</span> <span class="label">Research</span>
+      </a>
+      <a href="/app/watchlist.html" class="nav-item" data-label="Watchlist">
+        <span class="icon">⭐</span> <span class="label">Watchlist</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Listings (coming soon)">
+        <span class="icon">📋</span> <span class="label">Listings</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Orders (coming soon)">
+        <span class="icon">📦</span> <span class="label">Orders</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Profit (coming soon)">
+        <span class="icon">📈</span> <span class="label">Profit</span> <span class="pill">soon</span>
+      </a>
+
+      <div class="nav-label">Account</div>
+      <a href="#" class="nav-item soon" data-label="Stores (coming soon)">
+        <span class="icon">🏪</span> <span class="label">Stores</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Team (coming soon)">
+        <span class="icon">👥</span> <span class="label">Team</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Settings (coming soon)">
+        <span class="icon">⚙</span> <span class="label">Settings</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Billing (coming soon)">
+        <span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span>
+      </a>
+
+      <div class="nav-label">Resources</div>
+      <a href="#" class="nav-item soon" data-label="Course (coming soon)">
+        <span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span>
+      </a>
+      <a href="/" class="nav-item" data-label="Back to marketing site">
+        <span class="icon">←</span> <span class="label">Marketing site</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="avatar" id="user-avatar">G</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Guest</div>
+        <div class="role" id="user-role">PREVIEW MODE</div>
+      </div>
+      <button class="user-menu" id="user-menu-btn" title="Account">⋯</button>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <div class="main">
+
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-icon" id="menu-btn" title="Menu">☰</button>
+        <div class="crumb">
+          KEMPY <span class="arrow">/</span> <span class="current">Research</span>
+        </div>
+      </div>
+      <div class="actions">
+        <a href="/app/watchlist.html" class="btn ghost sm">⭐ Watchlist (<span id="topbar-wl-count">0</span>)</a>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- HERO SEARCH -->
+      <section class="search-hero">
+        <h1>Find <span class="accent">profitable</span> products.</h1>
+        <p>Search any keyword. The engine pulls Amazon supplier prices, eBay sold prices, fees and shipping — and surfaces the best opportunities first.</p>
+
+        <div class="search-row">
+          <input type="text" id="search-input" class="search-input" placeholder="Try: headphones, USB cable, watch, handbag, webcam..." autocomplete="off" />
+          <button id="search-btn" class="search-go">Search</button>
+        </div>
+
+        <div class="suggestions" id="suggestions">
+          <span class="suggestion" data-q="headphones">headphones</span>
+          <span class="suggestion" data-q="cable">USB cable</span>
+          <span class="suggestion" data-q="watch">vintage watch</span>
+          <span class="suggestion" data-q="handbag">designer handbag</span>
+          <span class="suggestion" data-q="charger">phone charger</span>
+          <span class="suggestion" data-q="webcam">webcam</span>
+          <span class="suggestion" data-q="all">show all</span>
+        </div>
+      </section>
+
+      <!-- FILTER BAR (hidden until results) -->
+      <div class="filter-bar hidden" id="filter-bar">
+        <div class="group">
+          <label>Category</label>
+          <select id="filter-cat"><option value="">All</option></select>
+        </div>
+        <div class="group">
+          <label>Min ROI</label>
+          <select id="filter-roi">
+            <option value="0">Any</option>
+            <option value="10">10%+</option>
+            <option value="20">20%+</option>
+            <option value="30">30%+</option>
+            <option value="50">50%+</option>
+          </select>
+        </div>
+        <div class="group">
+          <label>Sort</label>
+          <select id="filter-sort">
+            <option value="roi-desc">Best ROI</option>
+            <option value="profit-desc">Highest profit</option>
+            <option value="price-asc">Lowest cost</option>
+            <option value="price-desc">Highest cost</option>
+            <option value="name-asc">A–Z</option>
+          </select>
+        </div>
+        <div class="stats" id="filter-stats"></div>
+      </div>
+
+      <!-- RESULTS META (sources, timing) -->
+      <div class="results-meta" id="results-meta" style="display:none;"></div>
+
+      <!-- RESULTS -->
+      <div class="results" id="results">
+        <!-- Empty state by default -->
+        <div class="empty-state">
+          <span class="icon">🔭</span>
+          <h3>Start your search</h3>
+          <p>Type a keyword above or tap a suggestion to see profit opportunities. Results are ranked by ROI by default.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ====================================================================
+// Sidebar / topbar shared behavior
+// ====================================================================
+const menuBtn = document.getElementById('menu-btn');
+const sidebar = document.getElementById('sidebar');
+const isDesktop = () => window.innerWidth > 900;
+
+menuBtn?.addEventListener('click', () => {
+  if (isDesktop()) {
+    const collapsed = document.documentElement.classList.toggle('sb-collapsed');
+    localStorage.setItem('kempy_sidebar_collapsed', collapsed ? '1' : '0');
+  } else {
+    sidebar.classList.toggle('open');
+  }
+});
+document.addEventListener('click', (e) => {
+  if (isDesktop()) return;
+  if (!sidebar.classList.contains('open')) return;
+  if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
+  sidebar.classList.remove('open');
+});
+window.addEventListener('resize', () => {
+  if (isDesktop()) sidebar.classList.remove('open');
+});
+
+// ====================================================================
+// Toast helper
+// ====================================================================
+const toastEl = document.getElementById('toast');
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show ' + type;
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+// ====================================================================
+// User / auth detection
+// ====================================================================
+let currentUser = null;
+async function loadMe() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      if (data.user) {
+        currentUser = data.user;
+        const email = data.user.email || 'You';
+        document.getElementById('user-name').textContent = email;
+        document.getElementById('user-role').textContent = (data.user.role || 'MEMBER').toUpperCase();
+        document.getElementById('user-avatar').textContent = email[0].toUpperCase();
+      }
+    }
+  } catch (_) {}
+}
+
+// ====================================================================
+// Watchlist count badge in topbar (server count + local count)
+// ====================================================================
+const savedAsins = new Set();
+async function loadWatchlist() {
+  let serverCount = 0;
+  try {
+    const r = await fetch('/api/watchlist', { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      serverCount = data.count ?? (data.items?.length ?? 0);
+      (data.items || []).forEach(i => i.asin && savedAsins.add(i.asin));
+    }
+  } catch (_) {}
+  // Local items (preview mode)
+  try {
+    const local = JSON.parse(localStorage.getItem('kempy_watchlist_local') || '[]');
+    document.getElementById('topbar-wl-count').textContent = serverCount + local.length;
+  } catch (_) {
+    document.getElementById('topbar-wl-count').textContent = serverCount;
+  }
+}
+
+// ====================================================================
+// Search + render
+// ====================================================================
+const searchInput = document.getElementById('search-input');
+const searchBtn = document.getElementById('search-btn');
+const resultsEl = document.getElementById('results');
+const filterBar = document.getElementById('filter-bar');
+const filterCat = document.getElementById('filter-cat');
+const filterRoi = document.getElementById('filter-roi');
+const filterSort = document.getElementById('filter-sort');
+const filterStats = document.getElementById('filter-stats');
+const metaEl = document.getElementById('results-meta');
+
+let lastProducts = [];   // raw response — filters operate on this
+let lastMeta = null;
+
+const FEE_RATE = 0.129;
+function fmt$(n) { return '$' + (n == null ? '—' : Number(n).toFixed(2)); }
+function verdictFor(roi) {
+  if (roi >= 50) return { label: 'Premium opportunity', cls: 'excellent' };
+  if (roi >= 30) return { label: 'Excellent — list it', cls: 'excellent' };
+  if (roi >= 20) return { label: 'Good opportunity', cls: 'good' };
+  if (roi >= 10) return { label: 'Marginal — needs volume', cls: 'medium' };
+  return { label: 'Skip — ROI too low', cls: 'poor' };
+}
+function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSkeleton(n = 4) {
+  resultsEl.innerHTML = Array.from({length: n}).map(() => `
+    <div class="skeleton">
+      <div>
+        <div class="sk-bar sk-l1"></div>
+        <div class="sk-bar sk-l2"></div>
+        <div class="sk-bar sk-l3"></div>
+      </div>
+      <div style="text-align:right;">
+        <div class="sk-bar sk-roi"></div>
+        <div class="sk-bar sk-tag"></div>
+        <div class="sk-bar sk-btn"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function applyFiltersAndRender() {
+  let products = lastProducts.slice();
+
+  // Filter by category
+  const cat = filterCat.value;
+  if (cat) products = products.filter(p => p.cat === cat);
+
+  // Filter by min ROI
+  const minRoi = Number(filterRoi.value || 0);
+  if (minRoi > 0) products = products.filter(p => (p.roi || 0) >= minRoi);
+
+  // Sort
+  const sort = filterSort.value;
+  products.sort((a, b) => {
+    switch (sort) {
+      case 'profit-desc': return (b.profit || 0) - (a.profit || 0);
+      case 'price-asc':   return (a.amazonPrice || 0) - (b.amazonPrice || 0);
+      case 'price-desc':  return (b.amazonPrice || 0) - (a.amazonPrice || 0);
+      case 'name-asc':    return String(a.name).localeCompare(String(b.name));
+      case 'roi-desc':
+      default:            return (b.roi || 0) - (a.roi || 0);
+    }
+  });
+
+  // Stats
+  if (products.length) {
+    const avgRoi = products.reduce((s, p) => s + (p.roi || 0), 0) / products.length;
+    const bestProfit = Math.max(...products.map(p => p.profit || 0));
+    filterStats.innerHTML = `
+      <span class="v">${products.length}</span> results
+      · avg ROI <span class="v">${avgRoi.toFixed(1)}%</span>
+      · best profit <span class="pos">${fmt$(bestProfit)}</span>
+    `;
+  } else {
+    filterStats.innerHTML = '<span class="v">0</span> results';
+  }
+
+  // Render cards
+  if (!products.length) {
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <span class="icon">🤷</span>
+        <h3>No matches with these filters</h3>
+        <p>Try widening your filter range, or run a different search.</p>
+      </div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = products.map(p => {
+    const v = verdictFor(p.roi || 0);
+    const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
+    const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">↗</a>` : '';
+    const amazonLink = p.amazonUrl ? `<a href="${escapeHtml(p.amazonUrl)}" target="_blank" rel="noopener">↗</a>` : '';
+    const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
+      ? `<span class="match-badge" title="${escapeHtml(p.matchReasoning || '')}">🤖 ${Math.round(p.matchConfidence * 100)}%</span>`
+      : '';
+    const isSaved = p.asin && savedAsins.has(p.asin);
+    const totalCost = (p.fees || 0) + (p.shipping || 0) + (p.packaging || 0);
+    return `
+      <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
+        <div>
+          <div class="head">
+            <div class="thumb">${p.emoji || '📦'}</div>
+            <div style="min-width:0;">
+              <div class="rc-name">${escapeHtml(p.name)}${matchBadge}</div>
+              <div class="rc-cat">${escapeHtml(p.cat || '')} · ${escapeHtml(p.vol || '?')}/mo · ${escapeHtml(p.comp || '?')} comp · ${escapeHtml(p.trend || '?')}</div>
+            </div>
+          </div>
+          <div class="rc-pricing">
+            <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
+            <div class="item"><div class="l">Amazon ${amazonLink}</div><div class="v">${fmt$(p.amazonPrice)}</div></div>
+            <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
+            <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(p.profit)}</div></div>
+          </div>
+        </div>
+        <div class="rc-verdict">
+          <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
+          <div class="rc-tag ${v.cls}">${v.label}</div>
+          <button class="rc-save ${isSaved ? 'saved' : ''}" data-action="save" ${isSaved ? 'disabled' : ''}>
+            ${isSaved ? 'Saved' : '⭐ Save'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateCategoryFilter(products) {
+  const cats = [...new Set(products.map(p => p.cat).filter(Boolean))].sort();
+  const current = filterCat.value;
+  filterCat.innerHTML = '<option value="">All</option>' +
+    cats.map(c => `<option value="${escapeHtml(c)}"${c === current ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+}
+
+function renderMeta(meta) {
+  if (!meta) { metaEl.style.display = 'none'; return; }
+  const s = meta.sources || {};
+  const cls = (val, want = 'live') => val === want ? 'ok' : 'warn';
+  metaEl.style.display = 'flex';
+  metaEl.innerHTML = `
+    <span class="chip">⏱ ${meta.ms || 0}ms</span>
+    ${meta.cached ? '<span class="chip ok">⚡ cached</span>' : ''}
+    <span class="chip">eBay: <span class="${cls(s.ebay)}">${s.ebay || 'mock'}</span></span>
+    <span class="chip">Amazon: <span class="${cls(s.amazon, 'live')}">${(s.amazon || 'mock')}</span></span>
+    <span class="chip">Matcher: <span class="${cls(s.matcher, 'claude')}">${s.matcher || 'first-result'}</span></span>
+  `;
+}
+
+async function search(q) {
+  q = (q || '').trim();
+  if (!q) {
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <span class="icon">🔭</span>
+        <h3>Start your search</h3>
+        <p>Type a keyword above or tap a suggestion to see profit opportunities.</p>
+      </div>`;
+    filterBar.classList.add('hidden');
+    metaEl.style.display = 'none';
+    return;
+  }
+
+  // Update URL so the search is shareable / refreshable
+  const url = new URL(window.location);
+  url.searchParams.set('q', q);
+  window.history.replaceState({}, '', url);
+
+  searchBtn.disabled = true;
+  searchBtn.textContent = '…';
+  renderSkeleton();
+
+  try {
+    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    const data = await r.json();
+    lastProducts = data.products || [];
+    lastMeta = data.meta || null;
+    populateCategoryFilter(lastProducts);
+    filterBar.classList.toggle('hidden', lastProducts.length === 0);
+    renderMeta(lastMeta);
+    applyFiltersAndRender();
+  } catch (err) {
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <span class="icon">⚠</span>
+        <h3>Search failed</h3>
+        <p>${escapeHtml(err.message)}<br>Make sure the backend is running (<code style="font-family:var(--font-mono);color:var(--cyan);">npm start</code>).</p>
+      </div>`;
+    filterBar.classList.add('hidden');
+    metaEl.style.display = 'none';
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = 'Search';
+  }
+}
+
+// ====================================================================
+// Save handler (delegated)
+//   - If authed: POST /api/watchlist (real backend, currently 501)
+//   - If not authed: store in localStorage so the Watchlist page can read it
+// ====================================================================
+const LS_KEY = 'kempy_watchlist_local';
+function loadLocal() {
+  try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : []; }
+  catch (_) { return []; }
+}
+function saveLocal(items) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch (_) {}
+}
+
+// Seed savedAsins from localStorage too, so the Save button knows what's already saved
+loadLocal().forEach(i => i.asin && savedAsins.add(i.asin));
+
+resultsEl.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action="save"]');
+  if (!btn) return;
+  const card = btn.closest('.research-card');
+  const product = JSON.parse(card.dataset.product.replace(/&#39;/g, "'").replace(/&quot;/g, '"'));
+
+  // Already saved? (button is also disabled, but belt and braces)
+  if (product.asin && savedAsins.has(product.asin)) return;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    if (currentUser) {
+      // Authed path — hits real API
+      const r = await fetch('/api/watchlist', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `Save failed (${r.status})`);
+      }
+    } else {
+      // Preview path — localStorage
+      const items = loadLocal();
+      const id = product.asin || ('local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+      items.push({
+        ...product,
+        id,
+        addedAt: new Date().toISOString(),
+        savedEbayPrice: product.ebayPrice,
+        savedAmazonPrice: product.amazonPrice,
+      });
+      saveLocal(items);
+    }
+
+    btn.classList.add('saved');
+    btn.textContent = 'Saved';
+    if (product.asin) savedAsins.add(product.asin);
+    document.getElementById('topbar-wl-count').textContent = loadLocal().length;
+    showToast(`Saved “${(product.name || '').slice(0, 40)}…” to watchlist`, 'success');
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '⭐ Save';
+    showToast(err.message, 'error');
+  }
+});
+
+// ====================================================================
+// Wire up search controls
+// ====================================================================
+searchBtn.addEventListener('click', () => search(searchInput.value));
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(searchInput.value); });
+document.querySelectorAll('.suggestion').forEach(s => {
+  s.addEventListener('click', () => {
+    const q = s.dataset.q;
+    searchInput.value = q === 'all' ? '' : q;
+    search(q);
+  });
+});
+[filterCat, filterRoi, filterSort].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+
+// ====================================================================
+// On load: read ?q= from URL and search automatically
+// ====================================================================
+(async function init() {
+  await loadMe();
+  await loadWatchlist();
+  const urlQ = new URL(window.location).searchParams.get('q');
+  if (urlQ) {
+    searchInput.value = urlQ === 'all' ? '' : urlQ;
+    search(urlQ);
+  }
+})();
+</script>
+
+</body>
+</html>

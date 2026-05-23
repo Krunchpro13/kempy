@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Watchlist — KEMPY</title>
+<script>
+  if (window.innerWidth > 900 && localStorage.getItem('kempy_sidebar_collapsed') === '1') {
+    document.documentElement.classList.add('sb-collapsed');
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------- Design tokens ---------- */
+:root {
+  --bg: #050708;
+  --bg-2: #0a0d10;
+  --surface: #0e1316;
+  --surface-2: #131a1e;
+  --surface-3: #182025;
+  --border: #1a2329;
+  --border-cyan: #1e3a44;
+  --cyan: #00e5ff;
+  --cyan-glow: #00e5ff40;
+  --cyan-dim: #4ad4e4;
+  --green: #00ff9d;
+  --green-dim: #00cc7a;
+  --amber: #ffb800;
+  --red: #ff4d6d;
+  --text: #e6f1f5;
+  --text-dim: #8a9ba3;
+  --text-muted: #5a6970;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Archivo Black', sans-serif;
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 68px;
+  --topbar-h: 64px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgba(0,229,255,0.05), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 100% 100%, rgba(0,255,157,0.03), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.012'/></svg>");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- App layout (shared) ---------- */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+  transition: grid-template-columns 0.25s ease;
+}
+html.sb-collapsed .app { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+html.sb-collapsed .brand-text,
+html.sb-collapsed .nav-label,
+html.sb-collapsed .nav-item .label,
+html.sb-collapsed .nav-item .pill,
+html.sb-collapsed .user-info,
+html.sb-collapsed .user-menu { display: none; }
+html.sb-collapsed .nav-item { justify-content: center; padding: 11px 0; gap: 0; }
+html.sb-collapsed .brand { justify-content: center; padding: 18px 0; gap: 0; }
+html.sb-collapsed .sidebar-footer { justify-content: center; padding: 14px 8px; }
+html.sb-collapsed .nav { padding: 14px 8px; }
+html.sb-collapsed .nav-item { position: relative; }
+html.sb-collapsed .nav-item:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--border-cyan);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* ---------- Sidebar (shared) ---------- */
+.sidebar {
+  background: rgba(10,13,16,0.72);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.brand {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: -1px;
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.brand::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--green); }
+  50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); }
+}
+.nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 1px; overflow-y: auto; }
+.nav::-webkit-scrollbar { width: 4px; }
+.nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.nav-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  padding: 14px 12px 6px;
+}
+.nav-label:first-child { padding-top: 4px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active {
+  background: rgba(0,229,255,0.08);
+  color: var(--cyan);
+  border-color: var(--border-cyan);
+  box-shadow: inset 0 0 20px rgba(0,229,255,0.04);
+}
+.nav-item.soon { opacity: 0.55; }
+.nav-item.soon:hover { opacity: 0.85; }
+.nav-item .icon { width: 18px; display: inline-flex; justify-content: center; flex-shrink: 0; opacity: 0.95; }
+.nav-item .pill {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.sidebar-footer {
+  padding: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--bg);
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-info .name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-info .role { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.user-menu { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 6px; border-radius: 6px; line-height: 1; transition: all 0.15s; }
+.user-menu:hover { background: var(--surface); color: var(--text); }
+
+/* ---------- Main (shared) ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+  height: var(--topbar-h);
+  padding: 0 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,7,8,0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar .crumb { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
+.topbar .crumb .arrow { margin: 0 8px; opacity: 0.5; }
+.topbar .crumb .current { color: var(--cyan); }
+.topbar .actions { display: flex; gap: 10px; align-items: center; }
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.btn-icon:hover { border-color: var(--border-cyan); color: var(--cyan); }
+.content { padding: 32px; flex: 1; max-width: 1400px; width: 100%; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--cyan);
+  color: var(--bg);
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+  font-family: var(--font-sans);
+}
+.btn:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.btn.ghost { background: transparent; color: var(--cyan); border: 1px solid var(--border-cyan); }
+.btn.ghost:hover { background: rgba(0,229,255,0.06); box-shadow: none; }
+.btn.sm { padding: 7px 12px; font-size: 12px; }
+.btn.danger { background: transparent; color: var(--red); border: 1px solid rgba(255,77,109,0.3); }
+.btn.danger:hover { background: rgba(255,77,109,0.08); box-shadow: none; }
+
+/* ---------- PAGE-SPECIFIC: Watchlist ---------- */
+
+/* Header row */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: -1.2px;
+  margin-bottom: 4px;
+}
+.page-header h1 .accent { color: var(--cyan); }
+.page-header p { color: var(--text-dim); font-size: 14px; }
+.page-header .toolbar { display: flex; gap: 10px; }
+
+/* Local-mode banner */
+.local-banner {
+  background: linear-gradient(135deg, rgba(255,184,0,0.06), rgba(0,229,255,0.03));
+  border: 1px solid rgba(255,184,0,0.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.local-banner .badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--amber);
+  background: rgba(255,184,0,0.1);
+  padding: 5px 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,184,0,0.25);
+  flex-shrink: 0;
+}
+.local-banner .body { flex: 1; }
+.local-banner h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.local-banner p { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
+.local-banner.hidden { display: none; }
+
+/* Stats strip */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+.stat .label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.stat .value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.stat .value.cyan { color: var(--cyan); }
+.stat .value.green { color: var(--green); }
+.stat .value.muted { color: var(--text-muted); }
+
+/* Sort + count row above grid */
+.list-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.list-controls .count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.list-controls .count .v { color: var(--text); }
+.list-controls .group { display: flex; align-items: center; gap: 8px; }
+.list-controls label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+.list-controls select {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.list-controls select:hover { border-color: var(--border-cyan); }
+
+/* Watchlist grid (single column cards) */
+.wl-list { display: grid; gap: 12px; }
+
+.wl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+  transition: border-color 0.15s, background 0.15s, opacity 0.2s, transform 0.2s;
+}
+.wl-card:hover { border-color: var(--border-cyan); background: var(--surface-2); }
+.wl-card.removing { opacity: 0; transform: translateX(-12px); }
+.wl-card.excellent { border-color: rgba(0,255,157,0.3); box-shadow: inset 0 0 24px rgba(0,255,157,0.04); }
+@media (max-width: 720px) { .wl-card { grid-template-columns: 1fr; } }
+
+.wl-card .head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.wl-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.wl-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 2px; line-height: 1.3; }
+.wl-meta { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.3px; }
+.wl-meta .sep { margin: 0 6px; opacity: 0.5; }
+
+.wl-pricing {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+@media (max-width: 720px) { .wl-pricing { grid-template-columns: repeat(2, 1fr); } }
+.wl-pricing .item .l { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.wl-pricing .item .v { color: var(--text); font-weight: 600; font-size: 13px; }
+.wl-pricing .item .v.pos { color: var(--green); }
+.wl-pricing .item .v.neg { color: var(--red); }
+.wl-pricing .item .drift {
+  font-size: 10px;
+  margin-top: 2px;
+}
+.wl-pricing .item .drift.up { color: var(--green); }
+.wl-pricing .item .drift.down { color: var(--red); }
+
+.wl-side {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+@media (max-width: 720px) { .wl-side { text-align: left; align-items: flex-start; } }
+.wl-roi {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+.wl-roi.excellent { color: var(--green); text-shadow: 0 0 18px rgba(0,255,157,0.4); }
+.wl-roi.good { color: var(--cyan); }
+.wl-roi.medium { color: var(--amber); }
+.wl-roi.poor { color: var(--red); }
+
+.wl-remove {
+  background: transparent;
+  border: 1px solid rgba(255,77,109,0.3);
+  color: var(--red);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.wl-remove:hover { background: rgba(255,77,109,0.08); border-color: var(--red); }
+
+/* Empty / error state */
+.empty-state {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 70px 24px;
+  text-align: center;
+}
+.empty-state .icon { font-size: 52px; opacity: 0.4; margin-bottom: 14px; display: block; }
+.empty-state h3 { font-size: 18px; margin-bottom: 6px; font-weight: 600; }
+.empty-state p { color: var(--text-dim); font-size: 14px; max-width: 460px; margin: 0 auto 18px; }
+
+/* Skeleton */
+.skeleton {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+}
+.sk-bar { background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: 4px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-l1 { height: 16px; width: 60%; margin-bottom: 8px; }
+.sk-l2 { height: 12px; width: 40%; margin-bottom: 14px; }
+.sk-l3 { height: 32px; width: 100%; }
+.sk-roi { height: 40px; width: 80px; margin-bottom: 6px; }
+.sk-tag { height: 16px; width: 100px; margin-bottom: 6px; }
+.sk-btn { height: 26px; width: 70px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--surface-2);
+  border: 1px solid var(--border-cyan);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { border-color: var(--red); }
+.toast.success { border-color: var(--green); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; left: -100%; top: 0; width: 280px; z-index: 100; transition: left 0.28s ease; }
+  .sidebar.open { left: 0; }
+  .sidebar.open + .main::before { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
+  .content { padding: 20px; }
+  .topbar { padding: 0 16px; }
+  .page-header h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============== SIDEBAR ============== -->
+  <aside class="sidebar" id="sidebar">
+    <a href="/" class="brand"><span class="brand-text">KEMPY</span></a>
+
+    <nav class="nav">
+      <div class="nav-label">Workspace</div>
+      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard">
+        <span class="icon">▣</span> <span class="label">Dashboard</span>
+      </a>
+      <a href="/app/research.html" class="nav-item" data-label="Research">
+        <span class="icon">🔍</span> <span class="label">Research</span>
+      </a>
+      <a href="/app/watchlist.html" class="nav-item active" data-label="Watchlist">
+        <span class="icon">⭐</span> <span class="label">Watchlist</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Listings (coming soon)">
+        <span class="icon">📋</span> <span class="label">Listings</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Orders (coming soon)">
+        <span class="icon">📦</span> <span class="label">Orders</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Profit (coming soon)">
+        <span class="icon">📈</span> <span class="label">Profit</span> <span class="pill">soon</span>
+      </a>
+
+      <div class="nav-label">Account</div>
+      <a href="#" class="nav-item soon" data-label="Stores (coming soon)">
+        <span class="icon">🏪</span> <span class="label">Stores</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Team (coming soon)">
+        <span class="icon">👥</span> <span class="label">Team</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Settings (coming soon)">
+        <span class="icon">⚙</span> <span class="label">Settings</span> <span class="pill">soon</span>
+      </a>
+      <a href="#" class="nav-item soon" data-label="Billing (coming soon)">
+        <span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span>
+      </a>
+
+      <div class="nav-label">Resources</div>
+      <a href="#" class="nav-item soon" data-label="Course (coming soon)">
+        <span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span>
+      </a>
+      <a href="/" class="nav-item" data-label="Back to marketing site">
+        <span class="icon">←</span> <span class="label">Marketing site</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="avatar" id="user-avatar">G</div>
+      <div class="user-info">
+        <div class="name" id="user-name">Guest</div>
+        <div class="role" id="user-role">PREVIEW MODE</div>
+      </div>
+      <button class="user-menu" id="user-menu-btn" title="Account">⋯</button>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <div class="main">
+
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-icon" id="menu-btn" title="Menu">☰</button>
+        <div class="crumb">
+          KEMPY <span class="arrow">/</span> <span class="current">Watchlist</span>
+        </div>
+      </div>
+      <div class="actions">
+        <a href="/app/research.html" class="btn sm">+ Add product</a>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Header row -->
+      <div class="page-header">
+        <div>
+          <h1>Your <span class="accent">watchlist</span></h1>
+          <p>Saved opportunities. Track price drift and snap them up when margins are right.</p>
+        </div>
+        <div class="toolbar">
+          <button class="btn ghost sm" id="refresh-btn" title="Re-fetch latest prices">↻ Refresh prices</button>
+          <button class="btn danger sm" id="clear-btn">🗑 Clear all</button>
+        </div>
+      </div>
+
+      <!-- Local-mode banner (shown when items are stored only in localStorage) -->
+      <div class="local-banner hidden" id="local-banner">
+        <span class="badge">Local only</span>
+        <div class="body">
+          <h4>Your watchlist is saved in this browser</h4>
+          <p>Sign in to sync across devices and keep your saved items if you clear browser data. Until accounts are wired up, everything lives in <code style="font-family:var(--font-mono);color:var(--cyan);">localStorage</code>.</p>
+        </div>
+      </div>
+
+      <!-- Stats strip -->
+      <section class="stats-strip" id="stats-strip" style="display:none;">
+        <div class="stat">
+          <div class="label">Items saved</div>
+          <div class="value cyan" id="stat-count">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total potential profit</div>
+          <div class="value green" id="stat-profit">$0.00</div>
+        </div>
+        <div class="stat">
+          <div class="label">Avg ROI</div>
+          <div class="value" id="stat-roi">0%</div>
+        </div>
+        <div class="stat">
+          <div class="label">Best opportunity</div>
+          <div class="value muted" id="stat-best">—</div>
+        </div>
+      </section>
+
+      <!-- Sort + count row -->
+      <div class="list-controls" id="list-controls" style="display:none;">
+        <div class="count"><span class="v" id="visible-count">0</span> items</div>
+        <div class="group">
+          <label>Sort</label>
+          <select id="sort-select">
+            <option value="added-desc">Recently added</option>
+            <option value="added-asc">Oldest first</option>
+            <option value="roi-desc">Best ROI</option>
+            <option value="profit-desc">Highest profit</option>
+            <option value="name-asc">A–Z</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="wl-list" id="wl-list"></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ====================================================================
+// Sidebar / topbar shared behavior
+// ====================================================================
+const menuBtn = document.getElementById('menu-btn');
+const sidebar = document.getElementById('sidebar');
+const isDesktop = () => window.innerWidth > 900;
+menuBtn?.addEventListener('click', () => {
+  if (isDesktop()) {
+    const collapsed = document.documentElement.classList.toggle('sb-collapsed');
+    localStorage.setItem('kempy_sidebar_collapsed', collapsed ? '1' : '0');
+  } else {
+    sidebar.classList.toggle('open');
+  }
+});
+document.addEventListener('click', (e) => {
+  if (isDesktop()) return;
+  if (!sidebar.classList.contains('open')) return;
+  if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
+  sidebar.classList.remove('open');
+});
+window.addEventListener('resize', () => { if (isDesktop()) sidebar.classList.remove('open'); });
+
+// ====================================================================
+// Toast
+// ====================================================================
+const toastEl = document.getElementById('toast');
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show ' + type;
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+// ====================================================================
+// Local watchlist storage
+//   Items are keyed by ASIN where available, otherwise by name.
+//   Shape: { id, addedAt, savedEbayPrice, savedAmazonPrice, ...product }
+// ====================================================================
+const LS_KEY = 'kempy_watchlist_local';
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) { return []; }
+}
+function saveLocal(items) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch (_) {}
+}
+
+// ====================================================================
+// User detection
+// ====================================================================
+let currentUser = null;
+async function loadMe() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      if (data.user) {
+        currentUser = data.user;
+        const email = data.user.email || 'You';
+        document.getElementById('user-name').textContent = email;
+        document.getElementById('user-role').textContent = (data.user.role || 'MEMBER').toUpperCase();
+        document.getElementById('user-avatar').textContent = email[0].toUpperCase();
+      }
+    }
+  } catch (_) {}
+}
+
+// ====================================================================
+// Render
+// ====================================================================
+const listEl = document.getElementById('wl-list');
+const statsEl = document.getElementById('stats-strip');
+const controlsEl = document.getElementById('list-controls');
+const localBanner = document.getElementById('local-banner');
+const refreshBtn = document.getElementById('refresh-btn');
+const clearBtn = document.getElementById('clear-btn');
+const sortSelect = document.getElementById('sort-select');
+
+function fmt$(n) { return '$' + (n == null ? '—' : Number(n).toFixed(2)); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function timeAgo(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return min + 'm ago';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + 'h ago';
+  const day = Math.floor(hr / 24);
+  if (day < 30) return day + 'd ago';
+  const mo = Math.floor(day / 30);
+  return mo + 'mo ago';
+}
+function roiClass(roi) {
+  if (roi >= 30) return 'excellent';
+  if (roi >= 20) return 'good';
+  if (roi >= 10) return 'medium';
+  return 'poor';
+}
+
+function renderEmpty() {
+  listEl.innerHTML = `
+    <div class="empty-state">
+      <span class="icon">⭐</span>
+      <h3>No saved items yet</h3>
+      <p>Find products on the Research page and tap Save to track them here. Prices, profit, and ROI all stay current.</p>
+      <a href="/app/research.html" class="btn">Go to Research →</a>
+    </div>`;
+  statsEl.style.display = 'none';
+  controlsEl.style.display = 'none';
+  localBanner.classList.add('hidden');
+}
+
+function renderStats(items) {
+  if (!items.length) { statsEl.style.display = 'none'; return; }
+  statsEl.style.display = 'grid';
+  const totalProfit = items.reduce((s, i) => s + (i.profit || 0), 0);
+  const avgRoi = items.reduce((s, i) => s + (i.roi || 0), 0) / items.length;
+  const best = items.reduce((b, i) => (i.roi || 0) > (b?.roi || 0) ? i : b, null);
+  document.getElementById('stat-count').textContent = items.length;
+  document.getElementById('stat-profit').textContent = fmt$(totalProfit);
+  document.getElementById('stat-roi').textContent = avgRoi.toFixed(1) + '%';
+  const bestEl = document.getElementById('stat-best');
+  if (best) {
+    bestEl.textContent = (best.name || '').slice(0, 22) + (best.name.length > 22 ? '…' : '');
+    bestEl.style.color = 'var(--cyan)';
+    bestEl.style.fontSize = '15px';
+    bestEl.title = best.name + ' · ' + (best.roi || 0).toFixed(1) + '%';
+  }
+}
+
+function sortItems(items) {
+  const arr = items.slice();
+  switch (sortSelect.value) {
+    case 'added-asc': return arr.sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt));
+    case 'roi-desc': return arr.sort((a, b) => (b.roi || 0) - (a.roi || 0));
+    case 'profit-desc': return arr.sort((a, b) => (b.profit || 0) - (a.profit || 0));
+    case 'name-asc': return arr.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    case 'added-desc':
+    default: return arr.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+  }
+}
+
+function renderCard(item) {
+  const v = roiClass(item.roi || 0);
+  const cardCls = (item.roi || 0) >= 30 ? 'excellent' : '';
+  const drift = (saved, current) => {
+    if (saved == null || current == null || saved === current) return '';
+    const diff = current - saved;
+    const pct = ((diff / saved) * 100).toFixed(1);
+    const dir = diff > 0 ? 'up' : 'down';
+    const sign = diff > 0 ? '+' : '';
+    return `<div class="drift ${dir}">${sign}${pct}% vs saved</div>`;
+  };
+  return `
+    <div class="wl-card ${cardCls}" data-id="${escapeHtml(item.id)}">
+      <div>
+        <div class="head">
+          <div class="wl-thumb">${item.emoji || '📦'}</div>
+          <div style="min-width:0;">
+            <div class="wl-name">${escapeHtml(item.name)}</div>
+            <div class="wl-meta">
+              ${escapeHtml(item.cat || '')}
+              <span class="sep">·</span> added ${timeAgo(item.addedAt)}
+              ${item.asin ? `<span class="sep">·</span> ${escapeHtml(item.asin)}` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="wl-pricing">
+          <div class="item">
+            <div class="l">eBay</div>
+            <div class="v">${fmt$(item.ebayPrice)}</div>
+            ${drift(item.savedEbayPrice, item.ebayPrice)}
+          </div>
+          <div class="item">
+            <div class="l">Amazon</div>
+            <div class="v">${fmt$(item.amazonPrice)}</div>
+            ${drift(item.savedAmazonPrice, item.amazonPrice)}
+          </div>
+          <div class="item">
+            <div class="l">Fees+Ship</div>
+            <div class="v neg">−${fmt$((item.fees || 0) + (item.shipping || 0) + (item.packaging || 0))}</div>
+          </div>
+          <div class="item">
+            <div class="l">Profit</div>
+            <div class="v pos">${fmt$(item.profit)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="wl-side">
+        <div class="wl-roi ${v}">${item.roi != null ? item.roi.toFixed(1) + '%' : '—'}</div>
+        ${item.ebayUrl ? `<a href="${escapeHtml(item.ebayUrl)}" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;letter-spacing:0.5px;">↗ View on eBay</a>` : ''}
+        <button class="wl-remove" data-action="remove">🗑 Remove</button>
+      </div>
+    </div>`;
+}
+
+function render() {
+  const items = loadLocal();
+  if (!items.length) { renderEmpty(); return; }
+  localBanner.classList.toggle('hidden', !!currentUser);
+  controlsEl.style.display = 'flex';
+  document.getElementById('visible-count').textContent = items.length;
+  renderStats(items);
+  const sorted = sortItems(items);
+  listEl.innerHTML = sorted.map(renderCard).join('');
+}
+
+// ====================================================================
+// Remove + clear + refresh
+// ====================================================================
+listEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="remove"]');
+  if (!btn) return;
+  const card = btn.closest('.wl-card');
+  const id = card.dataset.id;
+  const items = loadLocal().filter(i => i.id !== id);
+  saveLocal(items);
+  card.classList.add('removing');
+  setTimeout(() => { render(); showToast('Removed from watchlist', 'success'); }, 200);
+});
+
+clearBtn.addEventListener('click', () => {
+  const items = loadLocal();
+  if (!items.length) return;
+  if (!confirm(`Remove all ${items.length} items from your watchlist?`)) return;
+  saveLocal([]);
+  render();
+  showToast('Watchlist cleared', 'success');
+});
+
+refreshBtn.addEventListener('click', async () => {
+  const items = loadLocal();
+  if (!items.length) {
+    showToast('Nothing to refresh', 'error');
+    return;
+  }
+  refreshBtn.disabled = true;
+  refreshBtn.textContent = '↻ Refreshing…';
+  let updated = 0;
+  // Strategy: re-search by name keyword and match by asin.
+  // With mock data the prices don't change, but the mechanism is in place
+  // for when real APIs are wired up.
+  for (const item of items) {
+    try {
+      const q = (item.name || '').split(/\s+/).slice(0, 2).join(' ');
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      if (!r.ok) continue;
+      const data = await r.json();
+      const match = (data.products || []).find(p => p.asin && p.asin === item.asin);
+      if (!match) continue;
+      Object.assign(item, {
+        ebayPrice: match.ebayPrice,
+        amazonPrice: match.amazonPrice,
+        fees: match.fees,
+        shipping: match.shipping,
+        packaging: match.packaging,
+        profit: match.profit,
+        roi: match.roi,
+        ebayUrl: match.ebayUrl || item.ebayUrl,
+        amazonUrl: match.amazonUrl || item.amazonUrl,
+      });
+      updated++;
+    } catch (_) {}
+  }
+  saveLocal(items);
+  refreshBtn.disabled = false;
+  refreshBtn.textContent = '↻ Refresh prices';
+  render();
+  showToast(`Refreshed ${updated} of ${items.length}`, updated ? 'success' : 'error');
+});
+
+sortSelect.addEventListener('change', render);
+
+// ====================================================================
+// Init
+// ====================================================================
+(async function init() {
+  await loadMe();
+  render();
+})();
+</script>
+
+</body>
+</html>
