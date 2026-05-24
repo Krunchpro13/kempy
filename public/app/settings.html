@@ -381,6 +381,561 @@ html.sb-collapsed .nav-item:hover::after {
 }
 .btn.sm { padding: 7px 12px; font-size: 12px; }
 
+/* ---------- Settings ---------- */
+.settings-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.2fr) minmax(240px, 0.8fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.settings-title h1 {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.settings-title p {
+  color: var(--text-dim);
+  font-size: 14px;
+  max-width: 640px;
+}
+.flow-card {
+  background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(0,255,157,0.04));
+  border: 1px solid var(--border-cyan);
+  border-radius: 14px;
+  padding: 16px;
+}
+.flow-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.flow-steps {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  counter-reset: flow;
+}
+.flow-steps li {
+  counter-increment: flow;
+  position: relative;
+  padding: 10px 12px 10px 40px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.flow-steps li::before {
+  content: counter(flow);
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(14,19,22,0.7);
+  border: 1px solid var(--border);
+  padding: 8px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.tab-btn:hover {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+.tab-btn.active {
+  color: var(--cyan);
+  background: rgba(0,229,255,0.08);
+  border-color: var(--border-cyan);
+  box-shadow: inset 0 0 18px rgba(0,229,255,0.08);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: panelIn 0.25s ease; }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-head { margin-bottom: 14px; }
+.section-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.section-head p {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+.panel.wide { grid-column: 1 / -1; }
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.panel-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.panel-header p {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.field label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+input, select, textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--border-cyan);
+  box-shadow: 0 0 0 2px rgba(0,229,255,0.08);
+}
+input[readonly] {
+  color: var(--text-dim);
+  background: rgba(19,26,30,0.6);
+}
+textarea { resize: vertical; min-height: 110px; }
+.helper { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.input-group { position: relative; }
+.input-group input { padding-right: 44px; }
+.input-group.prefix input { padding-left: 26px; padding-right: 12px; }
+.input-suffix, .input-prefix {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.input-suffix { right: 12px; }
+.input-prefix { left: 10px; }
+
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+.seg { position: relative; }
+.seg input { position: absolute; opacity: 0; }
+.seg span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.seg input:checked + span {
+  background: rgba(0,229,255,0.12);
+  color: var(--cyan);
+  border: 1px solid var(--border-cyan);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.toggle-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.switch {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+.slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 2px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all 0.2s ease;
+}
+.switch input:checked + .slider {
+  background: rgba(0,229,255,0.15);
+  border-color: var(--border-cyan);
+}
+.switch input:checked + .slider::before {
+  transform: translateX(22px);
+  background: var(--cyan);
+}
+
+.badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+.badge.success {
+  color: var(--green);
+  border-color: rgba(0,255,157,0.3);
+  background: rgba(0,255,157,0.08);
+}
+.badge.warn {
+  color: var(--amber);
+  border-color: rgba(255,184,0,0.35);
+  background: rgba(255,184,0,0.08);
+}
+
+.sync-row { display: flex; gap: 10px; align-items: center; }
+
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.store-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.store-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.store-name { font-weight: 600; }
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(0,255,157,0.4);
+}
+.status.issue::before {
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(255,77,109,0.35);
+}
+.store-meta { font-size: 12px; color: var(--text-dim); }
+.store-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.radio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.store-buttons { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+.check input { accent-color: var(--cyan); }
+.check.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.check-grid { display: grid; gap: 10px; }
+
+.preview-card {
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.preview-row strong { font-weight: 600; }
+.preview-row span { color: var(--text-dim); }
+
+.history-list { display: grid; gap: 10px; margin-top: 8px; }
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.history-item span { color: var(--text-dim); }
+
+.danger-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.usage { display: grid; gap: 8px; }
+.usage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.usage-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.usage-bar span {
+  display: block;
+  height: 100%;
+  width: 72%;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+}
+
+.payment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.payment-brand { font-weight: 600; }
+.payment-meta { font-size: 12px; color: var(--text-muted); }
+
+.note {
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-cyan);
+  color: var(--text);
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 200;
+  font-size: 13px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 150;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  width: min(520px, 96vw);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+.modal.warning { border-color: rgba(255,77,109,0.45); }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.modal-header h3 { font-size: 16px; }
+.modal-body { display: grid; gap: 10px; }
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover { border-color: var(--border-cyan); color: var(--cyan); }
+
+.btn.danger {
+  background: var(--red);
+  color: #0b0f12;
+}
+.btn.danger:hover {
+  background: #ff6b85;
+  box-shadow: 0 0 18px rgba(255,77,109,0.35);
+}
+
+.pulse {
+  position: relative;
+}
+.pulse::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,229,255,0.5);
+  opacity: 0;
+  animation: pulseRing 1.8s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes pulseRing {
+  0% { opacity: 0.8; transform: scale(0.96); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
@@ -402,6 +957,10 @@ html.sb-collapsed .nav-item:hover::after {
   }
   .content { padding: 20px; }
   .topbar { padding: 0 16px; }
+  .settings-hero { grid-template-columns: 1fr; }
+  .panel-header { flex-direction: column; align-items: flex-start; }
+  .sync-row { flex-direction: column; align-items: stretch; }
+  .tab-btn { flex: 1 1 140px; text-align: center; }
 }
 </style>
 </head>
@@ -491,18 +1050,605 @@ html.sb-collapsed .nav-item:hover::after {
       </div>
     </header>
 
-    <div class="content">
-      <div class="empty">
-        <div class="icon">⚙</div>
-        <p>Manage your KEMPY account settings and preferences.</p>
-        <a href="#" class="btn ghost sm">Save changes</a>
+    <div class="content" data-endpoint="/api/settings">
+      <section class="settings-hero">
+        <div class="settings-title">
+          <h1>Settings control room</h1>
+          <p>Connect your store, tune pricing rules, and lock in safety so every listing follows your rules.</p>
+        </div>
+        <div class="flow-card">
+          <div class="flow-title">Simple user journey</div>
+          <ol class="flow-steps">
+            <li>Connect your eBay store</li>
+            <li>Set markup and Safety Shield</li>
+            <li>Update account details</li>
+            <li>Return to Research and start listing</li>
+          </ol>
+        </div>
+      </section>
+
+      <div class="tabs" role="tablist" aria-label="Settings sections">
+        <button class="tab-btn active" id="tab-btn-stores" data-tab="stores" role="tab" aria-selected="true" aria-controls="tab-stores" tabindex="0">My Stores</button>
+        <button class="tab-btn" id="tab-btn-pricing" data-tab="pricing" role="tab" aria-selected="false" aria-controls="tab-pricing" tabindex="-1">Pricing Rules</button>
+        <button class="tab-btn" id="tab-btn-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="tab-ai" tabindex="-1">AI Listing Preferences</button>
+        <button class="tab-btn" id="tab-btn-safety" data-tab="safety" role="tab" aria-selected="false" aria-controls="tab-safety" tabindex="-1">Safety Shield</button>
+        <button class="tab-btn" id="tab-btn-automation" data-tab="automation" role="tab" aria-selected="false" aria-controls="tab-automation" tabindex="-1">Automation &amp; Monitoring</button>
+        <button class="tab-btn" id="tab-btn-account" data-tab="account" role="tab" aria-selected="false" aria-controls="tab-account" tabindex="-1">My Account</button>
+        <button class="tab-btn" id="tab-btn-billing" data-tab="billing" role="tab" aria-selected="false" aria-controls="tab-billing" tabindex="-1">Billing</button>
       </div>
-        <p>No orders to fulfill. When you make a sale, it will show up here.</p>
-        <a href="#" class="btn ghost sm">Connect store (soon)</a>
+
+      <div class="tab-panels">
+        <section id="tab-stores" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-stores">
+          <div class="section-head">
+            <h2>My Stores</h2>
+            <p>View and manage your connected eBay stores for new listings.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Extension sync token</h3>
+                  <p>Paste this token into the Chrome extension to link automation.</p>
+                </div>
+                <span class="badge success">Active</span>
+              </div>
+              <div class="sync-row">
+                <input id="sync-token" type="text" value="KEMPY-7HF2-9C1A" readonly />
+                <button class="btn ghost sm" id="copy-token">Copy</button>
+              </div>
+              <div class="helper">Keep this token private. It links your browser automation to KEMPY.</div>
+            </div>
+
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <h3>Connected eBay stores</h3>
+                  <p>Select your default store and manage connections.</p>
+                </div>
+                <div class="panel-actions">
+                  <button class="btn sm" data-open-modal="add-store">+ Connect New eBay Store</button>
+                </div>
+              </div>
+              <div class="empty" id="store-empty" hidden>
+                <div class="icon">S</div>
+                <p>Connect your first store to unlock listing automation.</p>
+                <button class="btn" data-open-modal="add-store">+ Connect New eBay Store</button>
+              </div>
+              <div class="store-grid" id="store-grid" data-has-stores="true">
+                <div class="store-card">
+                  <div class="store-top">
+                    <div class="store-name">BaySide Deals</div>
+                    <span class="badge success">Connected</span>
+                  </div>
+                  <div class="store-meta">Default listing destination - Sync key: EXT-4AF9</div>
+                  <div class="store-actions">
+                    <label class="radio-chip">
+                      <input type="radio" name="default-store" checked />
+                      Default store
+                    </label>
+                    <div class="store-buttons">
+                      <button class="btn ghost sm">Disconnect</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="store-card">
+                  <div class="store-top">
+                    <div class="store-name">Night Owl Outlet</div>
+                    <span class="badge warn">Reconnect needed</span>
+                  </div>
+                  <div class="store-meta">Last sync 5 days ago - Sync key: EXT-9B12</div>
+                  <div class="store-actions">
+                    <label class="radio-chip">
+                      <input type="radio" name="default-store" />
+                      Default store
+                    </label>
+                    <div class="store-buttons">
+                      <button class="btn sm">Reconnect</button>
+                      <button class="btn ghost sm">Disconnect</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-pricing" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-pricing">
+          <div class="section-head">
+            <h2>Pricing Rules</h2>
+            <p>Set your markup, ads rate, and fees buffer with a live preview.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Markup rules</h3>
+                  <p>Add profit as a percentage or fixed amount.</p>
+                </div>
+                <div class="panel-actions">
+                  <button class="btn sm" id="save-markup-btn">Save pricing</button>
+                </div>
+              </div>
+              <div class="segmented" role="radiogroup" aria-label="Markup type">
+                <label class="seg">
+                  <input type="radio" name="markup-mode" value="percent" checked />
+                  <span>Percent</span>
+                </label>
+                <label class="seg">
+                  <input type="radio" name="markup-mode" value="fixed" />
+                  <span>Fixed</span>
+                </label>
+              </div>
+              <div class="field" data-markup-field="percent">
+                <label for="markup-percent">Markup percentage</label>
+                <div class="input-group">
+                  <input id="markup-percent" type="number" min="0" step="0.1" value="20" />
+                  <span class="input-suffix">%</span>
+                </div>
+              </div>
+              <div class="field" data-markup-field="fixed" hidden>
+                <label for="markup-fixed">Fixed markup</label>
+                <div class="input-group prefix">
+                  <span class="input-prefix">$</span>
+                  <input id="markup-fixed" type="number" min="0" step="0.01" value="5" />
+                </div>
+              </div>
+              <div class="helper">Markup applies to all new eBay listings.</div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Ads &amp; fees buffer</h3>
+                  <p>Set promoted listings and optional fee cushion.</p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="promoted-rate">Default promoted listings</label>
+                <div class="input-group">
+                  <input id="promoted-rate" type="number" min="0" step="0.1" value="4" />
+                  <span class="input-suffix">%</span>
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Fees buffer</div>
+                  <div class="helper">Automatically adds a cushion for eBay fees.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="fees-buffer" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="field">
+                <label for="fees-buffer-amount">Fees buffer amount</label>
+                <div class="input-group prefix">
+                  <span class="input-prefix">$</span>
+                  <input id="fees-buffer-amount" type="number" min="0" step="0.01" value="1.50" />
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Live preview</h3>
+                  <p>Example calculation using your current rules.</p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="preview-amazon">Example Amazon price</label>
+                <div class="input-group prefix">
+                  <span class="input-prefix">$</span>
+                  <input id="preview-amazon" type="number" min="0" step="0.01" value="40" />
+                </div>
+              </div>
+              <div class="preview-card">
+                <div class="preview-row"><span>Listing price</span><strong id="preview-list-price">$0.00</strong></div>
+                <div class="preview-row"><span>Estimated ad fee</span><span id="preview-ad-fee">$0.00</span></div>
+                <div class="preview-row"><span>Projected profit</span><strong id="preview-profit">$0.00</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-ai" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-ai">
+          <div class="section-head">
+            <h2>AI Listing Preferences</h2>
+            <p>Control how KEMPY generates and cleans your listings.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Optimization toggles</h3>
+                  <p>Let AI enhance titles and images before publishing.</p>
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Title optimization</div>
+                  <div class="helper">Rewrite titles for eBay search visibility.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="ai-title" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Image cleaning</div>
+                  <div class="helper">Remove watermarks or Amazon logos.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="ai-images" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Description style</h3>
+                  <p>Pick a writing style for AI descriptions.</p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="description-style">Style</label>
+                <select id="description-style">
+                  <option>Short &amp; Sweet</option>
+                  <option>Bullet Points</option>
+                  <option>Detailed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-safety" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-safety">
+          <div class="section-head">
+            <h2>Safety Shield</h2>
+            <p>Protect your account by blocking risky brands and keywords.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>VeRO protection</h3>
+                  <p>Automatically block known risky brands.</p>
+                </div>
+                <span class="badge success">Recommended</span>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Enable VeRO protection</div>
+                  <div class="helper">Prevents common takedowns on eBay.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="vero-toggle" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>My blacklist</h3>
+                  <p>Never list items from these brands.</p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="blacklist">Brands or keywords</label>
+                <textarea id="blacklist" placeholder="Nike, Disney, Bose"></textarea>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Keyword filters</h3>
+                  <p>Block listings containing these words.</p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="keyword-filters">Keywords</label>
+                <textarea id="keyword-filters" placeholder="used, refurbished, open box"></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-automation" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-automation">
+          <div class="section-head">
+            <h2>Automation &amp; Monitoring</h2>
+            <p>Keep listings synced with Amazon pricing and stock changes.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Price &amp; stock automation</h3>
+                  <p>Automatically sync pricing and availability.</p>
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Price sync</div>
+                  <div class="helper">Update eBay price when Amazon changes.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="price-sync" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Stock protection</div>
+                  <div class="helper">End listing if Amazon runs out of stock.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="stock-protection" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Minimum profit guard</h3>
+                  <p>End listings that drop below your profit threshold.</p>
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Enable minimum profit guard</div>
+                  <div class="helper">Stops listings that fall below your set profit.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="profit-guard" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="field">
+                <label for="min-profit">Minimum profit amount</label>
+                <div class="input-group prefix">
+                  <span class="input-prefix">$</span>
+                  <input id="min-profit" type="number" min="0" step="0.01" value="6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-account" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-account">
+          <div class="section-head">
+            <h2>My Account</h2>
+            <p>Update account details, security, and notifications.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Account details</h3>
+                  <p>Update your username and email address.</p>
+                </div>
+                <div class="panel-actions">
+                  <button class="btn sm">Save</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="account-username">Username</label>
+                <input id="account-username" type="text" value="GuestSeller" />
+              </div>
+              <div class="field">
+                <label for="account-email">Email address</label>
+                <input id="account-email" type="email" value="guest@kempy.app" />
+                <div class="helper">Updating your email requires verification.</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Password</h3>
+                  <p>Change your current password.</p>
+                </div>
+                <div class="panel-actions">
+                  <button class="btn ghost sm">Update password</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="password-current">Current password</label>
+                <input id="password-current" type="password" placeholder="Current password" />
+              </div>
+              <div class="field">
+                <label for="password-new">New password</label>
+                <input id="password-new" type="password" placeholder="New password" />
+              </div>
+              <div class="field">
+                <label for="password-confirm">Confirm password</label>
+                <input id="password-confirm" type="password" placeholder="Confirm password" />
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Two-factor authentication</h3>
+                  <p>Add extra login security.</p>
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-title">Enable 2FA</div>
+                  <div class="helper">Requires a code on every login.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="two-factor" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Notifications</h3>
+                  <p>Choose which email alerts you receive.</p>
+                </div>
+              </div>
+              <div class="check-grid">
+                <label class="check card"><input type="checkbox" checked /> New sales</label>
+                <label class="check card"><input type="checkbox" checked /> Stock issues</label>
+                <label class="check card"><input type="checkbox" checked /> Safety warnings</label>
+                <label class="check card"><input type="checkbox" /> Pricing rule changes</label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Plan &amp; usage</h3>
+                  <p>Starter - 100 listings/mo</p>
+                </div>
+              </div>
+              <div class="usage">
+                <div class="usage-meta">
+                  <span>Listings used</span>
+                  <span>72 / 100</span>
+                </div>
+                <div class="usage-bar"><span></span></div>
+                <div class="helper">Usage resets on the first of each month.</div>
+              </div>
+            </div>
+
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <h3>Danger zone</h3>
+                  <p>Deactivate or permanently delete your account.</p>
+                </div>
+              </div>
+              <div class="note">Deactivating stops automation immediately. Deleting is permanent.</div>
+              <div class="danger-actions">
+                <button class="btn ghost">Deactivate account</button>
+                <button class="btn danger">Delete account permanently</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-billing" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-billing">
+          <div class="section-head">
+            <h2>Billing</h2>
+            <p>Manage payment methods, renewals, and plan changes.</p>
+          </div>
+          <div class="panel-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Payment method</h3>
+                  <p>Stripe-powered credit card billing.</p>
+                </div>
+                <span class="badge">Stripe</span>
+              </div>
+              <div class="payment-card">
+                <div>
+                  <div class="payment-brand">Visa</div>
+                  <div class="payment-meta">**** 4242 · Expires 08/28</div>
+                </div>
+                <button class="btn ghost sm">Update card</button>
+              </div>
+              <div class="helper">Upcoming renewal: Jun 14, 2026</div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Plan changes</h3>
+                  <p>Upgrade or downgrade your plan anytime.</p>
+                </div>
+              </div>
+              <div class="note">Your current plan is Starter. Changes take effect on the next billing cycle.</div>
+              <div class="panel-actions" style="margin-top:12px;">
+                <button class="btn sm">Upgrade plan</button>
+                <button class="btn ghost sm">Downgrade plan</button>
+              </div>
+            </div>
+
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <h3>Billing history</h3>
+                  <p>Recent invoices and payments.</p>
+                </div>
+              </div>
+              <div class="history-list">
+                <div class="history-item">
+                  <div>May 14, 2026 - Starter Plan</div>
+                  <span>$49.00</span>
+                </div>
+                <div class="history-item">
+                  <div>Apr 14, 2026 - Starter Plan</div>
+                  <span>$49.00</span>
+                </div>
+                <div class="history-item">
+                  <div>Mar 14, 2026 - Starter Plan</div>
+                  <span>$49.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
 </div>
+
+<div class="modal-backdrop" id="modal-add-store" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-add-store-title">
+    <div class="modal-header">
+      <h3 id="modal-add-store-title">Add eBay store</h3>
+      <button class="icon-btn" data-close-modal aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="store-name">eBay store name</label>
+        <input id="store-name" type="text" placeholder="Your eBay store name" />
+      </div>
+      <div class="field">
+        <label for="store-sync-key">Chrome extension sync key</label>
+        <input id="store-sync-key" type="text" placeholder="EXT-XXXX" />
+      </div>
+      <div class="helper">The sync key is generated inside your Chrome extension.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-close-modal>Cancel</button>
+      <button class="btn" id="add-store-btn">Add store</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-vero-warning" aria-hidden="true">
+  <div class="modal warning" role="dialog" aria-modal="true" aria-labelledby="modal-vero-title">
+    <div class="modal-header">
+      <h3 id="modal-vero-title">Disable VeRO shield?</h3>
+      <button class="icon-btn" data-close-modal aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="note">Warning: Disabling VeRO protection increases the risk of eBay account suspension. Are you sure?</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-close-modal>Cancel</button>
+      <button class="btn danger" id="confirm-vero-disable">Disable VeRO shield</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
 <script>
 // ---------- Sidebar toggle ----------
@@ -527,6 +1673,236 @@ document.addEventListener('click', (e) => {
 
 window.addEventListener('resize', () => {
   if (isDesktop()) sidebar.classList.remove('open');
+});
+
+// Settings endpoint for future wiring (GET/PUT /api/settings)
+const SETTINGS_ENDPOINT = '/api/settings';
+
+// ---------- Tabs ----------
+const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
+
+function setActiveTab(tabId, shouldFocus = false) {
+  tabButtons.forEach((btn) => {
+    const isActive = btn.dataset.tab === tabId;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    btn.setAttribute('tabindex', isActive ? '0' : '-1');
+    if (isActive && shouldFocus) btn.focus({ preventScroll: true });
+  });
+  tabPanels.forEach((panel) => {
+    const isActive = panel.id === `tab-${tabId}`;
+    panel.classList.toggle('active', isActive);
+    panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+  });
+  if (tabId) {
+    history.replaceState(null, '', `#${tabId}`);
+  }
+}
+
+if (tabButtons.length) {
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab, true));
+  });
+  const hashTab = window.location.hash.replace('#', '');
+  if (hashTab && document.getElementById(`tab-${hashTab}`)) {
+    setActiveTab(hashTab);
+  } else {
+    setActiveTab(tabButtons[0].dataset.tab);
+  }
+}
+
+// ---------- Markup mode ----------
+const markupModeInputs = document.querySelectorAll('input[name="markup-mode"]');
+const markupFields = document.querySelectorAll('[data-markup-field]');
+
+function updateMarkupFields() {
+  const selected = document.querySelector('input[name="markup-mode"]:checked');
+  const mode = selected ? selected.value : 'percent';
+  markupFields.forEach((field) => {
+    field.hidden = field.dataset.markupField !== mode;
+  });
+}
+
+markupModeInputs.forEach((input) => input.addEventListener('change', updateMarkupFields));
+updateMarkupFields();
+
+// ---------- Fees buffer + profit guard ----------
+const feesBufferToggle = document.getElementById('fees-buffer');
+const feesBufferAmount = document.getElementById('fees-buffer-amount');
+
+function updateFeesBuffer() {
+  if (!feesBufferToggle || !feesBufferAmount) return;
+  feesBufferAmount.disabled = !feesBufferToggle.checked;
+}
+
+feesBufferToggle?.addEventListener('change', updateFeesBuffer);
+updateFeesBuffer();
+
+const profitGuardToggle = document.getElementById('profit-guard');
+const minProfitInput = document.getElementById('min-profit');
+
+function updateProfitGuard() {
+  if (!profitGuardToggle || !minProfitInput) return;
+  minProfitInput.disabled = !profitGuardToggle.checked;
+}
+
+profitGuardToggle?.addEventListener('change', updateProfitGuard);
+updateProfitGuard();
+
+// ---------- Toast ----------
+const toast = document.getElementById('toast');
+let toastTimer;
+
+function showToast(message) {
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+const saveMarkupBtn = document.getElementById('save-markup-btn');
+saveMarkupBtn?.addEventListener('click', () => {
+  const selected = document.querySelector('input[name="markup-mode"]:checked');
+  const mode = selected ? selected.value : 'percent';
+  if (mode === 'fixed') {
+    const raw = parseFloat(document.getElementById('markup-fixed')?.value || '');
+    const value = Number.isFinite(raw) ? raw : 5;
+    showToast(`Success: Pricing rules saved with $${value.toFixed(2)} markup.`);
+  } else {
+    const raw = parseFloat(document.getElementById('markup-percent')?.value || '');
+    const value = Number.isFinite(raw) ? raw : 20;
+    showToast(`Success: Pricing rules saved with ${value}% markup.`);
+  }
+});
+
+// ---------- Live preview ----------
+const previewAmazon = document.getElementById('preview-amazon');
+const previewListPrice = document.getElementById('preview-list-price');
+const previewAdFee = document.getElementById('preview-ad-fee');
+const previewProfit = document.getElementById('preview-profit');
+const promotedRateInput = document.getElementById('promoted-rate');
+
+function formatMoney(value) {
+  const amount = Number.isFinite(value) ? value : 0;
+  return `$${amount.toFixed(2)}`;
+}
+
+function recalcPreview() {
+  if (!previewAmazon || !previewListPrice || !previewAdFee || !previewProfit) return;
+  const amazonPrice = parseFloat(previewAmazon.value || '0') || 0;
+  const selected = document.querySelector('input[name="markup-mode"]:checked');
+  const mode = selected ? selected.value : 'percent';
+  const percentMarkup = parseFloat(document.getElementById('markup-percent')?.value || '0') || 0;
+  const fixedMarkup = parseFloat(document.getElementById('markup-fixed')?.value || '0') || 0;
+  const feesBuffer = feesBufferToggle?.checked ? parseFloat(feesBufferAmount?.value || '0') || 0 : 0;
+  const adRate = parseFloat(promotedRateInput?.value || '0') || 0;
+  const markupValue = mode === 'fixed' ? fixedMarkup : amazonPrice * (percentMarkup / 100);
+  const listPrice = amazonPrice + markupValue + feesBuffer;
+  const adFee = listPrice * (adRate / 100);
+  const profit = listPrice - amazonPrice - adFee;
+  previewListPrice.textContent = formatMoney(listPrice);
+  previewAdFee.textContent = formatMoney(adFee);
+  previewProfit.textContent = formatMoney(profit);
+}
+
+[
+  previewAmazon,
+  promotedRateInput,
+  feesBufferAmount,
+  feesBufferToggle,
+  ...markupModeInputs,
+  document.getElementById('markup-percent'),
+  document.getElementById('markup-fixed')
+].forEach((input) => {
+  input?.addEventListener('input', recalcPreview);
+  input?.addEventListener('change', recalcPreview);
+});
+
+recalcPreview();
+
+// ---------- Stores empty state ----------
+const storeGrid = document.getElementById('store-grid');
+const storeEmpty = document.getElementById('store-empty');
+if (storeGrid && storeEmpty) {
+  const hasStores = storeGrid.dataset.hasStores === 'true';
+  storeGrid.hidden = !hasStores;
+  storeEmpty.hidden = hasStores;
+}
+
+// ---------- Modals ----------
+const modalBackdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+
+function openModal(name) {
+  const modal = document.getElementById(`modal-${name}`);
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+document.querySelectorAll('[data-open-modal]').forEach((btn) => {
+  btn.addEventListener('click', () => openModal(btn.dataset.openModal));
+});
+
+document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+  btn.addEventListener('click', () => closeModal(btn.closest('.modal-backdrop')));
+});
+
+modalBackdrops.forEach((backdrop) => {
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) closeModal(backdrop);
+  });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  modalBackdrops.forEach((backdrop) => closeModal(backdrop));
+});
+
+const addStoreBtn = document.getElementById('add-store-btn');
+addStoreBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  closeModal(document.getElementById('modal-add-store'));
+  showToast('Store added.');
+});
+
+const copyTokenBtn = document.getElementById('copy-token');
+const syncTokenInput = document.getElementById('sync-token');
+copyTokenBtn?.addEventListener('click', async () => {
+  const value = syncTokenInput?.value?.trim();
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    showToast('Sync token copied.');
+  } catch (_) {
+    syncTokenInput?.select();
+    document.execCommand('copy');
+    showToast('Sync token copied.');
+  }
+});
+
+// ---------- VeRO safety warning ----------
+const veroToggle = document.getElementById('vero-toggle');
+const confirmVeroBtn = document.getElementById('confirm-vero-disable');
+const veroModal = document.getElementById('modal-vero-warning');
+
+veroToggle?.addEventListener('change', () => {
+  if (!veroToggle.checked) {
+    veroToggle.checked = true;
+    openModal('vero-warning');
+  }
+});
+
+confirmVeroBtn?.addEventListener('click', () => {
+  if (veroToggle) veroToggle.checked = false;
+  closeModal(veroModal);
 });
 
 // ---------- Auth detection ----------
