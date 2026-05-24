@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Listings — KEMPY</title>
+<title>Settings — KEMPY</title>
 <script>
   // Restore sidebar collapsed state before paint (prevents flash on reload).
   // Only honored on desktop widths (>900px); mobile uses a different mechanism.
@@ -424,7 +424,7 @@ html.sb-collapsed .nav-item:hover::after {
       <a href="/app/watchlist.html" class="nav-item" data-label="Watchlist">
         <span class="icon">⭐</span> <span class="label">Watchlist</span>
       </a>
-      <a href="/app/listings.html" class="nav-item active" data-label="Listings">
+      <a href="/app/listings.html" class="nav-item" data-label="Listings">
         <span class="icon">📋</span> <span class="label">Listings</span>
       </a>
       <a href="/app/orders.html" class="nav-item" data-label="Orders">
@@ -441,7 +441,7 @@ html.sb-collapsed .nav-item:hover::after {
       <a href="/app/team.html" class="nav-item" data-label="Team">
         <span class="icon">👥</span> <span class="label">Team</span>
       </a>
-      <a href="/app/settings.html" class="nav-item" data-label="Settings">
+      <a href="/app/settings.html" class="nav-item active" data-label="Settings">
         <span class="icon">⚙</span> <span class="label">Settings</span>
       </a>
       <a href="/app/billing.html" class="nav-item" data-label="Billing">
@@ -466,7 +466,7 @@ html.sb-collapsed .nav-item:hover::after {
     </nav>
 
     <div class="sidebar-footer">
-      <div class="avatar" id="user-avatar">G</div>
+      <div class.avatar" id="user-avatar">G</div>
       <div class="user-info">
         <div class="name" id="user-name">Guest</div>
         <div class="role" id="user-role">PREVIEW MODE</div>
@@ -482,19 +482,22 @@ html.sb-collapsed .nav-item:hover::after {
       <div style="display:flex;align-items:center;gap:12px;">
         <button class="btn-icon menu-btn" id="menu-btn" title="Menu">☰</button>
         <div class="crumb">
-          KEMPY <span class="arrow">/</span> <span class="current">Listings</span>
+          KEMPY <span class="arrow">/</span> <span class="current">Settings</span>
         </div>
       </div>
       <div class="actions">
         <button class="btn-icon" title="Notifications">🔔</button>
-        <a href="/app/research.html" class="btn sm">+ New listing</a>
+        <a href="/app/research.html" class="btn sm">Find products</a>
       </div>
     </header>
 
     <div class="content">
       <div class="empty">
-        <div class="icon">📋</div>
-        <p>No listings yet. Connect an eBay store to get started.</p>
+        <div class="icon">⚙</div>
+        <p>Manage your KEMPY account settings and preferences.</p>
+        <a href="#" class="btn ghost sm">Save changes</a>
+      </div>
+        <p>No orders to fulfill. When you make a sale, it will show up here.</p>
         <a href="#" class="btn ghost sm">Connect store (soon)</a>
       </div>
     </div>

@@ -10,6 +10,13 @@ import { initDb, isEnabled as dbEnabled, ping as dbPing } from './src/services/d
 import watchlistRouter from './src/routes/watchlist.js';
 import listingsRouter from './src/routes/listings.js';
 import ordersRouter from './src/routes/orders.js';
+import profitRouter from './src/routes/profit.js';
+import storesRouter from './src/routes/stores.js';
+import teamRouter from './src/routes/team.js';
+import settingsRouter from './src/routes/settings.js';
+import billingRouter from './src/routes/billing.js';
+import affiliateRouter from './src/routes/affiliate.js';
+import staffRouter from './src/routes/staff.js';
 
 dotenv.config();
 
@@ -78,6 +85,15 @@ app.use('/api/listings', listingsRouter);
 
 // Orders
 app.use('/api/orders', ordersRouter);
+
+// New Pages
+app.use('/api/profit', profitRouter);
+app.use('/api/stores', storesRouter);
+app.use('/api/team', teamRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/billing', billingRouter);
+app.use('/api/affiliate', affiliateRouter);
+app.use('/api/staff', staffRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
