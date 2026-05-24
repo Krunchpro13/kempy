@@ -1062,9 +1062,9 @@ footer .container { display: flex; justify-content: space-between; align-items: 
       <a href="#research">Research</a>
       <a href="#calculator">Calculator</a>
       <span id="nav-account">
-        <a href="#" id="nav-signin">Sign in</a>
+        <a href="/auth/login.html" id="nav-signin">Sign in</a>
       </span>
-      <a href="#pricing" class="nav-cta">Get Started</a>
+      <a href="/auth/signup.html" class="nav-cta">Get Started</a>
     </div>
   </div>
 </nav>
@@ -1082,7 +1082,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
       KEMPY finds winning products on Amazon and automatically lists them on eBay.
       No inventory, no listing by hand, no experience needed. Just follow our proven system and start getting sales.
     </p>
-    <a href="#pricing" class="hero-cta">Get Started for $50</a>
+    <a href="/auth/signup.html" class="hero-cta">Get Started for $50</a>
     <div class="hero-guarantee">First sale in 30 days or your money back</div>
     <div class="hero-includes">Includes the full beginner course + Discord support + help desk</div>
 
@@ -1433,7 +1433,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
         <span>Unlimited listings</span>
         <span>30-day guarantee</span>
       </div>
-      <a href="#" class="hero-cta" style="position: relative; z-index: 2;">Get Started for $50</a>
+      <a href="/auth/signup.html" class="hero-cta" style="position: relative; z-index: 2;">Get Started for $50</a>
       <div class="hero-guarantee" style="position: relative; z-index: 2;">First sale in 30 days or your money back</div>
     </div>
   </div>
@@ -1907,6 +1907,7 @@ authForm.addEventListener('submit', async e => {
 });
 
 async function loadMe() {
+  // 1. Try real API
   try {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
     if (r.ok) {
@@ -1914,6 +1915,19 @@ async function loadMe() {
       currentUser = data.user;
     }
   } catch (_) {}
+  // 2. Preview-mode fallback: localStorage user from /auth/login or /auth/signup
+  if (!currentUser) {
+    try {
+      const raw = localStorage.getItem('kempy_user_local');
+      if (raw) {
+        const u = JSON.parse(raw);
+        currentUser = {
+          email: u.email,
+          display_name: u.name || (u.email ? u.email.split('@')[0] : 'You'),
+        };
+      }
+    } catch (_) {}
+  }
   renderAccount();
 }
 
@@ -1922,24 +1936,25 @@ function renderAccount() {
     const initial = (currentUser.display_name || currentUser.email).charAt(0).toUpperCase();
     const label = currentUser.display_name || currentUser.email.split('@')[0];
     navAccount.innerHTML = `
-      <span class="nav-user-chip">
+      <a href="/app/dashboard.html" class="nav-user-chip" style="text-decoration:none;color:inherit;">
         <span class="avatar">${initial}</span>
         <span>${label}</span>
-        <a class="signout" id="nav-signout">sign out</a>
-      </span>
+      </a>
+      <a class="signout" id="nav-signout" href="#">sign out</a>
     `;
-    document.getElementById('nav-signout').addEventListener('click', signOut);
-  } else {
-    navAccount.innerHTML = '<a href="#" id="nav-signin">Sign in</a>';
-    document.getElementById('nav-signin').addEventListener('click', e => {
+    document.getElementById('nav-signout').addEventListener('click', (e) => {
       e.preventDefault();
-      openAuthModal('login');
+      signOut();
     });
+  } else {
+    navAccount.innerHTML = '<a href="/auth/login.html" id="nav-signin">Sign in</a>';
+    // No JS click handler — the link navigates naturally
   }
 }
 
 async function signOut() {
-  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+  localStorage.removeItem('kempy_user_local');
   currentUser = null;
   renderAccount();
   showToast('Signed out');

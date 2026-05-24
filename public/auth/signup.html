@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign up — KEMPY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050708;
+  --bg-2: #0a0d10;
+  --surface: #0e1316;
+  --surface-2: #131a1e;
+  --border: #1a2329;
+  --border-cyan: #1e3a44;
+  --cyan: #00e5ff;
+  --cyan-glow: #00e5ff40;
+  --cyan-dim: #4ad4e4;
+  --green: #00ff9d;
+  --amber: #ffb800;
+  --red: #ff4d6d;
+  --text: #e6f1f5;
+  --text-dim: #8a9ba3;
+  --text-muted: #5a6970;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Archivo Black', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,229,255,0.10), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 10% 110%, rgba(0,255,157,0.05), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.015'/></svg>");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.back-home {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 10;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  transition: color 0.15s;
+}
+.back-home:hover { color: var(--cyan); }
+
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0,255,157,0.35), transparent 50%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.auth-brand {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -1px;
+  color: var(--cyan);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  text-decoration: none;
+}
+.auth-brand::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--green); }
+  50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); }
+}
+
+.auth-card h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+.auth-card h1 .accent { color: var(--green); }
+.auth-card .sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 28px;
+}
+
+/* Bullet points above the form */
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 22px;
+  padding: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.benefit::before {
+  content: '✓';
+  color: var(--green);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.form { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---------- Social sign-in buttons ---------- */
+.social-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+}
+.social-btn:hover { border-color: var(--border-cyan); background: var(--surface-2); }
+.social-btn:disabled { opacity: 0.55; cursor: wait; }
+
+.social-btn .logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.social-btn .logo.g { background: #fff; color: #4285f4; }
+.social-btn .logo.e { background: #e53238; color: #fff; }
+.social-btn .logo.a { background: #ff9900; color: #131a22; }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+.field input {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input::placeholder { color: var(--text-muted); }
+.field input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+}
+.field .hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+/* Password strength meter */
+.pw-meter {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.pw-meter .seg {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+.pw-meter.weak   .seg:nth-child(-n+1) { background: var(--red); }
+.pw-meter.fair   .seg:nth-child(-n+2) { background: var(--amber); }
+.pw-meter.good   .seg:nth-child(-n+3) { background: var(--cyan); }
+.pw-meter.strong .seg                 { background: var(--green); }
+
+.pw-strength {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.pw-strength.weak   { color: var(--red); }
+.pw-strength.fair   { color: var(--amber); }
+.pw-strength.good   { color: var(--cyan); }
+.pw-strength.strong { color: var(--green); }
+
+.error-box {
+  background: rgba(255,77,109,0.08);
+  border: 1px solid rgba(255,77,109,0.25);
+  color: var(--red);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: none;
+}
+.error-box.show { display: block; }
+
+.auth-submit {
+  background: var(--cyan);
+  color: var(--bg);
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+  margin-top: 6px;
+}
+.auth-submit:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
+.auth-submit:active { transform: translateY(1px); }
+.auth-submit:disabled { opacity: 0.6; cursor: wait; box-shadow: none; }
+
+.preview-note {
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: rgba(255,184,0,0.06);
+  border: 1px solid rgba(255,184,0,0.18);
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  font-family: var(--font-mono);
+}
+.preview-note .badge {
+  display: inline-block;
+  color: var(--amber);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+.terms {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: center;
+}
+.terms a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 2px; }
+
+.auth-footer {
+  margin-top: 22px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.auth-footer a {
+  color: var(--cyan);
+  text-decoration: none;
+  font-weight: 500;
+}
+.auth-footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 480px) {
+  .auth-card { padding: 28px 22px; }
+  .auth-card h1 { font-size: 22px; }
+  .back-home { top: 14px; left: 14px; }
+}
+</style>
+</head>
+<body>
+
+<a href="/" class="back-home">← Back to home</a>
+
+<div class="auth-shell">
+  <div class="auth-card">
+    <a href="/" class="auth-brand">KEMPY</a>
+
+    <h1>Get <span class="accent">started</span>.</h1>
+    <p class="sub">Find profitable products in under 60 seconds.</p>
+
+    <div class="social-row">
+      <button type="button" class="social-btn" data-provider="google">
+        <span class="logo g">G</span> Continue with Google
+      </button>
+      <button type="button" class="social-btn" data-provider="ebay">
+        <span class="logo e">e</span> Continue with eBay
+      </button>
+      <button type="button" class="social-btn" data-provider="amazon">
+        <span class="logo a">a</span> Continue with Amazon
+      </button>
+    </div>
+
+    <div class="divider"><span>or with email</span></div>
+
+    <form class="form" id="signup-form" novalidate>
+      <div class="field">
+        <label for="name">Your name</label>
+        <input type="text" id="name" name="name" placeholder="Jane Smith" autocomplete="name" required />
+      </div>
+
+      <div class="field">
+        <label for="email">Work email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="new-password" required minlength="8" />
+        <div class="pw-meter" id="pw-meter"><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div></div>
+        <div class="pw-strength" id="pw-strength" style="visibility:hidden;">—</div>
+      </div>
+
+      <div class="error-box" id="error"></div>
+
+      <button type="submit" class="auth-submit" id="submit-btn">Create account</button>
+    </form>
+
+    <div class="terms">
+      By signing up you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+    </div>
+
+    <div class="preview-note">
+      <span class="badge">PREVIEW</span>
+      Accounts are stored locally in this browser until real authentication is wired up. Your data lives only on this device.
+    </div>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/auth/login.html">Log in</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const form = document.getElementById('signup-form');
+const errorEl = document.getElementById('error');
+const submitBtn = document.getElementById('submit-btn');
+const pwInput = document.getElementById('password');
+const pwMeter = document.getElementById('pw-meter');
+const pwLabel = document.getElementById('pw-strength');
+
+function showError(msg) {
+  errorEl.textContent = msg;
+  errorEl.classList.add('show');
+}
+function clearError() { errorEl.classList.remove('show'); }
+
+// Password strength: length + variety
+function scorePassword(pw) {
+  if (!pw) return { score: 0, label: '' };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
+  const labels = ['', 'weak', 'fair', 'good', 'strong'];
+  return { score, label: labels[score] };
+}
+
+pwInput.addEventListener('input', () => {
+  const { label } = scorePassword(pwInput.value);
+  pwMeter.className = 'pw-meter ' + label;
+  pwLabel.className = 'pw-strength ' + label;
+  pwLabel.textContent = label || '—';
+  pwLabel.style.visibility = pwInput.value ? 'visible' : 'hidden';
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+
+  const data = Object.fromEntries(new FormData(form));
+  if (!data.name || !data.email || !data.password) {
+    showError('Please fill in every field.');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    showError("That doesn't look like a valid email.");
+    return;
+  }
+  if (data.password.length < 8) {
+    showError('Password must be at least 8 characters.');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending verification code…';
+
+  // PRODUCTION: POST to /api/auth/signup which creates a pending user,
+  //   generates an OTP, and emails it via your mail provider (Resend / SES / etc.)
+  //   The server returns { pendingId } and we redirect to /auth/verify.html?id=pendingId
+  // PREVIEW: generate a 6-digit code locally and stash everything in sessionStorage
+  //   so verify.html can read it.
+  let usedRealApi = false;
+  try {
+    const r = await fetch('/api/auth/signup', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (r.ok) usedRealApi = true;
+  } catch (_) {}
+
+  if (!usedRealApi) {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
+      name: data.name,
+      email: data.email,
+      otp,
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 min
+      preview: true,
+    }));
+  }
+
+  window.location.href = '/auth/verify.html';
+});
+
+// ====================================================================
+// Social sign-in (Google / eBay / Amazon)
+// OAuth providers verify their own users, so we skip OTP and go
+// straight to the dashboard.
+//
+// PRODUCTION: replace with `window.location.href = /api/auth/oauth/{provider}`
+// PREVIEW: simulate the round-trip and store a demo user locally.
+// ====================================================================
+const PROVIDER_DEMOS = {
+  google: { email: 'demo@gmail.com', name: 'Google Demo' },
+  ebay:   { email: 'demo@ebay.com',  name: 'eBay Demo'   },
+  amazon: { email: 'demo@amazon.com', name: 'Amazon Demo' },
+};
+
+document.querySelectorAll('.social-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const provider = btn.dataset.provider;
+
+    document.querySelectorAll('.social-btn').forEach(b => b.disabled = true);
+    submitBtn.disabled = true;
+    const labelEl = btn.lastChild;
+    labelEl.textContent = ' Redirecting…';
+
+    // Production switch:
+    // window.location.href = `/api/auth/oauth/${provider}`;
+    // return;
+
+    await new Promise(r => setTimeout(r, 700));
+    const u = PROVIDER_DEMOS[provider];
+    localStorage.setItem('kempy_user_local', JSON.stringify({
+      ...u,
+      role: 'owner',
+      provider,
+      loggedInAt: new Date().toISOString(),
+      preview: true,
+    }));
+    window.location.href = '/app/dashboard.html';
+  });
+});
+</script>
+
+</body>
+</html>

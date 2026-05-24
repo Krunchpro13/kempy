@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verify email — KEMPY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050708;
+  --bg-2: #0a0d10;
+  --surface: #0e1316;
+  --surface-2: #131a1e;
+  --border: #1a2329;
+  --border-cyan: #1e3a44;
+  --cyan: #00e5ff;
+  --cyan-glow: #00e5ff40;
+  --cyan-dim: #4ad4e4;
+  --green: #00ff9d;
+  --amber: #ffb800;
+  --red: #ff4d6d;
+  --text: #e6f1f5;
+  --text-dim: #8a9ba3;
+  --text-muted: #5a6970;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Archivo Black', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,229,255,0.10), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 10% 110%, rgba(0,255,157,0.05), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.015'/></svg>");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.back-home {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 10;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  transition: color 0.15s;
+}
+.back-home:hover { color: var(--cyan); }
+
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 460px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0,229,255,0.35), transparent 50%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0,229,255,0.08);
+  border: 1px solid var(--border-cyan);
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+h1 .accent { color: var(--cyan); }
+.sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 26px;
+  line-height: 1.55;
+}
+.sub .email {
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+/* OTP input row */
+.otp-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.otp-row input {
+  width: 46px;
+  height: 56px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.otp-row input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+  background: var(--surface);
+}
+.otp-row input.filled { border-color: var(--border-cyan); color: var(--cyan); }
+.otp-row.error input {
+  border-color: var(--red);
+  animation: shake 0.4s;
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+@media (max-width: 420px) {
+  .otp-row input { width: 40px; height: 50px; font-size: 20px; }
+  .otp-row { gap: 6px; }
+}
+
+.error-text {
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  min-height: 18px;
+  margin-bottom: 14px;
+}
+
+.auth-submit {
+  background: var(--cyan);
+  color: var(--bg);
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+  width: 100%;
+}
+.auth-submit:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
+.auth-submit:active { transform: translateY(1px); }
+.auth-submit:disabled { opacity: 0.6; cursor: wait; box-shadow: none; }
+
+.resend-row {
+  margin-top: 22px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+.resend-row #resend-btn {
+  background: none;
+  border: none;
+  color: var(--cyan);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 0;
+  margin-left: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.resend-row #resend-btn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.preview-note {
+  margin-top: 22px;
+  padding: 12px;
+  background: rgba(255,184,0,0.06);
+  border: 1px solid rgba(255,184,0,0.18);
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  font-family: var(--font-mono);
+  text-align: left;
+}
+.preview-note .badge {
+  display: inline-block;
+  color: var(--amber);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+.preview-note .code {
+  display: inline-block;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--cyan);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-left: 4px;
+  user-select: all;
+}
+
+.auth-footer {
+  margin-top: 18px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.auth-footer a {
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-footer a:hover { color: var(--cyan); }
+
+@media (max-width: 480px) {
+  .auth-card { padding: 28px 22px; }
+  .back-home { top: 14px; left: 14px; }
+}
+</style>
+</head>
+<body>
+
+<a href="/auth/signup.html" class="back-home">← Back to sign up</a>
+
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="icon-circle">📩</div>
+
+    <h1>Check your <span class="accent">email</span>.</h1>
+    <p class="sub">
+      We sent a 6-digit code to<br>
+      <span class="email" id="email-display">you@example.com</span>
+    </p>
+
+    <form id="otp-form" autocomplete="off">
+      <div class="otp-row" id="otp-row">
+        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 1" autofocus />
+        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 2" />
+        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 3" />
+        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 4" />
+        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 5" />
+        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 6" />
+      </div>
+
+      <div class="error-text" id="error"></div>
+
+      <button type="submit" class="auth-submit" id="verify-btn">Verify and continue</button>
+    </form>
+
+    <div class="resend-row">
+      Didn't get it?
+      <button id="resend-btn" type="button" disabled>Resend in <span id="resend-timer">60</span>s</button>
+    </div>
+
+    <div class="preview-note">
+      <span class="badge">PREVIEW</span>
+      No real email is sent yet. Your code is shown here for testing:
+      <span class="code" id="code-hint">000000</span>
+    </div>
+
+    <div class="auth-footer">
+      Wrong email? <a href="/auth/signup.html">Start over</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====================================================================
+// Pending-signup state (set by signup.html before redirecting here)
+//
+// PRODUCTION: replace this whole flow with API calls:
+//   - GET  /api/auth/otp/status?id=...    → returns { email, expiresAt }
+//   - POST /api/auth/otp/verify {id,code} → returns { user } on success
+//   - POST /api/auth/otp/resend {id}      → re-issues + emails a new code
+// ====================================================================
+const STORAGE_KEY = 'kempy_pending_signup';
+
+function loadPending() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function savePending(obj) {
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); } catch {}
+}
+
+let pending = loadPending();
+
+// If somebody hits this page directly with no pending state, push them back to signup
+if (!pending) {
+  window.location.replace('/auth/signup.html');
+}
+
+// Render the email + the preview code hint
+document.getElementById('email-display').textContent = pending.email;
+document.getElementById('code-hint').textContent = pending.otp;
+
+// ====================================================================
+// OTP input behavior (auto-advance, paste, backspace)
+// ====================================================================
+const otpRow = document.getElementById('otp-row');
+const inputs = Array.from(otpRow.querySelectorAll('input'));
+const errorEl = document.getElementById('error');
+const verifyBtn = document.getElementById('verify-btn');
+
+function clearError() { errorEl.textContent = ''; otpRow.classList.remove('error'); }
+function showError(msg) { errorEl.textContent = msg; otpRow.classList.add('error'); }
+
+inputs.forEach((input, i) => {
+  input.addEventListener('input', () => {
+    clearError();
+    // Strip non-digits (catches mobile keyboards / accidental letters)
+    input.value = input.value.replace(/[^0-9]/g, '');
+    input.classList.toggle('filled', !!input.value);
+    if (input.value && i < inputs.length - 1) inputs[i + 1].focus();
+    // Auto-submit when all 6 are filled
+    if (inputs.every(inp => inp.value)) submitCode();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !input.value && i > 0) {
+      inputs[i - 1].focus();
+      inputs[i - 1].value = '';
+      inputs[i - 1].classList.remove('filled');
+    }
+    if (e.key === 'ArrowLeft' && i > 0) inputs[i - 1].focus();
+    if (e.key === 'ArrowRight' && i < inputs.length - 1) inputs[i + 1].focus();
+  });
+
+  input.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const txt = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
+    txt.split('').forEach((ch, idx) => {
+      if (inputs[idx]) {
+        inputs[idx].value = ch;
+        inputs[idx].classList.add('filled');
+      }
+    });
+    if (txt.length === 6) submitCode();
+    else if (txt.length < 6 && inputs[txt.length]) inputs[txt.length].focus();
+  });
+});
+
+// ====================================================================
+// Verify
+// ====================================================================
+async function submitCode() {
+  const code = inputs.map(i => i.value).join('');
+  if (code.length !== 6) {
+    showError('Enter all 6 digits.');
+    return;
+  }
+
+  // Refresh pending state in case Resend just changed it
+  pending = loadPending();
+  if (!pending) { window.location.replace('/auth/signup.html'); return; }
+  if (Date.now() > pending.expiresAt) {
+    showError('Code expired. Tap Resend to get a new one.');
+    return;
+  }
+
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = 'Verifying…';
+
+  // PRODUCTION: POST /api/auth/otp/verify { id, code }
+  // PREVIEW: check against the locally-stored code
+  let usedRealApi = false;
+  try {
+    const r = await fetch('/api/auth/otp/verify', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pending.email, code }),
+    });
+    if (r.ok) usedRealApi = true;
+  } catch {}
+
+  if (!usedRealApi) {
+    if (code !== pending.otp) {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = 'Verify and continue';
+      showError('Wrong code. Try again.');
+      // Clear inputs so user can retype
+      inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
+      inputs[0].focus();
+      return;
+    }
+    // Code matched — promote pending signup to a real local user
+    localStorage.setItem('kempy_user_local', JSON.stringify({
+      email: pending.email,
+      name: pending.name,
+      role: 'owner',
+      createdAt: new Date().toISOString(),
+      loggedInAt: new Date().toISOString(),
+      preview: true,
+    }));
+  }
+
+  sessionStorage.removeItem(STORAGE_KEY);
+  window.location.href = '/app/dashboard.html';
+}
+
+document.getElementById('otp-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitCode();
+});
+
+// ====================================================================
+// Resend with 60s cooldown
+// ====================================================================
+const resendBtn = document.getElementById('resend-btn');
+const resendTimer = document.getElementById('resend-timer');
+let cooldown = 60;
+let cooldownIv = null;
+
+function startCooldown() {
+  cooldown = 60;
+  resendBtn.disabled = true;
+  resendTimer.textContent = cooldown;
+  clearInterval(cooldownIv);
+  cooldownIv = setInterval(() => {
+    cooldown--;
+    resendTimer.textContent = cooldown;
+    if (cooldown <= 0) {
+      clearInterval(cooldownIv);
+      resendBtn.disabled = false;
+      resendBtn.innerHTML = 'Resend code';
+    }
+  }, 1000);
+}
+
+resendBtn.addEventListener('click', async () => {
+  clearError();
+  resendBtn.disabled = true;
+
+  // PRODUCTION: POST /api/auth/otp/resend { id }
+  // PREVIEW: regenerate the code locally
+  const newCode = String(Math.floor(100000 + Math.random() * 900000));
+  pending = { ...pending, otp: newCode, issuedAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000 };
+  savePending(pending);
+  document.getElementById('code-hint').textContent = newCode;
+
+  // Clear inputs
+  inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
+  inputs[0].focus();
+
+  startCooldown();
+});
+
+startCooldown();
+</script>
+
+</body>
+</html>
