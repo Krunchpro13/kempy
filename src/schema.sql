@@ -58,3 +58,48 @@ CREATE TRIGGER watchlist_updated_at
   BEFORE UPDATE ON watchlist
   FOR EACH ROW
   EXECUTE FUNCTION set_updated_at();
+
+-- =============================================================================
+-- Listings
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS listings (
+    id SERIAL PRIMARY KEY,
+    ebay_item_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    status TEXT NOT NULL, -- e.g., 'active', 'sold', 'ended'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS listings_ebay_item_id_unique ON listings (ebay_item_id);
+
+DROP TRIGGER IF EXISTS listings_updated_at ON listings;
+CREATE TRIGGER listings_updated_at
+    BEFORE UPDATE ON listings
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+
+-- =============================================================================
+-- Orders
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    status TEXT NOT NULL, -- e.g., 'pending', 'shipped', 'delivered'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS orders_order_id_unique ON orders (order_id);
+
+DROP TRIGGER IF EXISTS orders_updated_at ON orders;
+CREATE TRIGGER orders_updated_at
+    BEFORE UPDATE ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+
