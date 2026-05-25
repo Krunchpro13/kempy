@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Settings — KEMPY</title>
 <script>
-  // Restore sidebar collapsed state before paint (prevents flash on reload).
-  // Only honored on desktop widths (>900px); mobile uses a different mechanism.
   if (window.innerWidth > 900 && localStorage.getItem('kempy_sidebar_collapsed') === '1') {
     document.documentElement.classList.add('sb-collapsed');
   }
@@ -15,77 +13,41 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ---------- Design tokens (match landing) ---------- */
 :root {
-  --bg: #050708;
-  --bg-2: #0a0d10;
-  --surface: #0e1316;
-  --surface-2: #131a1e;
-  --surface-3: #182025;
-  --border: #1a2329;
-  --border-cyan: #1e3a44;
-  --cyan: #00e5ff;
-  --cyan-glow: #00e5ff40;
-  --cyan-dim: #4ad4e4;
-  --green: #00ff9d;
-  --green-dim: #00cc7a;
-  --amber: #ffb800;
-  --red: #ff4d6d;
-  --text: #e6f1f5;
-  --text-dim: #8a9ba3;
-  --text-muted: #5a6970;
+  --bg: #050708; --bg-2: #0a0d10; --surface: #0e1316; --surface-2: #131a1e; --surface-3: #182025;
+  --border: #1a2329; --border-cyan: #1e3a44;
+  --cyan: #00e5ff; --cyan-glow: #00e5ff40; --cyan-dim: #4ad4e4;
+  --green: #00ff9d; --green-dim: #00cc7a; --amber: #ffb800; --red: #ff4d6d;
+  --text: #e6f1f5; --text-dim: #8a9ba3; --text-muted: #5a6970;
   --font-sans: 'Sora', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-display: 'Archivo Black', sans-serif;
-
-  --sidebar-w: 248px;
-  --sidebar-w-collapsed: 68px;
-  --topbar-h: 64px;
+  --sidebar-w: 248px; --sidebar-w-collapsed: 68px; --topbar-h: 64px;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-weight: 400;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-weight: 400; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; min-height: 100vh;
 }
-
-/* Atmospheric background — softer than landing */
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background:
     radial-gradient(ellipse 70% 50% at 0% 0%, rgba(0,229,255,0.05), transparent 60%),
     radial-gradient(ellipse 50% 30% at 100% 100%, rgba(0,255,157,0.03), transparent 60%);
-  pointer-events: none;
-  z-index: 0;
 }
 body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.012'/></svg>");
-  pointer-events: none;
-  z-index: 0;
 }
 
-/* ---------- App layout ---------- */
+/* ---------- App layout (shared) ---------- */
 .app {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
-  min-height: 100vh;
-  position: relative;
-  z-index: 1;
+  display: grid; grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh; position: relative; z-index: 1;
   transition: grid-template-columns 0.25s ease;
 }
-
-/* ---------- Collapsed sidebar (desktop) ---------- */
 html.sb-collapsed .app { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
 html.sb-collapsed .brand-text,
 html.sb-collapsed .nav-label,
@@ -97,870 +59,422 @@ html.sb-collapsed .nav-item { justify-content: center; padding: 11px 0; gap: 0; 
 html.sb-collapsed .brand { justify-content: center; padding: 18px 0; gap: 0; }
 html.sb-collapsed .sidebar-footer { justify-content: center; padding: 14px 8px; }
 html.sb-collapsed .nav { padding: 14px 8px; }
-
-/* Tooltip on hover when collapsed */
 html.sb-collapsed .nav-item { position: relative; }
 html.sb-collapsed .nav-item:hover::after {
-  content: attr(data-label);
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--surface-2);
-  border: 1px solid var(--border-cyan);
-  color: var(--text);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  z-index: 200;
-  pointer-events: none;
+  content: attr(data-label); position: absolute;
+  left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  background: var(--surface-2); border: 1px solid var(--border-cyan);
+  color: var(--text); padding: 6px 10px; border-radius: 6px;
+  font-size: 12px; font-family: var(--font-mono); letter-spacing: 0.5px;
+  white-space: nowrap; z-index: 200; pointer-events: none;
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
-/* ---------- Sidebar ---------- */
+/* ---------- Sidebar (shared) ---------- */
 .sidebar {
   background: rgba(10,13,16,0.72);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
 }
-
 .brand {
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: -1px;
-  color: var(--cyan);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-display); font-size: 22px; letter-spacing: -1px;
+  color: var(--cyan); display: flex; align-items: center; gap: 10px;
   text-decoration: none;
 }
 .brand::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 12px var(--green);
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 12px var(--green);
   animation: pulse 2.4s ease-in-out infinite;
 }
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 12px var(--green); }
   50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); }
 }
-
-.nav {
-  flex: 1;
-  padding: 14px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow-y: auto;
-}
+.nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 1px; overflow-y: auto; }
 .nav::-webkit-scrollbar { width: 4px; }
 .nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
 .nav-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-  padding: 14px 12px 6px;
+  font-family: var(--font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--text-muted); padding: 14px 12px 6px;
 }
 .nav-label:first-child { padding-top: 4px; }
-
 .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  color: var(--text-dim);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px; border-radius: 8px;
+  color: var(--text-dim); text-decoration: none;
+  font-size: 14px; font-weight: 500;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   border: 1px solid transparent;
-  position: relative;
 }
-.nav-item:hover {
-  background: var(--surface);
-  color: var(--text);
-}
+.nav-item:hover { background: var(--surface); color: var(--text); }
 .nav-item.active {
-  background: rgba(0,229,255,0.08);
-  color: var(--cyan);
+  background: rgba(0,229,255,0.08); color: var(--cyan);
   border-color: var(--border-cyan);
   box-shadow: inset 0 0 20px rgba(0,229,255,0.04);
 }
 .nav-item.soon { opacity: 0.55; }
 .nav-item.soon:hover { opacity: 0.85; }
-.nav-item .icon {
-  width: 18px;
-  display: inline-flex;
-  justify-content: center;
-  flex-shrink: 0;
-  opacity: 0.95;
-}
+.nav-item .icon { width: 18px; display: inline-flex; justify-content: center; flex-shrink: 0; opacity: 0.95; }
 .nav-item .pill {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 1px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
+  margin-left: auto; font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 1px; padding: 2px 6px; border-radius: 4px;
+  background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border);
 }
-
 .sidebar-footer {
-  padding: 14px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  padding: 14px; border-top: 1px solid var(--border);
+  display: flex; gap: 10px; align-items: center;
 }
 .avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, var(--cyan), var(--green));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  color: var(--bg);
-  flex-shrink: 0;
-  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; color: var(--bg);
+  flex-shrink: 0; font-size: 14px;
 }
 .user-info { flex: 1; min-width: 0; }
-.user-info .name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.user-info .role {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
-}
-.user-menu {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 18px;
-  padding: 6px;
-  border-radius: 6px;
-  line-height: 1;
-  transition: all 0.15s;
-}
-.user-menu:hover {
-  background: var(--surface);
-  color: var(--text);
-}
+.user-info .name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-info .role { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.user-menu { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 6px; border-radius: 6px; line-height: 1; transition: all 0.15s; }
+.user-menu:hover { background: var(--surface); color: var(--text); }
 
-/* ---------- Main ---------- */
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
+/* ---------- Main (shared) ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; }
 .topbar {
-  height: var(--topbar-h);
-  padding: 0 32px;
+  height: var(--topbar-h); padding: 0 32px;
   border-bottom: 1px solid var(--border);
   background: rgba(5,7,8,0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
 }
-.topbar .crumb {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-}
+.topbar .crumb { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
 .topbar .crumb .arrow { margin: 0 8px; opacity: 0.5; }
 .topbar .crumb .current { color: var(--cyan); }
-
 .topbar .actions { display: flex; gap: 10px; align-items: center; }
 .btn-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.15s;
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; transition: all 0.15s;
 }
 .btn-icon:hover { border-color: var(--border-cyan); color: var(--cyan); }
-
-/* ---------- Content ---------- */
-.content {
-  padding: 32px;
-  flex: 1;
-  max-width: 1400px;
-  width: 100%;
-}
-
-/* Empty state — used inside cards when no data */
-.empty {
-  text-align: center;
-  padding: 28px 12px;
-  color: var(--text-dim);
-}
-.empty .icon {
-  font-size: 36px;
-  opacity: 0.35;
-  margin-bottom: 10px;
-  display: inline-block;
-}
-.empty p { font-size: 13px; margin-bottom: 14px; }
-.empty .btn { margin-top: 6px; }
+.content { padding: 32px; flex: 1; max-width: 1200px; width: 100%; }
 
 /* Buttons */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--cyan);
-  color: var(--bg);
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 13px;
-  border: none;
-  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: var(--cyan); color: var(--bg);
+  border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;
+  border: none; cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
   font-family: var(--font-sans);
 }
-.btn:hover {
-  background: var(--cyan-dim);
-  box-shadow: 0 0 28px var(--cyan-glow);
-}
+.btn:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
 .btn:active { transform: translateY(1px); }
-.btn.ghost {
-  background: transparent;
-  color: var(--cyan);
-  border: 1px solid var(--border-cyan);
-}
-.btn.ghost:hover {
-  background: rgba(0,229,255,0.06);
-  box-shadow: none;
-}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.btn.ghost { background: transparent; color: var(--cyan); border: 1px solid var(--border-cyan); }
+.btn.ghost:hover { background: rgba(0,229,255,0.06); box-shadow: none; }
+.btn.danger { background: transparent; color: var(--red); border: 1px solid rgba(255,77,109,0.3); }
+.btn.danger:hover { background: rgba(255,77,109,0.08); box-shadow: none; }
+.btn.danger.solid { background: var(--red); color: white; border: none; }
+.btn.danger.solid:hover { background: #e64566; box-shadow: 0 0 28px rgba(255,77,109,0.4); }
 .btn.sm { padding: 7px 12px; font-size: 12px; }
 
-/* ---------- Settings ---------- */
-.settings-hero {
-  display: grid;
-  grid-template-columns: minmax(280px, 1.2fr) minmax(240px, 0.8fr);
-  gap: 20px;
-  margin-bottom: 24px;
-}
-.settings-title h1 {
+/* ============== PAGE: Settings ============== */
+
+.page-header { margin-bottom: 22px; }
+.page-header h1 {
   font-family: var(--font-display);
-  font-size: 34px;
-  letter-spacing: -1px;
-  line-height: 1.1;
-  margin-bottom: 8px;
+  font-size: 32px; letter-spacing: -1.2px;
+  margin-bottom: 4px;
 }
-.settings-title p {
+.page-header h1 .accent { color: var(--cyan); }
+.page-header p { color: var(--text-dim); font-size: 14px; }
+
+/* Sub-nav + panel layout */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+@media (max-width: 800px) {
+  .settings-layout { grid-template-columns: 1fr; gap: 16px; }
+}
+
+.sub-nav {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: calc(var(--topbar-h) + 16px);
+}
+@media (max-width: 800px) {
+  .sub-nav { position: static; flex-direction: row; flex-wrap: wrap; }
+}
+.sub-link {
+  padding: 10px 12px;
+  border-radius: 8px;
   color: var(--text-dim);
-  font-size: 14px;
-  max-width: 640px;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+  background: none;
+  font-family: var(--font-sans);
+  text-align: left;
+  width: 100%;
 }
-.flow-card {
-  background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(0,255,157,0.04));
-  border: 1px solid var(--border-cyan);
-  border-radius: 14px;
-  padding: 16px;
+.sub-link:hover { background: var(--bg-2); color: var(--text); }
+.sub-link.active {
+  background: rgba(0,229,255,0.08);
+  color: var(--cyan);
+  border-color: var(--border-cyan);
 }
-.flow-title {
+.sub-link .icon { width: 18px; text-align: center; opacity: 0.9; }
+.sub-link.danger.active { background: rgba(255,77,109,0.08); color: var(--red); border-color: rgba(255,77,109,0.25); }
+.sub-link.danger:hover { color: var(--red); }
+
+/* Panels */
+.panel { display: none; }
+.panel.active { display: block; }
+
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+.section .help {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.section.danger { border-color: rgba(255,77,109,0.25); }
+.section.danger h2 { color: var(--red); }
+
+/* Form fields */
+.field { margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block;
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
-.flow-steps {
-  list-style: none;
-  display: grid;
-  gap: 8px;
-  counter-reset: flow;
-}
-.flow-steps li {
-  counter-increment: flow;
-  position: relative;
-  padding: 10px 12px 10px 40px;
-  background: var(--surface-2);
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="password"],
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--bg-2);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 13px;
   color: var(--text);
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.flow-steps li::before {
-  content: counter(flow);
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--surface-3);
-  border: 1px solid var(--border-cyan);
-  color: var(--cyan);
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+}
+.field textarea { resize: vertical; min-height: 80px; font-family: var(--font-sans); }
+.field .hint {
   font-family: var(--font-mono);
   font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--text-muted);
+  margin-top: 5px;
+  letter-spacing: 0.3px;
 }
 
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  background: rgba(14,19,22,0.7);
-  border: 1px solid var(--border);
-  padding: 8px;
-  border-radius: 12px;
-  margin-bottom: 18px;
-}
-.tab-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: var(--font-sans);
-}
-.tab-btn:hover {
-  color: var(--text);
-  background: var(--surface);
-  border-color: var(--border);
-}
-.tab-btn.active {
-  color: var(--cyan);
-  background: rgba(0,229,255,0.08);
-  border-color: var(--border-cyan);
-  box-shadow: inset 0 0 18px rgba(0,229,255,0.08);
-}
-
-.tab-panel { display: none; }
-.tab-panel.active { display: block; animation: panelIn 0.25s ease; }
-@keyframes panelIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.section-head { margin-bottom: 14px; }
-.section-head h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.section-head p {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-
-.panel-grid {
+.field-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-}
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-}
-.panel.wide { grid-column: 1 / -1; }
-.panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 14px;
 }
-.panel-header h3 {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.panel-header p {
-  color: var(--text-dim);
-  font-size: 13px;
-}
-.panel-actions {
+@media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } }
+
+.section-footer {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
-  align-items: center;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
 
-.field {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-.field label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: var(--text-muted);
-}
-input, select, textarea {
-  width: 100%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 13px;
-  color: var(--text);
-  font-family: var(--font-sans);
-}
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--border-cyan);
-  box-shadow: 0 0 0 2px rgba(0,229,255,0.08);
-}
-input[readonly] {
-  color: var(--text-dim);
-  background: rgba(19,26,30,0.6);
-}
-textarea { resize: vertical; min-height: 110px; }
-.helper { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
-.input-group { position: relative; }
-.input-group input { padding-right: 44px; }
-.input-group.prefix input { padding-left: 26px; padding-right: 12px; }
-.input-suffix, .input-prefix {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-family: var(--font-mono);
-}
-.input-suffix { right: 12px; }
-.input-prefix { left: 10px; }
-
-.segmented {
-  display: inline-flex;
-  gap: 4px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px;
-  margin-bottom: 12px;
-}
-.seg { position: relative; }
-.seg input { position: absolute; opacity: 0; }
-.seg span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.seg input:checked + span {
-  background: rgba(0,229,255,0.12);
-  color: var(--cyan);
-  border: 1px solid var(--border-cyan);
-}
-
+/* Toggle */
 .toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
 }
-.toggle-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.toggle-row:first-child { padding-top: 0; }
+.toggle-row .info { flex: 1; padding-right: 16px; }
+.toggle-row .title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+.toggle-row .desc { font-size: 12.5px; color: var(--text-dim); }
+
 .switch {
   position: relative;
-  width: 46px;
-  height: 24px;
   display: inline-block;
+  width: 40px;
+  height: 22px;
   flex-shrink: 0;
 }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
   position: absolute;
+  cursor: pointer;
   inset: 0;
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 999px;
-  transition: all 0.2s ease;
+  border-radius: 100px;
+  transition: 0.2s;
 }
 .slider::before {
   content: '';
   position: absolute;
-  width: 18px;
-  height: 18px;
+  height: 14px;
+  width: 14px;
   left: 3px;
-  top: 2px;
-  border-radius: 50%;
+  top: 3px;
   background: var(--text-muted);
-  transition: all 0.2s ease;
+  border-radius: 50%;
+  transition: 0.2s;
 }
 .switch input:checked + .slider {
   background: rgba(0,229,255,0.15);
-  border-color: var(--border-cyan);
+  border-color: var(--cyan);
 }
 .switch input:checked + .slider::before {
-  transform: translateX(22px);
+  transform: translateX(18px);
   background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
 }
 
-.badge {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  background: var(--surface-2);
-}
-.badge.success {
-  color: var(--green);
-  border-color: rgba(0,255,157,0.3);
-  background: rgba(0,255,157,0.08);
-}
-.badge.warn {
-  color: var(--amber);
-  border-color: rgba(255,184,0,0.35);
-  background: rgba(255,184,0,0.08);
-}
-
-.sync-row { display: flex; gap: 10px; align-items: center; }
-
-.store-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
+/* Stores list (inside Stores panel) */
+.stores-list { display: grid; gap: 12px; margin-bottom: 16px; }
 .store-card {
-  background: var(--surface-2);
+  background: var(--bg-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: 10px;
+  padding: 16px 18px;
   display: grid;
-  gap: 10px;
-}
-.store-top {
-  display: flex;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
-.store-name { font-weight: 600; }
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  text-transform: uppercase;
-  font-family: var(--font-mono);
-  letter-spacing: 0.8px;
-  color: var(--text-muted);
-}
-.status::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px rgba(0,255,157,0.4);
-}
-.status.issue::before {
-  background: var(--red);
-  box-shadow: 0 0 8px rgba(255,77,109,0.35);
-}
-.store-meta { font-size: 12px; color: var(--text-dim); }
-.store-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.radio-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
+.store-card.connected { border-color: rgba(0,255,157,0.25); }
+.store-logo {
+  width: 42px; height: 42px;
+  border-radius: 8px;
+  background: var(--surface-3);
   border: 1px solid var(--border);
-  font-size: 10px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-}
-.store-buttons { display: inline-flex; gap: 8px; flex-wrap: wrap; }
-
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-}
-.check input { accent-color: var(--cyan); }
-.check.card {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-.check-grid { display: grid; gap: 10px; }
-
-.preview-card {
-  background: var(--surface-2);
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  display: grid;
-  gap: 8px;
-}
-.preview-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-}
-.preview-row strong { font-weight: 600; }
-.preview-row span { color: var(--text-dim); }
-
-.history-list { display: grid; gap: 10px; margin-top: 8px; }
-.history-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 13px;
-}
-.history-item span { color: var(--text-dim); }
-
-.danger-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-.usage { display: grid; gap: 8px; }
-.usage-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.usage-bar {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-.usage-bar span {
-  display: block;
-  height: 100%;
-  width: 72%;
-  background: linear-gradient(90deg, var(--cyan), var(--green));
-}
-
-.payment-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.payment-brand { font-weight: 600; }
-.payment-meta { font-size: 12px; color: var(--text-muted); }
-
-.note {
-  background: var(--surface-2);
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.toast {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-cyan);
-  color: var(--text);
-  padding: 12px 16px;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-  opacity: 0;
-  transform: translateY(10px);
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 200;
-  font-size: 13px;
-}
-.toast.show { opacity: 1; transform: translateY(0); }
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  display: none;
   align-items: center;
   justify-content: center;
-  z-index: 150;
-  padding: 20px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  flex-shrink: 0;
 }
-.modal-backdrop.open { display: flex; }
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-  width: min(520px, 96vw);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
-}
-.modal.warning { border-color: rgba(255,77,109,0.45); }
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.modal-header h3 { font-size: 16px; }
-.modal-body { display: grid; gap: 10px; }
-.modal-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+.store-logo.ebay { background: #e53238; color: white; border-color: #c92a30; }
+.store-logo.amazon { background: #ff9900; color: #131a22; border-color: #cc7a00; }
+.store-logo.shopify { background: #96bf48; color: #1a1a1a; border-color: #7ea63b; }
+.store-info .name { font-size: 14px; font-weight: 600; }
+.store-info .meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  letter-spacing: 0.3px;
 }
 
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+/* API key display */
+.api-key-row {
+  background: var(--bg-2);
   border: 1px solid var(--border);
-  background: transparent;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+.api-key-row .label { color: var(--text-muted); }
+.api-key-row .value { color: var(--cyan); flex: 1; word-break: break-all; }
+.api-key-row .value.hidden { letter-spacing: 4px; }
+.api-key-row button {
+  background: none; border: none;
   color: var(--text-dim);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 14px;
+  padding: 2px;
 }
-.icon-btn:hover { border-color: var(--border-cyan); color: var(--cyan); }
+.api-key-row button:hover { color: var(--cyan); }
 
-.btn.danger {
-  background: var(--red);
-  color: #0b0f12;
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--surface-2); border: 1px solid var(--border-cyan);
+  color: var(--text); padding: 12px 20px;
+  border-radius: 10px; font-family: var(--font-mono); font-size: 13px;
+  opacity: 0; pointer-events: none; z-index: 1000;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
-.btn.danger:hover {
-  background: #ff6b85;
-  box-shadow: 0 0 18px rgba(255,77,109,0.35);
-}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
 
-.pulse {
-  position: relative;
-}
-.pulse::after {
-  content: '';
-  position: absolute;
-  inset: -6px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,229,255,0.5);
-  opacity: 0;
-  animation: pulseRing 1.8s ease-out infinite;
-  pointer-events: none;
-}
-@keyframes pulseRing {
-  0% { opacity: 0.8; transform: scale(0.96); }
-  100% { opacity: 0; transform: scale(1.15); }
-}
-
-/* ---------- Responsive ---------- */
+/* Responsive */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: fixed;
-    left: -100%;
-    top: 0;
-    width: 280px;
-    z-index: 100;
-    transition: left 0.28s ease;
-  }
+  .sidebar { position: fixed; left: -100%; top: 0; width: 280px; z-index: 100; transition: left 0.28s ease; }
   .sidebar.open { left: 0; }
   .sidebar.open + .main::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 50;
+    content: ''; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 50;
   }
   .content { padding: 20px; }
   .topbar { padding: 0 16px; }
-  .settings-hero { grid-template-columns: 1fr; }
-  .panel-header { flex-direction: column; align-items: flex-start; }
-  .sync-row { flex-direction: column; align-items: stretch; }
-  .tab-btn { flex: 1 1 140px; text-align: center; }
+  .page-header h1 { font-size: 24px; }
 }
 </style>
 </head>
@@ -968,64 +482,28 @@ textarea { resize: vertical; min-height: 110px; }
 
 <div class="app">
 
-  <!-- ============== SIDEBAR ============== -->
   <aside class="sidebar" id="sidebar">
     <a href="/" class="brand"><span class="brand-text">KEMPY</span></a>
-
     <nav class="nav">
       <div class="nav-label">Workspace</div>
-      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard">
-        <span class="icon">▣</span> <span class="label">Dashboard</span>
-      </a>
-      <a href="/app/research.html" class="nav-item" data-label="Research">
-        <span class="icon">🔍</span> <span class="label">Research</span>
-      </a>
-      <a href="/app/watchlist.html" class="nav-item" data-label="Watchlist">
-        <span class="icon">⭐</span> <span class="label">Watchlist</span>
-      </a>
-      <a href="/app/listings.html" class="nav-item" data-label="Listings">
-        <span class="icon">📋</span> <span class="label">Listings</span>
-      </a>
-      <a href="/app/orders.html" class="nav-item" data-label="Orders">
-        <span class="icon">📦</span> <span class="label">Orders</span>
-      </a>
-      <a href="/app/profit.html" class="nav-item" data-label="Profit">
-        <span class="icon">📈</span> <span class="label">Profit</span>
-      </a>
+      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard"><span class="icon">▣</span> <span class="label">Dashboard</span></a>
+      <a href="/app/research.html" class="nav-item" data-label="Research"><span class="icon">🔍</span> <span class="label">Research</span></a>
+      <a href="/app/watchlist.html" class="nav-item" data-label="Watchlist"><span class="icon">⭐</span> <span class="label">Watchlist</span></a>
+      <a href="/app/listings.html" class="nav-item" data-label="Listings"><span class="icon">📋</span> <span class="label">Listings</span></a>
+      <a href="/app/orders.html" class="nav-item" data-label="Orders"><span class="icon">📦</span> <span class="label">Orders</span></a>
+      <a href="#" class="nav-item soon" data-label="Profit (coming soon)"><span class="icon">📈</span> <span class="label">Profit</span> <span class="pill">soon</span></a>
 
       <div class="nav-label">Account</div>
-      <a href="/app/stores.html" class="nav-item" data-label="Stores">
-        <span class="icon">🏪</span> <span class="label">Stores</span>
-      </a>
-      <a href="/app/team.html" class="nav-item" data-label="Team">
-        <span class="icon">👥</span> <span class="label">Team</span>
-      </a>
-      <a href="/app/settings.html" class="nav-item active" data-label="Settings">
-        <span class="icon">⚙</span> <span class="label">Settings</span>
-      </a>
-      <a href="/app/billing.html" class="nav-item" data-label="Billing">
-        <span class="icon">💳</span> <span class="label">Billing</span>
-      </a>
-      <a href="/app/affiliate.html" class="nav-item" data-label="Affiliate">
-        <span class="icon">🤝</span> <span class="label">Affiliate</span>
-      </a>
-
-      <div class="nav-label">Admin</div>
-      <a href="/app/staff.html" class="nav-item" data-label="Staff Portal">
-        <span class="icon">🛡️</span> <span class="label">Staff Portal</span>
-      </a>
+      <a href="#" class="nav-item soon" data-label="Team (coming soon)"><span class="icon">👥</span> <span class="label">Team</span> <span class="pill">soon</span></a>
+      <a href="/app/settings.html" class="nav-item active" data-label="Settings"><span class="icon">⚙</span> <span class="label">Settings</span></a>
+      <a href="#" class="nav-item soon" data-label="Billing (coming soon)"><span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span></a>
 
       <div class="nav-label">Resources</div>
-      <a href="#" class="nav-item soon" data-label="Course (coming soon)">
-        <span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span>
-      </a>
-      <a href="/" class="nav-item" data-label="Back to marketing site">
-        <span class="icon">←</span> <span class="label">Marketing site</span>
-      </a>
+      <a href="#" class="nav-item soon" data-label="Course (coming soon)"><span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span></a>
+      <a href="/" class="nav-item" data-label="Back to marketing site"><span class="icon">←</span> <span class="label">Marketing site</span></a>
     </nav>
-
     <div class="sidebar-footer">
-      <div class.avatar" id="user-avatar">G</div>
+      <div class="avatar" id="user-avatar">G</div>
       <div class="user-info">
         <div class="name" id="user-name">Guest</div>
         <div class="role" id="user-role">PREVIEW MODE</div>
@@ -1034,894 +512,565 @@ textarea { resize: vertical; min-height: 110px; }
     </div>
   </aside>
 
-  <!-- ============== MAIN ============== -->
   <div class="main">
-
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn-icon menu-btn" id="menu-btn" title="Menu">☰</button>
-        <div class="crumb">
-          KEMPY <span class="arrow">/</span> <span class="current">Settings</span>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn-icon" title="Notifications">🔔</button>
-        <a href="/app/research.html" class="btn sm">Find products</a>
+        <button class="btn-icon" id="menu-btn" title="Menu">☰</button>
+        <div class="crumb">KEMPY <span class="arrow">/</span> <span class="current" id="crumb-current">Settings</span></div>
       </div>
     </header>
 
-    <div class="content" data-endpoint="/api/settings">
-      <section class="settings-hero">
-        <div class="settings-title">
-          <h1>Settings control room</h1>
-          <p>Connect your store, tune pricing rules, and lock in safety so every listing follows your rules.</p>
+    <div class="content">
+
+      <div class="page-header">
+        <h1><span class="accent">Settings</span></h1>
+        <p>Manage your profile, stores, integrations and preferences.</p>
+      </div>
+
+      <div class="settings-layout">
+
+        <aside class="sub-nav">
+          <button class="sub-link active" data-panel="profile"><span class="icon">👤</span> Profile</button>
+          <button class="sub-link" data-panel="stores"><span class="icon">🏪</span> Stores</button>
+          <button class="sub-link" data-panel="notifications"><span class="icon">🔔</span> Notifications</button>
+          <button class="sub-link" data-panel="api"><span class="icon">🔌</span> API & Integrations</button>
+          <button class="sub-link danger" data-panel="danger"><span class="icon">⚠</span> Danger zone</button>
+        </aside>
+
+        <div>
+
+          <!-- ============ PROFILE ============ -->
+          <div class="panel active" id="panel-profile">
+            <div class="section">
+              <h2>Profile</h2>
+              <p class="help">How your account appears across KEMPY and on emails we send.</p>
+              <form id="profile-form">
+                <div class="field-row">
+                  <div class="field">
+                    <label for="profile-name">Display name</label>
+                    <input type="text" id="profile-name" name="name" placeholder="Jane Smith" />
+                  </div>
+                  <div class="field">
+                    <label for="profile-email">Email</label>
+                    <input type="email" id="profile-email" name="email" placeholder="you@example.com" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="profile-business">Business name (optional)</label>
+                  <input type="text" id="profile-business" name="business" placeholder="My eBay Shop LLC" />
+                  <div class="hint">Appears on invoices, packing slips and customer emails.</div>
+                </div>
+                <div class="field">
+                  <label for="profile-timezone">Time zone</label>
+                  <select id="profile-timezone" name="timezone">
+                    <option>(UTC+00:00) London</option>
+                    <option>(UTC-05:00) New York</option>
+                    <option>(UTC-08:00) Los Angeles</option>
+                    <option>(UTC+01:00) Berlin / Amsterdam</option>
+                    <option>(UTC+09:00) Tokyo</option>
+                    <option>(UTC+10:00) Sydney</option>
+                  </select>
+                </div>
+                <div class="section-footer">
+                  <button type="button" class="btn ghost" id="profile-cancel">Cancel</button>
+                  <button type="submit" class="btn">Save changes</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="section">
+              <h2>Password</h2>
+              <p class="help">Update the password used for email/password sign-in.</p>
+              <form id="pw-form">
+                <div class="field">
+                  <label for="pw-current">Current password</label>
+                  <input type="password" id="pw-current" autocomplete="current-password" />
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="pw-new">New password</label>
+                    <input type="password" id="pw-new" autocomplete="new-password" minlength="8" />
+                    <div class="hint">Minimum 8 characters.</div>
+                  </div>
+                  <div class="field">
+                    <label for="pw-confirm">Confirm new password</label>
+                    <input type="password" id="pw-confirm" autocomplete="new-password" />
+                  </div>
+                </div>
+                <div class="section-footer">
+                  <button type="submit" class="btn">Update password</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ============ STORES ============ -->
+          <div class="panel" id="panel-stores">
+            <div class="section">
+              <h2>Connected stores</h2>
+              <p class="help">Connect a marketplace to sync listings, orders and fulfillment automatically.</p>
+              <div class="stores-list" id="stores-list"></div>
+              <div class="section-footer" style="border-top: none; padding-top: 0; margin-top: 0;">
+                <button class="btn ghost sm" id="add-store-btn">+ More marketplaces</button>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Fulfillment supplier</h2>
+              <p class="help">When an order comes in, KEMPY uses this account to auto-purchase from your supplier.</p>
+              <div class="store-card" id="amazon-supplier">
+                <div class="store-logo amazon">a</div>
+                <div class="store-info">
+                  <div class="name">Amazon</div>
+                  <div class="meta">Used to auto-fulfill orders from your eBay store</div>
+                </div>
+                <button class="btn ghost sm" id="connect-amazon-supplier">Connect</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ NOTIFICATIONS ============ -->
+          <div class="panel" id="panel-notifications">
+            <div class="section">
+              <h2>Email notifications</h2>
+              <p class="help">Choose what KEMPY emails you about. You can change this anytime.</p>
+
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">New orders</div>
+                  <div class="desc">Email me when a customer places a new order.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="email-orders" checked /><span class="slider"></span></label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">Out-of-stock alerts</div>
+                  <div class="desc">When a supplier marks an item out of stock, get a heads-up so you can re-source.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="email-oos" checked /><span class="slider"></span></label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">Price-drift alerts</div>
+                  <div class="desc">When a saved product's margin shrinks below your threshold.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="email-pricedrift" /><span class="slider"></span></label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">Weekly summary</div>
+                  <div class="desc">Friday roundup of sales, profit and the week's best opportunities.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="email-weekly" checked /><span class="slider"></span></label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">Product updates</div>
+                  <div class="desc">Hear about new KEMPY features. Roughly one email a month.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="email-product" /><span class="slider"></span></label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>In-app notifications</h2>
+              <p class="help">For when you're working in the dashboard.</p>
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">New orders</div>
+                  <div class="desc">Real-time toast notification in the dashboard.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="push-orders" checked /><span class="slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title">System alerts</div>
+                  <div class="desc">When a store loses connection or an API rate-limits us.</div>
+                </div>
+                <label class="switch"><input type="checkbox" data-pref="push-system" checked /><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ API & INTEGRATIONS ============ -->
+          <div class="panel" id="panel-api">
+            <div class="section">
+              <h2>Personal API token</h2>
+              <p class="help">Use this token to access the KEMPY API from your own scripts. Keep it secret.</p>
+              <div class="api-key-row">
+                <span class="label">Token</span>
+                <span class="value hidden" id="api-token">kempy_sk_••••••••••••••••••••••••</span>
+                <button id="api-toggle" title="Show / hide">👁</button>
+                <button id="api-copy" title="Copy">📋</button>
+              </div>
+              <div class="section-footer" style="padding-top: 14px; margin-top: 14px;">
+                <button class="btn ghost sm" id="api-regen">Regenerate token</button>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Webhooks</h2>
+              <p class="help">Send events to your own URL when orders are placed or fulfilled. POSTed as JSON.</p>
+              <div class="field">
+                <label for="webhook-url">Endpoint URL</label>
+                <input type="text" id="webhook-url" placeholder="https://yourdomain.com/webhooks/kempy" />
+              </div>
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title"><code style="font-family:var(--font-mono);color:var(--cyan);">order.created</code></div>
+                  <div class="desc">When a new order syncs in from any store.</div>
+                </div>
+                <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title"><code style="font-family:var(--font-mono);color:var(--cyan);">order.fulfilled</code></div>
+                  <div class="desc">When tracking has been added to an order.</div>
+                </div>
+                <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div class="info">
+                  <div class="title"><code style="font-family:var(--font-mono);color:var(--cyan);">listing.outofstock</code></div>
+                  <div class="desc">When a listing's supplier reports out of stock.</div>
+                </div>
+                <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
+              </div>
+              <div class="section-footer">
+                <button class="btn">Save webhook</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ DANGER ZONE ============ -->
+          <div class="panel" id="panel-danger">
+            <div class="section danger">
+              <h2>Export your data</h2>
+              <p class="help">Download a ZIP of your listings, orders, watchlist and settings. JSON + CSV formats.</p>
+              <div class="section-footer" style="border-top: none; padding-top: 0; margin-top: 0;">
+                <button class="btn ghost" id="export-btn">Request export</button>
+              </div>
+            </div>
+
+            <div class="section danger">
+              <h2>Sign out everywhere</h2>
+              <p class="help">End every active session except this one. Use this if you think your account has been accessed.</p>
+              <div class="section-footer" style="border-top: none; padding-top: 0; margin-top: 0;">
+                <button class="btn danger" id="signout-all-btn">Sign out of all sessions</button>
+              </div>
+            </div>
+
+            <div class="section danger">
+              <h2>Delete account</h2>
+              <p class="help">Permanently delete your KEMPY account and all data we hold. <strong style="color:var(--red);">This cannot be undone.</strong> Stores will be disconnected; existing orders will not be cancelled.</p>
+              <div class="section-footer" style="border-top: none; padding-top: 0; margin-top: 0;">
+                <button class="btn danger solid" id="delete-btn">Delete account permanently</button>
+              </div>
+            </div>
+          </div>
+
         </div>
-        <div class="flow-card">
-          <div class="flow-title">Simple user journey</div>
-          <ol class="flow-steps">
-            <li>Connect your eBay store</li>
-            <li>Set markup and Safety Shield</li>
-            <li>Update account details</li>
-            <li>Return to Research and start listing</li>
-          </ol>
-        </div>
-      </section>
-
-      <div class="tabs" role="tablist" aria-label="Settings sections">
-        <button class="tab-btn active" id="tab-btn-stores" data-tab="stores" role="tab" aria-selected="true" aria-controls="tab-stores" tabindex="0">My Stores</button>
-        <button class="tab-btn" id="tab-btn-pricing" data-tab="pricing" role="tab" aria-selected="false" aria-controls="tab-pricing" tabindex="-1">Pricing Rules</button>
-        <button class="tab-btn" id="tab-btn-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="tab-ai" tabindex="-1">AI Listing Preferences</button>
-        <button class="tab-btn" id="tab-btn-safety" data-tab="safety" role="tab" aria-selected="false" aria-controls="tab-safety" tabindex="-1">Safety Shield</button>
-        <button class="tab-btn" id="tab-btn-automation" data-tab="automation" role="tab" aria-selected="false" aria-controls="tab-automation" tabindex="-1">Automation &amp; Monitoring</button>
-        <button class="tab-btn" id="tab-btn-account" data-tab="account" role="tab" aria-selected="false" aria-controls="tab-account" tabindex="-1">My Account</button>
-        <button class="tab-btn" id="tab-btn-billing" data-tab="billing" role="tab" aria-selected="false" aria-controls="tab-billing" tabindex="-1">Billing</button>
       </div>
 
-      <div class="tab-panels">
-        <section id="tab-stores" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-stores">
-          <div class="section-head">
-            <h2>My Stores</h2>
-            <p>View and manage your connected eBay stores for new listings.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Extension sync token</h3>
-                  <p>Paste this token into the Chrome extension to link automation.</p>
-                </div>
-                <span class="badge success">Active</span>
-              </div>
-              <div class="sync-row">
-                <input id="sync-token" type="text" value="KEMPY-7HF2-9C1A" readonly />
-                <button class="btn ghost sm" id="copy-token">Copy</button>
-              </div>
-              <div class="helper">Keep this token private. It links your browser automation to KEMPY.</div>
-            </div>
-
-            <div class="panel wide">
-              <div class="panel-header">
-                <div>
-                  <h3>Connected eBay stores</h3>
-                  <p>Select your default store and manage connections.</p>
-                </div>
-                <div class="panel-actions">
-                  <button class="btn sm" data-open-modal="add-store">+ Connect New eBay Store</button>
-                </div>
-              </div>
-              <div class="empty" id="store-empty" hidden>
-                <div class="icon">S</div>
-                <p>Connect your first store to unlock listing automation.</p>
-                <button class="btn" data-open-modal="add-store">+ Connect New eBay Store</button>
-              </div>
-              <div class="store-grid" id="store-grid" data-has-stores="true">
-                <div class="store-card">
-                  <div class="store-top">
-                    <div class="store-name">BaySide Deals</div>
-                    <span class="badge success">Connected</span>
-                  </div>
-                  <div class="store-meta">Default listing destination - Sync key: EXT-4AF9</div>
-                  <div class="store-actions">
-                    <label class="radio-chip">
-                      <input type="radio" name="default-store" checked />
-                      Default store
-                    </label>
-                    <div class="store-buttons">
-                      <button class="btn ghost sm">Disconnect</button>
-                    </div>
-                  </div>
-                </div>
-                <div class="store-card">
-                  <div class="store-top">
-                    <div class="store-name">Night Owl Outlet</div>
-                    <span class="badge warn">Reconnect needed</span>
-                  </div>
-                  <div class="store-meta">Last sync 5 days ago - Sync key: EXT-9B12</div>
-                  <div class="store-actions">
-                    <label class="radio-chip">
-                      <input type="radio" name="default-store" />
-                      Default store
-                    </label>
-                    <div class="store-buttons">
-                      <button class="btn sm">Reconnect</button>
-                      <button class="btn ghost sm">Disconnect</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-pricing" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-pricing">
-          <div class="section-head">
-            <h2>Pricing Rules</h2>
-            <p>Set your markup, ads rate, and fees buffer with a live preview.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Markup rules</h3>
-                  <p>Add profit as a percentage or fixed amount.</p>
-                </div>
-                <div class="panel-actions">
-                  <button class="btn sm" id="save-markup-btn">Save pricing</button>
-                </div>
-              </div>
-              <div class="segmented" role="radiogroup" aria-label="Markup type">
-                <label class="seg">
-                  <input type="radio" name="markup-mode" value="percent" checked />
-                  <span>Percent</span>
-                </label>
-                <label class="seg">
-                  <input type="radio" name="markup-mode" value="fixed" />
-                  <span>Fixed</span>
-                </label>
-              </div>
-              <div class="field" data-markup-field="percent">
-                <label for="markup-percent">Markup percentage</label>
-                <div class="input-group">
-                  <input id="markup-percent" type="number" min="0" step="0.1" value="20" />
-                  <span class="input-suffix">%</span>
-                </div>
-              </div>
-              <div class="field" data-markup-field="fixed" hidden>
-                <label for="markup-fixed">Fixed markup</label>
-                <div class="input-group prefix">
-                  <span class="input-prefix">$</span>
-                  <input id="markup-fixed" type="number" min="0" step="0.01" value="5" />
-                </div>
-              </div>
-              <div class="helper">Markup applies to all new eBay listings.</div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Ads &amp; fees buffer</h3>
-                  <p>Set promoted listings and optional fee cushion.</p>
-                </div>
-              </div>
-              <div class="field">
-                <label for="promoted-rate">Default promoted listings</label>
-                <div class="input-group">
-                  <input id="promoted-rate" type="number" min="0" step="0.1" value="4" />
-                  <span class="input-suffix">%</span>
-                </div>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Fees buffer</div>
-                  <div class="helper">Automatically adds a cushion for eBay fees.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="fees-buffer" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="field">
-                <label for="fees-buffer-amount">Fees buffer amount</label>
-                <div class="input-group prefix">
-                  <span class="input-prefix">$</span>
-                  <input id="fees-buffer-amount" type="number" min="0" step="0.01" value="1.50" />
-                </div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Live preview</h3>
-                  <p>Example calculation using your current rules.</p>
-                </div>
-              </div>
-              <div class="field">
-                <label for="preview-amazon">Example Amazon price</label>
-                <div class="input-group prefix">
-                  <span class="input-prefix">$</span>
-                  <input id="preview-amazon" type="number" min="0" step="0.01" value="40" />
-                </div>
-              </div>
-              <div class="preview-card">
-                <div class="preview-row"><span>Listing price</span><strong id="preview-list-price">$0.00</strong></div>
-                <div class="preview-row"><span>Estimated ad fee</span><span id="preview-ad-fee">$0.00</span></div>
-                <div class="preview-row"><span>Projected profit</span><strong id="preview-profit">$0.00</strong></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-ai" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-ai">
-          <div class="section-head">
-            <h2>AI Listing Preferences</h2>
-            <p>Control how KEMPY generates and cleans your listings.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Optimization toggles</h3>
-                  <p>Let AI enhance titles and images before publishing.</p>
-                </div>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Title optimization</div>
-                  <div class="helper">Rewrite titles for eBay search visibility.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="ai-title" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Image cleaning</div>
-                  <div class="helper">Remove watermarks or Amazon logos.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="ai-images" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Description style</h3>
-                  <p>Pick a writing style for AI descriptions.</p>
-                </div>
-              </div>
-              <div class="field">
-                <label for="description-style">Style</label>
-                <select id="description-style">
-                  <option>Short &amp; Sweet</option>
-                  <option>Bullet Points</option>
-                  <option>Detailed</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-safety" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-safety">
-          <div class="section-head">
-            <h2>Safety Shield</h2>
-            <p>Protect your account by blocking risky brands and keywords.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>VeRO protection</h3>
-                  <p>Automatically block known risky brands.</p>
-                </div>
-                <span class="badge success">Recommended</span>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Enable VeRO protection</div>
-                  <div class="helper">Prevents common takedowns on eBay.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="vero-toggle" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>My blacklist</h3>
-                  <p>Never list items from these brands.</p>
-                </div>
-              </div>
-              <div class="field">
-                <label for="blacklist">Brands or keywords</label>
-                <textarea id="blacklist" placeholder="Nike, Disney, Bose"></textarea>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Keyword filters</h3>
-                  <p>Block listings containing these words.</p>
-                </div>
-              </div>
-              <div class="field">
-                <label for="keyword-filters">Keywords</label>
-                <textarea id="keyword-filters" placeholder="used, refurbished, open box"></textarea>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-automation" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-automation">
-          <div class="section-head">
-            <h2>Automation &amp; Monitoring</h2>
-            <p>Keep listings synced with Amazon pricing and stock changes.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Price &amp; stock automation</h3>
-                  <p>Automatically sync pricing and availability.</p>
-                </div>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Price sync</div>
-                  <div class="helper">Update eBay price when Amazon changes.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="price-sync" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Stock protection</div>
-                  <div class="helper">End listing if Amazon runs out of stock.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="stock-protection" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Minimum profit guard</h3>
-                  <p>End listings that drop below your profit threshold.</p>
-                </div>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Enable minimum profit guard</div>
-                  <div class="helper">Stops listings that fall below your set profit.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="profit-guard" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="field">
-                <label for="min-profit">Minimum profit amount</label>
-                <div class="input-group prefix">
-                  <span class="input-prefix">$</span>
-                  <input id="min-profit" type="number" min="0" step="0.01" value="6" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-account" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-account">
-          <div class="section-head">
-            <h2>My Account</h2>
-            <p>Update account details, security, and notifications.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Account details</h3>
-                  <p>Update your username and email address.</p>
-                </div>
-                <div class="panel-actions">
-                  <button class="btn sm">Save</button>
-                </div>
-              </div>
-              <div class="field">
-                <label for="account-username">Username</label>
-                <input id="account-username" type="text" value="GuestSeller" />
-              </div>
-              <div class="field">
-                <label for="account-email">Email address</label>
-                <input id="account-email" type="email" value="guest@kempy.app" />
-                <div class="helper">Updating your email requires verification.</div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Password</h3>
-                  <p>Change your current password.</p>
-                </div>
-                <div class="panel-actions">
-                  <button class="btn ghost sm">Update password</button>
-                </div>
-              </div>
-              <div class="field">
-                <label for="password-current">Current password</label>
-                <input id="password-current" type="password" placeholder="Current password" />
-              </div>
-              <div class="field">
-                <label for="password-new">New password</label>
-                <input id="password-new" type="password" placeholder="New password" />
-              </div>
-              <div class="field">
-                <label for="password-confirm">Confirm password</label>
-                <input id="password-confirm" type="password" placeholder="Confirm password" />
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Two-factor authentication</h3>
-                  <p>Add extra login security.</p>
-                </div>
-              </div>
-              <div class="toggle-row">
-                <div>
-                  <div class="toggle-title">Enable 2FA</div>
-                  <div class="helper">Requires a code on every login.</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="two-factor" />
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Notifications</h3>
-                  <p>Choose which email alerts you receive.</p>
-                </div>
-              </div>
-              <div class="check-grid">
-                <label class="check card"><input type="checkbox" checked /> New sales</label>
-                <label class="check card"><input type="checkbox" checked /> Stock issues</label>
-                <label class="check card"><input type="checkbox" checked /> Safety warnings</label>
-                <label class="check card"><input type="checkbox" /> Pricing rule changes</label>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Plan &amp; usage</h3>
-                  <p>Starter - 100 listings/mo</p>
-                </div>
-              </div>
-              <div class="usage">
-                <div class="usage-meta">
-                  <span>Listings used</span>
-                  <span>72 / 100</span>
-                </div>
-                <div class="usage-bar"><span></span></div>
-                <div class="helper">Usage resets on the first of each month.</div>
-              </div>
-            </div>
-
-            <div class="panel wide">
-              <div class="panel-header">
-                <div>
-                  <h3>Danger zone</h3>
-                  <p>Deactivate or permanently delete your account.</p>
-                </div>
-              </div>
-              <div class="note">Deactivating stops automation immediately. Deleting is permanent.</div>
-              <div class="danger-actions">
-                <button class="btn ghost">Deactivate account</button>
-                <button class="btn danger">Delete account permanently</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-billing" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-billing">
-          <div class="section-head">
-            <h2>Billing</h2>
-            <p>Manage payment methods, renewals, and plan changes.</p>
-          </div>
-          <div class="panel-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Payment method</h3>
-                  <p>Stripe-powered credit card billing.</p>
-                </div>
-                <span class="badge">Stripe</span>
-              </div>
-              <div class="payment-card">
-                <div>
-                  <div class="payment-brand">Visa</div>
-                  <div class="payment-meta">**** 4242 · Expires 08/28</div>
-                </div>
-                <button class="btn ghost sm">Update card</button>
-              </div>
-              <div class="helper">Upcoming renewal: Jun 14, 2026</div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Plan changes</h3>
-                  <p>Upgrade or downgrade your plan anytime.</p>
-                </div>
-              </div>
-              <div class="note">Your current plan is Starter. Changes take effect on the next billing cycle.</div>
-              <div class="panel-actions" style="margin-top:12px;">
-                <button class="btn sm">Upgrade plan</button>
-                <button class="btn ghost sm">Downgrade plan</button>
-              </div>
-            </div>
-
-            <div class="panel wide">
-              <div class="panel-header">
-                <div>
-                  <h3>Billing history</h3>
-                  <p>Recent invoices and payments.</p>
-                </div>
-              </div>
-              <div class="history-list">
-                <div class="history-item">
-                  <div>May 14, 2026 - Starter Plan</div>
-                  <span>$49.00</span>
-                </div>
-                <div class="history-item">
-                  <div>Apr 14, 2026 - Starter Plan</div>
-                  <span>$49.00</span>
-                </div>
-                <div class="history-item">
-                  <div>Mar 14, 2026 - Starter Plan</div>
-                  <span>$49.00</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
     </div>
   </div>
 </div>
 
-<div class="modal-backdrop" id="modal-add-store" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-add-store-title">
-    <div class="modal-header">
-      <h3 id="modal-add-store-title">Add eBay store</h3>
-      <button class="icon-btn" data-close-modal aria-label="Close">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label for="store-name">eBay store name</label>
-        <input id="store-name" type="text" placeholder="Your eBay store name" />
-      </div>
-      <div class="field">
-        <label for="store-sync-key">Chrome extension sync key</label>
-        <input id="store-sync-key" type="text" placeholder="EXT-XXXX" />
-      </div>
-      <div class="helper">The sync key is generated inside your Chrome extension.</div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn ghost" data-close-modal>Cancel</button>
-      <button class="btn" id="add-store-btn">Add store</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="modal-vero-warning" aria-hidden="true">
-  <div class="modal warning" role="dialog" aria-modal="true" aria-labelledby="modal-vero-title">
-    <div class="modal-header">
-      <h3 id="modal-vero-title">Disable VeRO shield?</h3>
-      <button class="icon-btn" data-close-modal aria-label="Close">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="note">Warning: Disabling VeRO protection increases the risk of eBay account suspension. Are you sure?</div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn ghost" data-close-modal>Cancel</button>
-      <button class="btn danger" id="confirm-vero-disable">Disable VeRO shield</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ---------- Sidebar toggle ----------
+// ====================================================================
+// Sidebar / topbar shared behavior
+// ====================================================================
 const menuBtn = document.getElementById('menu-btn');
 const sidebar = document.getElementById('sidebar');
 const isDesktop = () => window.innerWidth > 900;
-
 menuBtn?.addEventListener('click', () => {
   if (isDesktop()) {
     const collapsed = document.documentElement.classList.toggle('sb-collapsed');
     localStorage.setItem('kempy_sidebar_collapsed', collapsed ? '1' : '0');
-  } else {
-    sidebar.classList.toggle('open');
-  }
+  } else { sidebar.classList.toggle('open'); }
 });
-
 document.addEventListener('click', (e) => {
-  if (isDesktop() || !sidebar.classList.contains('open')) return;
+  if (isDesktop()) return;
+  if (!sidebar.classList.contains('open')) return;
   if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
   sidebar.classList.remove('open');
 });
+window.addEventListener('resize', () => { if (isDesktop()) sidebar.classList.remove('open'); });
 
-window.addEventListener('resize', () => {
-  if (isDesktop()) sidebar.classList.remove('open');
-});
-
-// Settings endpoint for future wiring (GET/PUT /api/settings)
-const SETTINGS_ENDPOINT = '/api/settings';
-
-// ---------- Tabs ----------
-const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
-const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
-
-function setActiveTab(tabId, shouldFocus = false) {
-  tabButtons.forEach((btn) => {
-    const isActive = btn.dataset.tab === tabId;
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    btn.setAttribute('tabindex', isActive ? '0' : '-1');
-    if (isActive && shouldFocus) btn.focus({ preventScroll: true });
-  });
-  tabPanels.forEach((panel) => {
-    const isActive = panel.id === `tab-${tabId}`;
-    panel.classList.toggle('active', isActive);
-    panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-  });
-  if (tabId) {
-    history.replaceState(null, '', `#${tabId}`);
-  }
+// ====================================================================
+// Toast
+// ====================================================================
+const toastEl = document.getElementById('toast');
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show ' + type;
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
 }
 
-if (tabButtons.length) {
-  tabButtons.forEach((btn) => {
-    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab, true));
-  });
-  const hashTab = window.location.hash.replace('#', '');
-  if (hashTab && document.getElementById(`tab-${hashTab}`)) {
-    setActiveTab(hashTab);
-  } else {
-    setActiveTab(tabButtons[0].dataset.tab);
-  }
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// ---------- Markup mode ----------
-const markupModeInputs = document.querySelectorAll('input[name="markup-mode"]');
-const markupFields = document.querySelectorAll('[data-markup-field]');
-
-function updateMarkupFields() {
-  const selected = document.querySelector('input[name="markup-mode"]:checked');
-  const mode = selected ? selected.value : 'percent';
-  markupFields.forEach((field) => {
-    field.hidden = field.dataset.markupField !== mode;
-  });
-}
-
-markupModeInputs.forEach((input) => input.addEventListener('change', updateMarkupFields));
-updateMarkupFields();
-
-// ---------- Fees buffer + profit guard ----------
-const feesBufferToggle = document.getElementById('fees-buffer');
-const feesBufferAmount = document.getElementById('fees-buffer-amount');
-
-function updateFeesBuffer() {
-  if (!feesBufferToggle || !feesBufferAmount) return;
-  feesBufferAmount.disabled = !feesBufferToggle.checked;
-}
-
-feesBufferToggle?.addEventListener('change', updateFeesBuffer);
-updateFeesBuffer();
-
-const profitGuardToggle = document.getElementById('profit-guard');
-const minProfitInput = document.getElementById('min-profit');
-
-function updateProfitGuard() {
-  if (!profitGuardToggle || !minProfitInput) return;
-  minProfitInput.disabled = !profitGuardToggle.checked;
-}
-
-profitGuardToggle?.addEventListener('change', updateProfitGuard);
-updateProfitGuard();
-
-// ---------- Toast ----------
-const toast = document.getElementById('toast');
-let toastTimer;
-
-function showToast(message) {
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
-}
-
-const saveMarkupBtn = document.getElementById('save-markup-btn');
-saveMarkupBtn?.addEventListener('click', () => {
-  const selected = document.querySelector('input[name="markup-mode"]:checked');
-  const mode = selected ? selected.value : 'percent';
-  if (mode === 'fixed') {
-    const raw = parseFloat(document.getElementById('markup-fixed')?.value || '');
-    const value = Number.isFinite(raw) ? raw : 5;
-    showToast(`Success: Pricing rules saved with $${value.toFixed(2)} markup.`);
-  } else {
-    const raw = parseFloat(document.getElementById('markup-percent')?.value || '');
-    const value = Number.isFinite(raw) ? raw : 20;
-    showToast(`Success: Pricing rules saved with ${value}% markup.`);
-  }
-});
-
-// ---------- Live preview ----------
-const previewAmazon = document.getElementById('preview-amazon');
-const previewListPrice = document.getElementById('preview-list-price');
-const previewAdFee = document.getElementById('preview-ad-fee');
-const previewProfit = document.getElementById('preview-profit');
-const promotedRateInput = document.getElementById('promoted-rate');
-
-function formatMoney(value) {
-  const amount = Number.isFinite(value) ? value : 0;
-  return `$${amount.toFixed(2)}`;
-}
-
-function recalcPreview() {
-  if (!previewAmazon || !previewListPrice || !previewAdFee || !previewProfit) return;
-  const amazonPrice = parseFloat(previewAmazon.value || '0') || 0;
-  const selected = document.querySelector('input[name="markup-mode"]:checked');
-  const mode = selected ? selected.value : 'percent';
-  const percentMarkup = parseFloat(document.getElementById('markup-percent')?.value || '0') || 0;
-  const fixedMarkup = parseFloat(document.getElementById('markup-fixed')?.value || '0') || 0;
-  const feesBuffer = feesBufferToggle?.checked ? parseFloat(feesBufferAmount?.value || '0') || 0 : 0;
-  const adRate = parseFloat(promotedRateInput?.value || '0') || 0;
-  const markupValue = mode === 'fixed' ? fixedMarkup : amazonPrice * (percentMarkup / 100);
-  const listPrice = amazonPrice + markupValue + feesBuffer;
-  const adFee = listPrice * (adRate / 100);
-  const profit = listPrice - amazonPrice - adFee;
-  previewListPrice.textContent = formatMoney(listPrice);
-  previewAdFee.textContent = formatMoney(adFee);
-  previewProfit.textContent = formatMoney(profit);
-}
-
-[
-  previewAmazon,
-  promotedRateInput,
-  feesBufferAmount,
-  feesBufferToggle,
-  ...markupModeInputs,
-  document.getElementById('markup-percent'),
-  document.getElementById('markup-fixed')
-].forEach((input) => {
-  input?.addEventListener('input', recalcPreview);
-  input?.addEventListener('change', recalcPreview);
-});
-
-recalcPreview();
-
-// ---------- Stores empty state ----------
-const storeGrid = document.getElementById('store-grid');
-const storeEmpty = document.getElementById('store-empty');
-if (storeGrid && storeEmpty) {
-  const hasStores = storeGrid.dataset.hasStores === 'true';
-  storeGrid.hidden = !hasStores;
-  storeEmpty.hidden = hasStores;
-}
-
-// ---------- Modals ----------
-const modalBackdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
-
-function openModal(name) {
-  const modal = document.getElementById(`modal-${name}`);
-  if (!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-}
-
-function closeModal(modal) {
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-}
-
-document.querySelectorAll('[data-open-modal]').forEach((btn) => {
-  btn.addEventListener('click', () => openModal(btn.dataset.openModal));
-});
-
-document.querySelectorAll('[data-close-modal]').forEach((btn) => {
-  btn.addEventListener('click', () => closeModal(btn.closest('.modal-backdrop')));
-});
-
-modalBackdrops.forEach((backdrop) => {
-  backdrop.addEventListener('click', (event) => {
-    if (event.target === backdrop) closeModal(backdrop);
-  });
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return;
-  modalBackdrops.forEach((backdrop) => closeModal(backdrop));
-});
-
-const addStoreBtn = document.getElementById('add-store-btn');
-addStoreBtn?.addEventListener('click', (event) => {
-  event.preventDefault();
-  closeModal(document.getElementById('modal-add-store'));
-  showToast('Store added.');
-});
-
-const copyTokenBtn = document.getElementById('copy-token');
-const syncTokenInput = document.getElementById('sync-token');
-copyTokenBtn?.addEventListener('click', async () => {
-  const value = syncTokenInput?.value?.trim();
-  if (!value) return;
-  try {
-    await navigator.clipboard.writeText(value);
-    showToast('Sync token copied.');
-  } catch (_) {
-    syncTokenInput?.select();
-    document.execCommand('copy');
-    showToast('Sync token copied.');
-  }
-});
-
-// ---------- VeRO safety warning ----------
-const veroToggle = document.getElementById('vero-toggle');
-const confirmVeroBtn = document.getElementById('confirm-vero-disable');
-const veroModal = document.getElementById('modal-vero-warning');
-
-veroToggle?.addEventListener('change', () => {
-  if (!veroToggle.checked) {
-    veroToggle.checked = true;
-    openModal('vero-warning');
-  }
-});
-
-confirmVeroBtn?.addEventListener('click', () => {
-  if (veroToggle) veroToggle.checked = false;
-  closeModal(veroModal);
-});
-
-// ---------- Auth detection ----------
+// ====================================================================
+// Auth + profile prefill
+// ====================================================================
+let currentUser = null;
 async function loadMe() {
   try {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
     if (r.ok) {
-      const data = await r.json();
-      if (data.user) {
-        const email = data.user.email || 'You';
-        document.getElementById('user-name').textContent = email;
-        document.getElementById('user-role').textContent = (data.user.role || 'MEMBER').toUpperCase();
-        document.getElementById('user-avatar').textContent = email[0].toUpperCase();
-      }
+      const d = await r.json();
+      if (d.user) currentUser = d.user;
     }
   } catch (_) {}
+  if (!currentUser) {
+    try { const raw = localStorage.getItem('kempy_user_local'); if (raw) currentUser = JSON.parse(raw); } catch (_) {}
+  }
+  if (currentUser) {
+    const label = currentUser.name || currentUser.email || 'You';
+    document.getElementById('user-name').textContent = label;
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase() + (currentUser.preview ? ' · LOCAL' : '');
+    document.getElementById('user-avatar').textContent = label[0].toUpperCase();
+    document.getElementById('profile-name').value = currentUser.name || '';
+    document.getElementById('profile-email').value = currentUser.email || '';
+    document.getElementById('profile-business').value = currentUser.business || '';
+  }
+  const mb = document.getElementById('user-menu-btn');
+  if (mb) {
+    mb.title = currentUser ? 'Sign out' : 'Sign in';
+    mb.textContent = currentUser ? '⎋' : '→';
+    mb.addEventListener('click', () => {
+      if (currentUser) {
+        if (!confirm('Sign out of KEMPY?')) return;
+        localStorage.removeItem('kempy_user_local');
+        window.location.reload();
+      } else {
+        window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);
+      }
+    });
+  }
 }
 
-loadMe();
+// ====================================================================
+// Sub-nav switching (with URL hash for deep-linking)
+// ====================================================================
+const subLinks = document.querySelectorAll('.sub-link');
+const panels = document.querySelectorAll('.panel');
+const crumb = document.getElementById('crumb-current');
+
+function switchPanel(name) {
+  subLinks.forEach(l => l.classList.toggle('active', l.dataset.panel === name));
+  panels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  const labelMap = {
+    profile: 'Profile', stores: 'Stores',
+    notifications: 'Notifications', api: 'API & Integrations',
+    danger: 'Danger zone',
+  };
+  crumb.textContent = 'Settings · ' + (labelMap[name] || 'Profile');
+  if (window.location.hash.slice(1) !== name) {
+    window.history.replaceState(null, '', '#' + name);
+  }
+}
+subLinks.forEach(l => l.addEventListener('click', () => switchPanel(l.dataset.panel)));
+const initialPanel = (window.location.hash.slice(1)) || 'profile';
+if (['profile','stores','notifications','api','danger'].includes(initialPanel)) {
+  switchPanel(initialPanel);
+}
+
+// ====================================================================
+// Stores (read/write localStorage in preview)
+// ====================================================================
+const LS_STORES = 'kempy_stores_local';
+function loadStores() {
+  try { return JSON.parse(localStorage.getItem(LS_STORES) || '[]'); } catch { return []; }
+}
+function saveStores(arr) {
+  try { localStorage.setItem(LS_STORES, JSON.stringify(arr)); } catch {}
+}
+
+function renderStores() {
+  const stores = loadStores();
+  const ebay = stores.find(s => s.kind === 'ebay');
+  const shopify = stores.find(s => s.kind === 'shopify');
+  const wrap = document.getElementById('stores-list');
+  wrap.innerHTML = [
+    {
+      kind: 'ebay', logo: 'e', logoCls: 'ebay', label: 'eBay',
+      hint: ebay ? (ebay.handle || 'Connected') : 'Not connected — sync orders, listings, and stock',
+      conn: !!ebay,
+    },
+    {
+      kind: 'shopify', logo: 'S', logoCls: 'shopify', label: 'Shopify',
+      hint: shopify ? (shopify.handle || 'Connected') : 'Optional — list to your own Shopify store too',
+      conn: !!shopify,
+    },
+  ].map(s => `
+    <div class="store-card ${s.conn ? 'connected' : ''}">
+      <div class="store-logo ${s.logoCls}">${s.logo}</div>
+      <div class="store-info">
+        <div class="name">${s.label}</div>
+        <div class="meta">${escapeHtml(s.hint)}</div>
+      </div>
+      ${s.conn
+        ? `<button class="btn ghost sm" data-action="disconnect" data-kind="${s.kind}">Disconnect</button>`
+        : `<button class="btn sm" data-action="connect" data-kind="${s.kind}">Connect</button>`}
+    </div>
+  `).join('');
+}
+
+document.getElementById('stores-list').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const kind = btn.dataset.kind;
+  const stores = loadStores();
+
+  if (action === 'connect') {
+    // PRODUCTION: window.location.href = `/api/auth/oauth/${kind}/store`
+    const handle = prompt(`Enter a ${kind} store name/handle (preview only):`, `my-${kind}-shop`);
+    if (!handle) return;
+    stores.push({ kind, handle, connectedAt: Date.now() });
+    saveStores(stores);
+    renderStores();
+    showToast(`Connected ${kind}: ${handle}`, 'success');
+  } else if (action === 'disconnect') {
+    if (!confirm(`Disconnect ${kind}? Existing orders won't be cancelled.`)) return;
+    saveStores(stores.filter(s => s.kind !== kind));
+    renderStores();
+    showToast(`Disconnected ${kind}`, 'success');
+  }
+});
+
+document.getElementById('add-store-btn').addEventListener('click', () => {
+  showToast('More marketplaces coming soon (Etsy, Mercari, TikTok Shop)', '');
+});
+
+document.getElementById('connect-amazon-supplier').addEventListener('click', () => {
+  showToast('Amazon supplier connection needs Keepa + LWA setup — coming soon', 'error');
+});
+
+// ====================================================================
+// Profile + password forms
+// ====================================================================
+document.getElementById('profile-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!currentUser) {
+    showToast('Sign in to save profile changes', 'error');
+    return;
+  }
+  currentUser.name = document.getElementById('profile-name').value.trim();
+  currentUser.email = document.getElementById('profile-email').value.trim();
+  currentUser.business = document.getElementById('profile-business').value.trim();
+  localStorage.setItem('kempy_user_local', JSON.stringify(currentUser));
+  document.getElementById('user-name').textContent = currentUser.name || currentUser.email || 'You';
+  document.getElementById('user-avatar').textContent = (currentUser.name || currentUser.email || 'Y')[0].toUpperCase();
+  showToast('Profile updated', 'success');
+});
+
+document.getElementById('profile-cancel').addEventListener('click', () => {
+  if (currentUser) {
+    document.getElementById('profile-name').value = currentUser.name || '';
+    document.getElementById('profile-email').value = currentUser.email || '';
+    document.getElementById('profile-business').value = currentUser.business || '';
+  }
+});
+
+document.getElementById('pw-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const cur = document.getElementById('pw-current').value;
+  const nw = document.getElementById('pw-new').value;
+  const cf = document.getElementById('pw-confirm').value;
+  if (!cur || !nw || !cf) { showToast('Fill in all password fields', 'error'); return; }
+  if (nw.length < 8)     { showToast('New password must be at least 8 characters', 'error'); return; }
+  if (nw !== cf)         { showToast("Passwords don't match", 'error'); return; }
+  e.target.reset();
+  showToast('Password updated (preview)', 'success');
+});
+
+// ====================================================================
+// Notification prefs — persist
+// ====================================================================
+const LS_PREFS = 'kempy_prefs_local';
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_PREFS) || '{}'); } catch { return {}; }
+}
+function savePrefs(p) {
+  try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {}
+}
+const prefs = loadPrefs();
+document.querySelectorAll('[data-pref]').forEach(el => {
+  if (prefs[el.dataset.pref] !== undefined) el.checked = !!prefs[el.dataset.pref];
+  el.addEventListener('change', () => {
+    const cur = loadPrefs();
+    cur[el.dataset.pref] = el.checked;
+    savePrefs(cur);
+    showToast('Preference saved', 'success');
+  });
+});
+
+// ====================================================================
+// API token
+// ====================================================================
+const FAKE_TOKEN = 'kempy_sk_a8f2k9d7m4p1q3z8x6y2v0n5r9c7e4j1';
+const tokenEl = document.getElementById('api-token');
+let tokenShown = false;
+document.getElementById('api-toggle').addEventListener('click', () => {
+  tokenShown = !tokenShown;
+  if (tokenShown) {
+    tokenEl.textContent = FAKE_TOKEN;
+    tokenEl.classList.remove('hidden');
+  } else {
+    tokenEl.textContent = 'kempy_sk_••••••••••••••••••••••••';
+    tokenEl.classList.add('hidden');
+  }
+});
+document.getElementById('api-copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(FAKE_TOKEN);
+    showToast('Token copied', 'success');
+  } catch {
+    showToast('Copy failed — select manually', 'error');
+  }
+});
+document.getElementById('api-regen').addEventListener('click', () => {
+  if (!confirm('Regenerate token? Any scripts using the old token will stop working immediately.')) return;
+  showToast('Token regenerated (preview)', 'success');
+});
+
+// ====================================================================
+// Danger zone
+// ====================================================================
+document.getElementById('export-btn').addEventListener('click', () => {
+  showToast("Export queued — we'll email when ready", 'success');
+});
+document.getElementById('signout-all-btn').addEventListener('click', () => {
+  if (!confirm('Sign out of all other sessions?')) return;
+  showToast('All other sessions signed out', 'success');
+});
+document.getElementById('delete-btn').addEventListener('click', () => {
+  const a = prompt('Type DELETE to confirm permanent account deletion:');
+  if (a !== 'DELETE') return;
+  localStorage.clear();
+  showToast('Account deleted. Redirecting…', 'success');
+  setTimeout(() => window.location.href = '/', 1400);
+});
+
+// ====================================================================
+// Init
+// ====================================================================
+(async function init() {
+  await loadMe();
+  renderStores();
+})();
 </script>
+
 </body>
 </html>
