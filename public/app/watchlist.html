@@ -562,54 +562,21 @@ html.sb-collapsed .nav-item:hover::after {
 
     <nav class="nav">
       <div class="nav-label">Workspace</div>
-      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard">
-        <span class="icon">▣</span> <span class="label">Dashboard</span>
-      </a>
-      <a href="/app/research.html" class="nav-item" data-label="Research">
-        <span class="icon">🔍</span> <span class="label">Research</span>
-      </a>
-      <a href="/app/watchlist.html" class="nav-item active" data-label="Watchlist">
-        <span class="icon">⭐</span> <span class="label">Watchlist</span>
-      </a>
-      <a href="/app/listings.html" class="nav-item" data-label="Listings">
-        <span class="icon">📋</span> <span class="label">Listings</span>
-      </a>
-      <a href="/app/orders.html" class="nav-item" data-label="Orders">
-        <span class="icon">📦</span> <span class="label">Orders</span>
-      </a>
-      <a href="/app/profit.html" class="nav-item" data-label="Profit">
-        <span class="icon">📈</span> <span class="label">Profit</span>
-      </a>
+      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard"><span class="icon">▣</span> <span class="label">Dashboard</span></a>
+      <a href="/app/research.html" class="nav-item" data-label="Research"><span class="icon">🔍</span> <span class="label">Research</span></a>
+      <a href="/app/watchlist.html" class="nav-item active" data-label="Watchlist"><span class="icon">⭐</span> <span class="label">Watchlist</span></a>
+      <a href="/app/listings.html" class="nav-item" data-label="Listings"><span class="icon">📋</span> <span class="label">Listings</span></a>
+      <a href="/app/orders.html" class="nav-item" data-label="Orders"><span class="icon">📦</span> <span class="label">Orders</span></a>
+      <a href="/app/profit.html" class="nav-item" data-label="Profit"><span class="icon">📈</span> <span class="label">Profit</span></a>
 
       <div class="nav-label">Account</div>
-      <a href="/app/stores.html" class="nav-item" data-label="Stores">
-        <span class="icon">🏪</span> <span class="label">Stores</span>
-      </a>
-      <a href="/app/team.html" class="nav-item" data-label="Team">
-        <span class="icon">👥</span> <span class="label">Team</span>
-      </a>
-      <a href="/app/settings.html" class="nav-item" data-label="Settings">
-        <span class="icon">⚙</span> <span class="label">Settings</span>
-      </a>
-      <a href="/app/billing.html" class="nav-item" data-label="Billing">
-        <span class="icon">💳</span> <span class="label">Billing</span>
-      </a>
-      <a href="/app/affiliate.html" class="nav-item" data-label="Affiliate">
-        <span class="icon">🤝</span> <span class="label">Affiliate</span>
-      </a>
-
-      <div class="nav-label">Admin</div>
-      <a href="/app/staff.html" class="nav-item" data-label="Staff Portal">
-        <span class="icon">🛡️</span> <span class="label">Staff Portal</span>
-      </a>
+      <a href="/app/team.html" class="nav-item" data-label="Team"><span class="icon">👥</span> <span class="label">Team</span></a>
+      <a href="/app/settings.html" class="nav-item" data-label="Settings"><span class="icon">⚙</span> <span class="label">Settings</span></a>
+      <a href="#" class="nav-item soon" data-label="Billing (coming soon)"><span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span></a>
 
       <div class="nav-label">Resources</div>
-      <a href="#" class="nav-item soon" data-label="Course (coming soon)">
-        <span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span>
-      </a>
-      <a href="/" class="nav-item" data-label="Back to marketing site">
-        <span class="icon">←</span> <span class="label">Marketing site</span>
-      </a>
+      <a href="#" class="nav-item soon" data-label="Course (coming soon)"><span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span></a>
+      <a href="/" class="nav-item" data-label="Marketing site"><span class="icon">←</span> <span class="label">Marketing site</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -756,7 +723,7 @@ function saveLocal(items) {
 }
 
 // ====================================================================
-// User detection
+// User detection (real API → fallback to localStorage preview)
 // ====================================================================
 let currentUser = null;
 async function loadMe() {
@@ -764,15 +731,35 @@ async function loadMe() {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
     if (r.ok) {
       const data = await r.json();
-      if (data.user) {
-        currentUser = data.user;
-        const email = data.user.email || 'You';
-        document.getElementById('user-name').textContent = email;
-        document.getElementById('user-role').textContent = (data.user.role || 'MEMBER').toUpperCase();
-        document.getElementById('user-avatar').textContent = email[0].toUpperCase();
-      }
+      if (data.user) currentUser = data.user;
     }
   } catch (_) {}
+  if (!currentUser) {
+    try {
+      const raw = localStorage.getItem('kempy_user_local');
+      if (raw) currentUser = JSON.parse(raw);
+    } catch (_) {}
+  }
+  if (currentUser) {
+    const label = currentUser.name || currentUser.email || 'You';
+    document.getElementById('user-name').textContent = label;
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase() + (currentUser.preview ? ' · LOCAL' : '');
+    document.getElementById('user-avatar').textContent = label[0].toUpperCase();
+  }
+  const menuBtnEl = document.getElementById('user-menu-btn');
+  if (menuBtnEl) {
+    menuBtnEl.title = currentUser ? 'Sign out' : 'Sign in';
+    menuBtnEl.textContent = currentUser ? '⎋' : '→';
+    menuBtnEl.addEventListener('click', () => {
+      if (currentUser) {
+        if (!confirm('Sign out of KEMPY?')) return;
+        localStorage.removeItem('kempy_user_local');
+        window.location.reload();
+      } else {
+        window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);
+      }
+    });
+  }
 }
 
 // ====================================================================

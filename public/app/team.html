@@ -3,10 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Team Management — KEMPY</title>
+<title>Team — KEMPY</title>
 <script>
-  // Restore sidebar collapsed state before paint (prevents flash on reload).
-  // Only honored on desktop widths (>900px); mobile uses a different mechanism.
   if (window.innerWidth > 900 && localStorage.getItem('kempy_sidebar_collapsed') === '1') {
     document.documentElement.classList.add('sb-collapsed');
   }
@@ -15,458 +13,294 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ---------- Design tokens (match landing) ---------- */
 :root {
-  --bg: #050708;
-  --bg-2: #0a0d10;
-  --surface: #0e1316;
-  --surface-2: #131a1e;
-  --surface-3: #182025;
-  --border: #1a2329;
-  --border-cyan: #1e3a44;
-  --cyan: #00e5ff;
-  --cyan-glow: #00e5ff40;
-  --cyan-dim: #4ad4e4;
-  --green: #00ff9d;
-  --green-dim: #00cc7a;
-  --amber: #ffb800;
-  --red: #ff4d6d;
-  --text: #e6f1f5;
-  --text-dim: #8a9ba3;
-  --text-muted: #5a6970;
+  --bg: #050708; --bg-2: #0a0d10; --surface: #0e1316; --surface-2: #131a1e; --surface-3: #182025;
+  --border: #1a2329; --border-cyan: #1e3a44;
+  --cyan: #00e5ff; --cyan-glow: #00e5ff40; --cyan-dim: #4ad4e4;
+  --green: #00ff9d; --green-dim: #00cc7a; --amber: #ffb800; --red: #ff4d6d;
+  --text: #e6f1f5; --text-dim: #8a9ba3; --text-muted: #5a6970;
   --font-sans: 'Sora', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-display: 'Archivo Black', sans-serif;
-
-  --sidebar-w: 248px;
-  --sidebar-w-collapsed: 68px;
-  --topbar-h: 64px;
+  --sidebar-w: 248px; --sidebar-w-collapsed: 68px; --topbar-h: 64px;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-weight: 400;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-}
-
-/* Atmospheric background — softer than landing */
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-weight: 400; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background:
     radial-gradient(ellipse 70% 50% at 0% 0%, rgba(0,229,255,0.05), transparent 60%),
     radial-gradient(ellipse 50% 30% at 100% 100%, rgba(0,255,157,0.03), transparent 60%);
-  pointer-events: none;
-  z-index: 0;
 }
 body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><circle cx='1' cy='1' r='0.5' fill='%23ffffff' opacity='0.012'/></svg>");
-  pointer-events: none;
-  z-index: 0;
 }
 
-/* ---------- App layout ---------- */
-.app {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
-  min-height: 100vh;
-  position: relative;
-  z-index: 1;
-  transition: grid-template-columns 0.25s ease;
-}
-
-/* ---------- Collapsed sidebar (desktop) ---------- */
+/* App layout */
+.app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; position: relative; z-index: 1; transition: grid-template-columns 0.25s ease; }
 html.sb-collapsed .app { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
-html.sb-collapsed .brand-text,
-html.sb-collapsed .nav-label,
-html.sb-collapsed .nav-item .label,
-html.sb-collapsed .nav-item .pill,
-html.sb-collapsed .user-info,
-html.sb-collapsed .user-menu { display: none; }
+html.sb-collapsed .brand-text, html.sb-collapsed .nav-label, html.sb-collapsed .nav-item .label, html.sb-collapsed .nav-item .pill, html.sb-collapsed .user-info, html.sb-collapsed .user-menu { display: none; }
 html.sb-collapsed .nav-item { justify-content: center; padding: 11px 0; gap: 0; }
 html.sb-collapsed .brand { justify-content: center; padding: 18px 0; gap: 0; }
 html.sb-collapsed .sidebar-footer { justify-content: center; padding: 14px 8px; }
 html.sb-collapsed .nav { padding: 14px 8px; }
-
-/* Tooltip on hover when collapsed */
 html.sb-collapsed .nav-item { position: relative; }
 html.sb-collapsed .nav-item:hover::after {
-  content: attr(data-label);
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--surface-2);
-  border: 1px solid var(--border-cyan);
-  color: var(--text);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  z-index: 200;
-  pointer-events: none;
+  content: attr(data-label); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  background: var(--surface-2); border: 1px solid var(--border-cyan); color: var(--text);
+  padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: var(--font-mono);
+  letter-spacing: 0.5px; white-space: nowrap; z-index: 200; pointer-events: none;
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
-/* ---------- Sidebar ---------- */
-.sidebar {
-  background: rgba(10,13,16,0.72);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-}
-
-.brand {
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: -1px;
-  color: var(--cyan);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
-.brand::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 12px var(--green);
-  animation: pulse 2.4s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 12px var(--green); }
-  50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); }
-}
-
-.nav {
-  flex: 1;
-  padding: 14px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow-y: auto;
-}
+/* Sidebar */
+.sidebar { background: rgba(10,13,16,0.72); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.brand { padding: 18px 22px; border-bottom: 1px solid var(--border); font-family: var(--font-display); font-size: 22px; letter-spacing: -1px; color: var(--cyan); display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 12px var(--green); } 50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); } }
+.nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 1px; overflow-y: auto; }
 .nav::-webkit-scrollbar { width: 4px; }
 .nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.nav-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-  padding: 14px 12px 6px;
-}
+.nav-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); padding: 14px 12px 6px; }
 .nav-label:first-child { padding-top: 4px; }
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  color: var(--text-dim);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  border: 1px solid transparent;
-  position: relative;
-}
-.nav-item:hover {
-  background: var(--surface);
-  color: var(--text);
-}
-.nav-item.active {
-  background: rgba(0,229,255,0.08);
-  color: var(--cyan);
-  border-color: var(--border-cyan);
-  box-shadow: inset 0 0 20px rgba(0,229,255,0.04);
-}
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px; color: var(--text-dim); text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.15s, color 0.15s, border-color 0.15s; border: 1px solid transparent; }
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active { background: rgba(0,229,255,0.08); color: var(--cyan); border-color: var(--border-cyan); box-shadow: inset 0 0 20px rgba(0,229,255,0.04); }
 .nav-item.soon { opacity: 0.55; }
 .nav-item.soon:hover { opacity: 0.85; }
-.nav-item .icon {
-  width: 18px;
-  display: inline-flex;
-  justify-content: center;
-  flex-shrink: 0;
-  opacity: 0.95;
-}
-.nav-item .pill {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 1px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-}
-
-.sidebar-footer {
-  padding: 14px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--cyan), var(--green));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  color: var(--bg);
-  flex-shrink: 0;
-  font-size: 14px;
-}
+.nav-item .icon { width: 18px; display: inline-flex; justify-content: center; flex-shrink: 0; opacity: 0.95; }
+.nav-item .pill { margin-left: auto; font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+.sidebar-footer { padding: 14px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--cyan), var(--green)); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; color: var(--bg); flex-shrink: 0; font-size: 14px; }
 .user-info { flex: 1; min-width: 0; }
-.user-info .name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.user-info .role {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
-}
-.user-menu {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 18px;
-  padding: 6px;
-  border-radius: 6px;
-  line-height: 1;
-  transition: all 0.15s;
-}
-.user-menu:hover {
-  background: var(--surface);
-  color: var(--text);
-}
+.user-info .name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-info .role { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.user-menu { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 6px; border-radius: 6px; line-height: 1; transition: all 0.15s; }
+.user-menu:hover { background: var(--surface); color: var(--text); }
 
-/* ---------- Main ---------- */
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.topbar {
-  height: var(--topbar-h);
-  padding: 0 32px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(5,7,8,0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.topbar .crumb {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-}
+/* Main */
+.main { display: flex; flex-direction: column; min-width: 0; }
+.topbar { height: var(--topbar-h); padding: 0 32px; border-bottom: 1px solid var(--border); background: rgba(5,7,8,0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.topbar .crumb { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
 .topbar .crumb .arrow { margin: 0 8px; opacity: 0.5; }
 .topbar .crumb .current { color: var(--cyan); }
-
 .topbar .actions { display: flex; gap: 10px; align-items: center; }
-.btn-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.15s;
-}
+.btn-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all 0.15s; }
 .btn-icon:hover { border-color: var(--border-cyan); color: var(--cyan); }
-
-/* ---------- Content ---------- */
-.content {
-  padding: 32px;
-  flex: 1;
-  max-width: 1400px;
-  width: 100%;
-}
-
-/* Empty state — used inside cards when no data */
-.empty {
-  text-align: center;
-  padding: 28px 12px;
-  color: var(--text-dim);
-}
-.empty .icon {
-  font-size: 36px;
-  opacity: 0.35;
-  margin-bottom: 10px;
-  display: inline-block;
-}
-.empty p { font-size: 13px; margin-bottom: 14px; }
-.empty .btn { margin-top: 6px; }
+.content { padding: 32px; flex: 1; max-width: 1200px; width: 100%; }
 
 /* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--cyan);
-  color: var(--bg);
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 13px;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
-  font-family: var(--font-sans);
-}
-.btn:hover {
-  background: var(--cyan-dim);
-  box-shadow: 0 0 28px var(--cyan-glow);
-}
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--cyan); color: var(--bg); border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: background 0.15s, box-shadow 0.15s, transform 0.05s; font-family: var(--font-sans); }
+.btn:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
 .btn:active { transform: translateY(1px); }
-.btn.ghost {
-  background: transparent;
-  color: var(--cyan);
+.btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.btn.ghost { background: transparent; color: var(--cyan); border: 1px solid var(--border-cyan); }
+.btn.ghost:hover { background: rgba(0,229,255,0.06); box-shadow: none; }
+.btn.sm { padding: 7px 12px; font-size: 12px; }
+.btn.danger { background: transparent; color: var(--red); border: 1px solid rgba(255,77,109,0.3); }
+.btn.danger:hover { background: rgba(255,77,109,0.08); box-shadow: none; }
+
+/* ============== PAGE: Team ============== */
+
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+.page-header h1 { font-family: var(--font-display); font-size: 32px; letter-spacing: -1.2px; margin-bottom: 4px; }
+.page-header h1 .accent { color: var(--cyan); }
+.page-header p { color: var(--text-dim); font-size: 14px; }
+
+/* Seat usage strip */
+.seats-bar {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 22px; margin-bottom: 20px;
+  display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;
+}
+.seats-bar .info .label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 6px; }
+.seats-bar .info .used { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.5px; }
+.seats-bar .info .used .total { color: var(--text-muted); font-weight: normal; }
+.seats-bar .info .hint { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+.seats-bar .progress {
+  margin-top: 8px;
+  width: 100%; max-width: 320px;
+  height: 6px; background: var(--bg-2); border-radius: 100px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.seats-bar .progress .fill {
+  height: 100%; background: linear-gradient(90deg, var(--cyan), var(--green));
+  border-radius: 100px; transition: width 0.4s ease;
+}
+@media (max-width: 600px) { .seats-bar { grid-template-columns: 1fr; } }
+
+/* Invite form */
+.invite-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 22px; margin-bottom: 16px;
+}
+.invite-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.invite-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; align-items: stretch; }
+@media (max-width: 700px) { .invite-row { grid-template-columns: 1fr; } }
+.invite-row input,
+.invite-row select {
+  background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 14px; border-radius: 8px;
+  font-family: var(--font-sans); font-size: 14px; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.invite-row input:focus, .invite-row select:focus {
+  border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+}
+
+/* Member list */
+.members-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  margin-bottom: 16px; overflow: hidden;
+}
+.members-header {
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.members-header h3 { font-size: 15px; font-weight: 600; }
+.members-header .count {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-muted); letter-spacing: 0.3px;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 16px; align-items: center;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.member-row:last-child { border-bottom: none; }
+.member-row:hover { background: var(--surface-2); }
+.member-row.pending { opacity: 0.7; background: rgba(255,184,0,0.02); }
+
+.m-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800;
+  color: var(--bg); font-size: 14px; flex-shrink: 0;
+}
+.m-avatar.c1 { background: linear-gradient(135deg, #00e5ff, #00ff9d); }
+.m-avatar.c2 { background: linear-gradient(135deg, #ff9900, #ffb800); }
+.m-avatar.c3 { background: linear-gradient(135deg, #ff4d6d, #c92a30); }
+.m-avatar.c4 { background: linear-gradient(135deg, #4ad4e4, #00e5ff); }
+.m-avatar.c5 { background: linear-gradient(135deg, #96bf48, #00ff9d); }
+.m-avatar.muted { background: var(--surface-3); color: var(--text-muted); border: 1px dashed var(--border); }
+
+.m-info { min-width: 0; }
+.m-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+.m-name .you-tag {
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 1px;
+  background: rgba(0,229,255,0.1); color: var(--cyan);
+  padding: 2px 6px; border-radius: 4px;
   border: 1px solid var(--border-cyan);
 }
-.btn.ghost:hover {
-  background: rgba(0,229,255,0.06);
-  box-shadow: none;
-}
-.btn.sm { padding: 7px 12px; font-size: 12px; }
+.m-email { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.3px; }
 
-/* ---------- Responsive ---------- */
+/* Role badge / pill */
+.role-badge {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 100px;
+}
+.role-badge.owner { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid var(--border-cyan); }
+.role-badge.admin { background: rgba(0,255,157,0.08); color: var(--green); border: 1px solid rgba(0,255,157,0.2); }
+.role-badge.member { background: var(--bg-2); color: var(--text-dim); border: 1px solid var(--border); }
+.role-badge.viewer { background: rgba(138,155,163,0.06); color: var(--text-muted); border: 1px solid var(--border); }
+.role-badge.pending { background: rgba(255,184,0,0.08); color: var(--amber); border: 1px solid rgba(255,184,0,0.2); }
+
+.m-last { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-align: right; min-width: 90px; }
+
+.m-menu {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer;
+  padding: 5px 8px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 14px; line-height: 1;
+  transition: all 0.15s;
+}
+.m-menu:hover { border-color: var(--border-cyan); color: var(--cyan); }
+.m-menu:disabled { opacity: 0.35; cursor: not-allowed; }
+
+@media (max-width: 700px) {
+  .member-row { grid-template-columns: auto 1fr auto; gap: 12px; }
+  .member-row .m-last { display: none; }
+}
+
+/* Role legend (helper card below members) */
+.role-legend {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 22px; margin-bottom: 16px;
+}
+.role-legend h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+.role-legend .row { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.role-legend .row:last-child { border-bottom: none; }
+.role-legend .row .name {
+  font-family: var(--font-mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px;
+  min-width: 80px; padding-top: 1px;
+}
+.role-legend .row .name.owner { color: var(--cyan); }
+.role-legend .row .name.admin { color: var(--green); }
+.role-legend .row .name.member { color: var(--text); }
+.role-legend .row .name.viewer { color: var(--text-dim); }
+.role-legend .desc { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--surface-2); border: 1px solid var(--border-cyan);
+  color: var(--text); padding: 12px 20px;
+  border-radius: 10px; font-family: var(--font-mono); font-size: 13px;
+  opacity: 0; pointer-events: none; z-index: 1000;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+
+/* Responsive */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: fixed;
-    left: -100%;
-    top: 0;
-    width: 280px;
-    z-index: 100;
-    transition: left 0.28s ease;
-  }
+  .sidebar { position: fixed; left: -100%; top: 0; width: 280px; z-index: 100; transition: left 0.28s ease; }
   .sidebar.open { left: 0; }
-  .sidebar.open + .main::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 50;
-  }
+  .sidebar.open + .main::before { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
   .content { padding: 20px; }
   .topbar { padding: 0 16px; }
+  .page-header h1 { font-size: 24px; }
 }
 </style>
 </head>
 <body>
 
 <div class="app">
-
-  <!-- ============== SIDEBAR ============== -->
   <aside class="sidebar" id="sidebar">
     <a href="/" class="brand"><span class="brand-text">KEMPY</span></a>
-
     <nav class="nav">
       <div class="nav-label">Workspace</div>
-      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard">
-        <span class="icon">▣</span> <span class="label">Dashboard</span>
-      </a>
-      <a href="/app/research.html" class="nav-item" data-label="Research">
-        <span class="icon">🔍</span> <span class="label">Research</span>
-      </a>
-      <a href="/app/watchlist.html" class="nav-item" data-label="Watchlist">
-        <span class="icon">⭐</span> <span class="label">Watchlist</span>
-      </a>
-      <a href="/app/listings.html" class="nav-item" data-label="Listings">
-        <span class="icon">📋</span> <span class="label">Listings</span>
-      </a>
-      <a href="/app/orders.html" class="nav-item" data-label="Orders">
-        <span class="icon">📦</span> <span class="label">Orders</span>
-      </a>
-      <a href="/app/profit.html" class="nav-item" data-label="Profit">
-        <span class="icon">📈</span> <span class="label">Profit</span>
-      </a>
+      <a href="/app/dashboard.html" class="nav-item" data-label="Dashboard"><span class="icon">▣</span> <span class="label">Dashboard</span></a>
+      <a href="/app/research.html" class="nav-item" data-label="Research"><span class="icon">🔍</span> <span class="label">Research</span></a>
+      <a href="/app/watchlist.html" class="nav-item" data-label="Watchlist"><span class="icon">⭐</span> <span class="label">Watchlist</span></a>
+      <a href="/app/listings.html" class="nav-item" data-label="Listings"><span class="icon">📋</span> <span class="label">Listings</span></a>
+      <a href="/app/orders.html" class="nav-item" data-label="Orders"><span class="icon">📦</span> <span class="label">Orders</span></a>
+      <a href="/app/profit.html" class="nav-item" data-label="Profit"><span class="icon">📈</span> <span class="label">Profit</span></a>
 
       <div class="nav-label">Account</div>
-      <a href="/app/stores.html" class="nav-item" data-label="Stores">
-        <span class="icon">🏪</span> <span class="label">Stores</span>
-      </a>
-      <a href="/app/team.html" class="nav-item active" data-label="Team">
-        <span class="icon">👥</span> <span class="label">Team</span>
-      </a>
-      <a href="/app/settings.html" class="nav-item" data-label="Settings">
-        <span class="icon">⚙</span> <span class="label">Settings</span>
-      </a>
-      <a href="/app/billing.html" class="nav-item" data-label="Billing">
-        <span class="icon">💳</span> <span class="label">Billing</span>
-      </a>
-      <a href="/app/affiliate.html" class="nav-item" data-label="Affiliate">
-        <span class="icon">🤝</span> <span class="label">Affiliate</span>
-      </a>
-
-      <div class="nav-label">Admin</div>
-      <a href="/app/staff.html" class="nav-item" data-label="Staff Portal">
-        <span class="icon">🛡️</span> <span class="label">Staff Portal</span>
-      </a>
+      <a href="/app/team.html" class="nav-item active" data-label="Team"><span class="icon">👥</span> <span class="label">Team</span></a>
+      <a href="/app/settings.html" class="nav-item" data-label="Settings"><span class="icon">⚙</span> <span class="label">Settings</span></a>
+      <a href="#" class="nav-item soon" data-label="Billing (coming soon)"><span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span></a>
 
       <div class="nav-label">Resources</div>
-      <a href="#" class="nav-item soon" data-label="Course (coming soon)">
-        <span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span>
-      </a>
-      <a href="/" class="nav-item" data-label="Back to marketing site">
-        <span class="icon">←</span> <span class="label">Marketing site</span>
-      </a>
+      <a href="#" class="nav-item soon" data-label="Course (coming soon)"><span class="icon">🎓</span> <span class="label">Course</span> <span class="pill">soon</span></a>
+      <a href="/" class="nav-item" data-label="Marketing site"><span class="icon">←</span> <span class="label">Marketing site</span></a>
     </nav>
-
     <div class="sidebar-footer">
-      <div class.avatar" id="user-avatar">G</div>
+      <div class="avatar" id="user-avatar">G</div>
       <div class="user-info">
         <div class="name" id="user-name">Guest</div>
         <div class="role" id="user-role">PREVIEW MODE</div>
@@ -475,77 +309,350 @@ html.sb-collapsed .nav-item:hover::after {
     </div>
   </aside>
 
-  <!-- ============== MAIN ============== -->
   <div class="main">
-
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn-icon menu-btn" id="menu-btn" title="Menu">☰</button>
-        <div class="crumb">
-          KEMPY <span class="arrow">/</span> <span class="current">Team Management</span>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn-icon" title="Notifications">🔔</button>
-        <a href="/app/research.html" class="btn sm">Find products</a>
+        <button class="btn-icon" id="menu-btn" title="Menu">☰</button>
+        <div class="crumb">KEMPY <span class="arrow">/</span> <span class="current">Team</span></div>
       </div>
     </header>
 
     <div class="content">
-      <div class="empty">
-        <div class="icon">👥</div>
-        <p>Invite team members to help manage your stores and research.</p>
-        <a href="#" class="btn ghost sm">Invite member</a>
+
+      <div class="page-header">
+        <div>
+          <h1>Your <span class="accent">team</span></h1>
+          <p>Invite teammates and assign roles to help run your stores.</p>
+        </div>
       </div>
-        <p>No orders to fulfill. When you make a sale, it will show up here.</p>
-        <a href="#" class="btn ghost sm">Connect store (soon)</a>
+
+      <div class="seats-bar">
+        <div class="info">
+          <div class="label">Seats used</div>
+          <div class="used"><span id="seats-used">0</span> <span class="total">/ <span id="seats-total">5</span></span></div>
+          <div class="progress"><div class="fill" id="seats-fill" style="width:0%"></div></div>
+          <div class="hint" id="seats-hint">—</div>
+        </div>
+        <div>
+          <a href="#" class="btn ghost sm">Upgrade for more seats →</a>
+        </div>
       </div>
+
+      <div class="invite-card">
+        <h3>Invite a teammate</h3>
+        <form id="invite-form">
+          <div class="invite-row">
+            <input type="email" id="invite-email" placeholder="teammate@example.com" autocomplete="off" required />
+            <select id="invite-role">
+              <option value="admin">Admin</option>
+              <option value="member" selected>Member</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button type="submit" class="btn">Send invite</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="members-card">
+        <div class="members-header">
+          <h3>Members</h3>
+          <span class="count"><span id="member-count">0</span> people · <span id="pending-count">0</span> pending</span>
+        </div>
+        <div id="members-list"></div>
+      </div>
+
+      <div class="role-legend">
+        <h3>What each role can do</h3>
+        <div class="row">
+          <span class="name owner">Owner</span>
+          <span class="desc">Full control. Manages billing, deletes the workspace, transfers ownership. Only one Owner per workspace.</span>
+        </div>
+        <div class="row">
+          <span class="name admin">Admin</span>
+          <span class="desc">Manages team, stores, integrations, and settings. Can do everything except billing and ownership transfer.</span>
+        </div>
+        <div class="row">
+          <span class="name member">Member</span>
+          <span class="desc">Day-to-day operations: research products, manage listings, fulfill orders, view profit. Cannot change settings or team.</span>
+        </div>
+        <div class="row">
+          <span class="name viewer">Viewer</span>
+          <span class="desc">Read-only access. Useful for accountants, advisors, or anyone who needs to see numbers without changing anything.</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-// ---------- Sidebar toggle ----------
+// Sidebar
 const menuBtn = document.getElementById('menu-btn');
 const sidebar = document.getElementById('sidebar');
 const isDesktop = () => window.innerWidth > 900;
-
 menuBtn?.addEventListener('click', () => {
   if (isDesktop()) {
     const collapsed = document.documentElement.classList.toggle('sb-collapsed');
     localStorage.setItem('kempy_sidebar_collapsed', collapsed ? '1' : '0');
-  } else {
-    sidebar.classList.toggle('open');
-  }
+  } else { sidebar.classList.toggle('open'); }
 });
-
 document.addEventListener('click', (e) => {
-  if (isDesktop() || !sidebar.classList.contains('open')) return;
+  if (isDesktop()) return;
+  if (!sidebar.classList.contains('open')) return;
   if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
   sidebar.classList.remove('open');
 });
+window.addEventListener('resize', () => { if (isDesktop()) sidebar.classList.remove('open'); });
 
-window.addEventListener('resize', () => {
-  if (isDesktop()) sidebar.classList.remove('open');
-});
+// Toast
+const toastEl = document.getElementById('toast');
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show ' + type;
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
 
-// ---------- Auth detection ----------
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Auth
+let currentUser = null;
 async function loadMe() {
   try {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
-    if (r.ok) {
-      const data = await r.json();
-      if (data.user) {
-        const email = data.user.email || 'You';
-        document.getElementById('user-name').textContent = email;
-        document.getElementById('user-role').textContent = (data.user.role || 'MEMBER').toUpperCase();
-        document.getElementById('user-avatar').textContent = email[0].toUpperCase();
-      }
-    }
+    if (r.ok) { const d = await r.json(); if (d.user) currentUser = d.user; }
   } catch (_) {}
+  if (!currentUser) {
+    try { const raw = localStorage.getItem('kempy_user_local'); if (raw) currentUser = JSON.parse(raw); } catch (_) {}
+  }
+  if (currentUser) {
+    const label = currentUser.name || currentUser.email || 'You';
+    document.getElementById('user-name').textContent = label;
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase() + (currentUser.preview ? ' · LOCAL' : '');
+    document.getElementById('user-avatar').textContent = label[0].toUpperCase();
+  }
+  const mb = document.getElementById('user-menu-btn');
+  if (mb) {
+    mb.title = currentUser ? 'Sign out' : 'Sign in';
+    mb.textContent = currentUser ? '⎋' : '→';
+    mb.addEventListener('click', () => {
+      if (currentUser) {
+        if (!confirm('Sign out of KEMPY?')) return;
+        localStorage.removeItem('kempy_user_local');
+        window.location.reload();
+      } else {
+        window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);
+      }
+    });
+  }
 }
 
-loadMe();
+// ====================================================================
+// Team data — localStorage with sensible seed
+// ====================================================================
+const LS_TEAM = 'kempy_team_local';
+const SEAT_LIMIT = 5;
+
+function seedTeam() {
+  const you = currentUser
+    ? {
+        id: 'me',
+        name: currentUser.name || (currentUser.email ? currentUser.email.split('@')[0] : 'You'),
+        email: currentUser.email || 'you@example.com',
+        role: 'owner',
+        lastActive: 'just now',
+        you: true,
+        color: 'c1',
+      }
+    : {
+        id: 'me',
+        name: 'Guest',
+        email: 'guest@example.com',
+        role: 'owner',
+        lastActive: 'just now',
+        you: true,
+        color: 'c1',
+      };
+  return [
+    you,
+    { id: 'm2', name: 'Sarah Chen',   email: 'sarah@example.com',   role: 'admin',  lastActive: '2h ago',       color: 'c2' },
+    { id: 'm3', name: 'Marcus Patel', email: 'marcus@example.com',  role: 'member', lastActive: 'Yesterday',    color: 'c4' },
+    { id: 'p1', name: 'New invite',   email: 'alex@example.com',    role: 'pending', invitedRole: 'member', lastActive: 'Invited 1d ago', color: 'muted', pending: true },
+  ];
+}
+
+function loadTeam() {
+  try {
+    const raw = localStorage.getItem(LS_TEAM);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      // Always refresh the "you" row from currentUser
+      if (currentUser) {
+        const me = arr.find(m => m.id === 'me');
+        if (me) {
+          me.name = currentUser.name || (currentUser.email ? currentUser.email.split('@')[0] : 'You');
+          me.email = currentUser.email || me.email;
+        }
+      }
+      return arr;
+    }
+  } catch {}
+  const seeded = seedTeam();
+  saveTeam(seeded);
+  return seeded;
+}
+function saveTeam(arr) {
+  try { localStorage.setItem(LS_TEAM, JSON.stringify(arr)); } catch {}
+}
+
+// ====================================================================
+// Render
+// ====================================================================
+function renderSeats(team) {
+  const active = team.filter(m => m.role !== 'pending').length;
+  const pending = team.filter(m => m.role === 'pending').length;
+  const total = active + pending;
+  document.getElementById('seats-used').textContent = total;
+  document.getElementById('seats-total').textContent = SEAT_LIMIT;
+  const pct = Math.min(100, (total / SEAT_LIMIT) * 100);
+  document.getElementById('seats-fill').style.width = pct + '%';
+  const remaining = Math.max(0, SEAT_LIMIT - total);
+  const hint = remaining === 0
+    ? "You've used all your seats. Upgrade your plan to add more."
+    : `${remaining} ${remaining === 1 ? 'seat' : 'seats'} remaining on your plan.`;
+  document.getElementById('seats-hint').textContent = hint;
+}
+
+function renderMembers(team) {
+  const wrap = document.getElementById('members-list');
+  wrap.innerHTML = team.map(m => {
+    const isPending = m.role === 'pending';
+    const initial = (m.name || m.email || '?')[0].toUpperCase();
+    const youTag = m.you ? '<span class="you-tag">You</span>' : '';
+    const roleBadge = isPending
+      ? `<span class="role-badge pending">Pending · ${escapeHtml(m.invitedRole || 'member')}</span>`
+      : `<span class="role-badge ${m.role}">${m.role}</span>`;
+    // Owner can't be removed; you can't remove yourself
+    const canManage = !m.you && m.role !== 'owner';
+    return `
+      <div class="member-row ${isPending ? 'pending' : ''}" data-id="${m.id}">
+        <div class="m-avatar ${m.color || 'c1'}">${escapeHtml(initial)}</div>
+        <div class="m-info">
+          <div class="m-name">${escapeHtml(m.name || 'Pending')} ${youTag}</div>
+          <div class="m-email">${escapeHtml(m.email)}</div>
+        </div>
+        ${roleBadge}
+        <div class="m-last">${escapeHtml(m.lastActive || '—')}</div>
+        <button class="m-menu" data-action="manage" data-id="${m.id}" ${canManage ? '' : 'disabled'} title="${canManage ? 'Manage' : (m.you ? 'You can\\'t manage yourself here' : 'Owner cannot be removed')}">⋯</button>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('member-count').textContent = team.filter(m => m.role !== 'pending').length;
+  document.getElementById('pending-count').textContent = team.filter(m => m.role === 'pending').length;
+}
+
+function rerender() {
+  const team = loadTeam();
+  renderSeats(team);
+  renderMembers(team);
+}
+
+// ====================================================================
+// Invite
+// ====================================================================
+document.getElementById('invite-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = document.getElementById('invite-email').value.trim().toLowerCase();
+  const role = document.getElementById('invite-role').value;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showToast('Enter a valid email address', 'error');
+    return;
+  }
+  const team = loadTeam();
+  if (team.find(m => (m.email || '').toLowerCase() === email)) {
+    showToast('That email is already on your team or pending', 'error');
+    return;
+  }
+  if (team.length >= SEAT_LIMIT) {
+    showToast(`Seat limit reached (${SEAT_LIMIT}). Upgrade to invite more.`, 'error');
+    return;
+  }
+  // Random color (skip muted)
+  const colors = ['c1','c2','c3','c4','c5'];
+  team.push({
+    id: 'p_' + Date.now(),
+    name: 'New invite',
+    email,
+    role: 'pending',
+    invitedRole: role,
+    lastActive: 'Invited just now',
+    color: 'muted',
+    pending: true,
+  });
+  saveTeam(team);
+  document.getElementById('invite-email').value = '';
+  rerender();
+  showToast(`Invite sent to ${email}`, 'success');
+});
+
+// ====================================================================
+// Member row actions (manage menu)
+// ====================================================================
+document.getElementById('members-list').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="manage"]');
+  if (!btn || btn.disabled) return;
+  const id = btn.dataset.id;
+  const team = loadTeam();
+  const member = team.find(m => m.id === id);
+  if (!member) return;
+
+  // Simple actions menu via confirm prompts — keeps the UI honest about preview mode
+  const action = prompt(
+    `Manage ${member.name || member.email}\\n\\n` +
+    `Type one:\\n` +
+    `  role admin\\n` +
+    `  role member\\n` +
+    `  role viewer\\n` +
+    `  resend  (pending only)\\n` +
+    `  remove`,
+    member.role === 'pending' ? 'resend' : 'role member'
+  );
+  if (!action) return;
+
+  const cmd = action.trim().toLowerCase();
+  if (cmd === 'remove') {
+    if (!confirm(`Remove ${member.name || member.email}?`)) return;
+    saveTeam(team.filter(m => m.id !== id));
+    rerender();
+    showToast(`Removed ${member.name || member.email}`, 'success');
+  } else if (cmd === 'resend' && member.role === 'pending') {
+    showToast(`Invite resent to ${member.email}`, 'success');
+  } else if (cmd.startsWith('role ')) {
+    const newRole = cmd.split(' ')[1];
+    if (!['admin','member','viewer'].includes(newRole)) {
+      showToast('Unknown role', 'error');
+      return;
+    }
+    member.role = newRole;
+    saveTeam(team);
+    rerender();
+    showToast(`${member.name || member.email} is now ${newRole}`, 'success');
+  } else {
+    showToast('Unknown command', 'error');
+  }
+});
+
+// Init
+(async function init() {
+  await loadMe();
+  rerender();
+})();
 </script>
+
 </body>
 </html>
