@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { searchEbay } from './src/services/ebay.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
