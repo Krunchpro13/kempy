@@ -1,214 +1,111 @@
-// =============================================================================
-// Research orchestrator
-// =============================================================================
-// Pipeline: eBay search → Amazon candidate search → Claude semantic match →
-//           profit calculation → ROI ranking.
+// src/services/research.js
 //
-// Each stage degrades gracefully: missing keys → mock fallback. Missing
-// Claude key → "first result" matching (legacy behavior, less accurate).
-// =============================================================================
+// Orchestrator for product research.
+//
+// Live mode (when EBAY_CLIENT_ID is set):
+//   1. Search eBay for the query → real listings + prices
+//   2. Estimate cost/profit/ROI using a placeholder supplier-cost ratio
+//      (will be replaced with real Amazon/Keepa lookups in the next step)
+//   3. Sort by ROI, return.
+//
+// Fallback mode (no keys, or eBay errors):
+//   - Filter the mock product list.
 
 import { searchEbay } from './ebay.js';
-import { findAmazonCandidates } from './amazon.js';
-import { matchAmazonProduct } from './claude.js';
-import { calculateProfit } from './profit.js';
-import { searchFallback } from './fallback-data.js';
-import { getCachedSearch, setCachedSearch } from './cache.js';
+import { FALLBACK_PRODUCTS } from './fallback-data.js';
 
-const MIN_MATCH_CONFIDENCE = 0.7;
+const FEE_RATE = 0.129;                 // typical eBay final value fee
+const PACKAGING = 1.50;                 // rough per-order packaging cost
 
-/**
- * Top-level search. Returns ranked product opportunities for a query.
- *
- * @param {string} query
- * @returns {Promise<{ products: Array, cached: boolean }>}
- */
+// Until we wire Amazon/Keepa, estimate supplier cost as eBay price × 0.72.
+// That's a typical 28% gross margin on dropshipped items. We'll replace this
+// with a real Amazon lookup once the Amazon service exists.
+const SUPPLIER_COST_RATIO = 0.72;
+
+// Pull a representative emoji for a query (purely cosmetic — frontend renders it)
+function emojiFor(name = '') {
+  const n = name.toLowerCase();
+  if (/headphone|earbud|airpod|earphone/.test(n)) return '🎧';
+  if (/watch|smartwatch/.test(n))                return '⌚';
+  if (/cable|cord/.test(n))                       return '🔌';
+  if (/charger|adapter|power/.test(n))            return '🔌';
+  if (/webcam|camera/.test(n))                    return '📷';
+  if (/bag|handbag|purse|tote/.test(n))           return '👜';
+  if (/phone|iphone|galaxy/.test(n))              return '📱';
+  if (/laptop|macbook/.test(n))                   return '💻';
+  if (/keyboard/.test(n))                         return '⌨️';
+  if (/mouse/.test(n))                            return '🖱️';
+  if (/lamp|light/.test(n))                       return '💡';
+  return '📦';
+}
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+// Convert a raw eBay item into the shape the frontend expects.
+function buildProduct(item) {
+  const ebayPrice = item.ebayPrice;
+  const shipping = item.ebayShipping != null ? item.ebayShipping : 6;
+  const amazonPrice = round2(ebayPrice * SUPPLIER_COST_RATIO);
+  const fees = round2(ebayPrice * FEE_RATE);
+  const packaging = PACKAGING;
+  const profit = round2(ebayPrice - amazonPrice - fees - shipping - packaging);
+  const roi = amazonPrice > 0 ? round2((profit / amazonPrice) * 100) : 0;
+
+  return {
+    name: item.name,
+    emoji: emojiFor(item.name),
+    cat: item.categories && item.categories[0] ? item.categories[0] : 'Marketplace',
+    vol: '—',                              // volume data needs Keepa
+    comp: 'live',
+    trend: '—',
+    ebayPrice,
+    amazonPrice,
+    ebayUrl: item.ebayUrl,
+    amazonUrl: null,                       // we don't have an Amazon match yet
+    fees,
+    shipping,
+    packaging,
+    profit,
+    roi,
+    asin: null,                            // populated in next phase (Amazon match)
+    matchSource: 'ebay',
+    image: item.image,
+    condition: item.condition,
+    ebayItemId: item.ebayItemId,
+  };
+}
+
 export async function searchProducts(query) {
-  // Cache check — short-circuits everything below
-  const cached = await getCachedSearch(query);
-  if (cached) return { products: cached, cached: true };
+  const q = (query || '').toLowerCase().trim();
 
-  const products = await runPipeline(query);
-
-  // Only cache live results — caching mock data is pointless and would
-  // mask a config issue if someone added keys mid-session
-  if (products.length > 0 && products[0].source !== 'mock') {
-    await setCachedSearch(query, products);
-  }
-
-  return { products, cached: false };
-}
-
-async function runPipeline(query) {
-  // -------- Live path: both data APIs configured --------
-  if (process.env.EBAY_CLIENT_ID && process.env.KEEPA_API_KEY) {
-    return await liveSearch(query);
-  }
-
-  // -------- Partial-live: eBay only (no Amazon supplier price) --------
-  if (process.env.EBAY_CLIENT_ID && !process.env.KEEPA_API_KEY) {
-    const listings = await searchEbay(query);
-    return (listings || []).map((l) => ({
-      name: l.title,
-      cat: 'eBay (live)',
-      ebayPrice: l.ebayPrice,
-      amazonPrice: null,
-      profit: null,
-      roi: null,
-      verdictLabel: '⚠ Add Keepa key for Amazon supplier prices',
-      verdictClass: 'medium',
-      ebayUrl: l.url,
-      image: l.image,
-      vol: l.watchCount,
-      comp: 'Unknown',
-      trend: 'Unknown',
-      source: 'live-ebay-only',
-    }));
-  }
-
-  // -------- Fallback: mock data --------
-  return mockSearch(query);
-}
-
-// ---- Implementation: full live ----
-
-async function liveSearch(query) {
-  const ebayListings = await searchEbay(query, 8);
-  if (!ebayListings || ebayListings.length === 0) return [];
-
-  const useClaude = !!process.env.ANTHROPIC_API_KEY;
-  const results = [];
-
-  // Sequential to respect Keepa/Anthropic rate limits.
-  // For production: parallel with Promise.allSettled + concurrency limit.
-  for (const listing of ebayListings) {
-    const cleanedTitle = cleanTitle(listing.title);
-
-    let candidates = null;
+  // ----- Try live eBay first -----
+  const hasEbay = !!process.env.EBAY_CLIENT_ID;
+  if (hasEbay && q && q !== 'all') {
     try {
-      candidates = await findAmazonCandidates(cleanedTitle, 5);
-    } catch (err) {
-      console.error(`[liveSearch] Keepa lookup failed for "${cleanedTitle}":`, err.message);
-      continue;
-    }
-
-    if (!candidates || candidates.length === 0) continue;
-
-    // ---- Match selection: Claude if available, else first result ----
-    let amazonMatch = null;
-    let matchInfo = { source: 'first-result', confidence: null };
-
-    if (useClaude) {
-      try {
-        const decision = await matchAmazonProduct(listing, candidates);
-
-        if (decision) {
-          if (decision.match_index === null) {
-            // Claude says no candidate matches — skip this listing entirely
-            // (better than showing wrong supplier price)
-            continue;
-          }
-          if (decision.confidence >= MIN_MATCH_CONFIDENCE
-              && decision.match_index >= 0
-              && decision.match_index < candidates.length) {
-            amazonMatch = candidates[decision.match_index];
-            matchInfo = {
-              source: 'claude',
-              confidence: decision.confidence,
-              reasoning: decision.reasoning,
-            };
-          } else {
-            // Low confidence — also skip
-            continue;
-          }
-        }
-      } catch (err) {
-        console.error('[liveSearch] Claude match failed:', err.message);
-        // Fall through to first-result fallback below
+      const items = await searchEbay(query, { limit: 24 });
+      if (items.length) {
+        const products = items
+          .map(buildProduct)
+          // Drop items where supplier-cost guess would land below $0.50 (probably noise)
+          .filter(p => p.amazonPrice > 0.5)
+          .sort((a, b) => (b.roi || 0) - (a.roi || 0));
+        return { products, cached: false, source: 'ebay' };
       }
+    } catch (err) {
+      console.error('[research] eBay live search failed, falling back to mock:', err.message);
+      // fall through to mock
     }
-
-    if (!amazonMatch) {
-      amazonMatch = candidates[0];
-    }
-
-    const profit = calculateProfit({
-      ebayPrice: listing.ebayPrice,
-      amazonPrice: amazonMatch.amazonPrice,
-      shipping: listing.shippingCost || 8,
-      packaging: 3,
-    });
-
-    results.push({
-      name: listing.title,
-      cat: amazonMatch.brand || 'Live match',
-      emoji: '📦',
-      ebayPrice: listing.ebayPrice,
-      amazonPrice: amazonMatch.amazonPrice,
-      ...profit,
-      ebayUrl: listing.url,
-      amazonUrl: amazonMatch.url,
-      ebayImage: listing.image,
-      amazonImage: amazonMatch.image,
-      asin: amazonMatch.asin,
-      matchSource: matchInfo.source,
-      matchConfidence: matchInfo.confidence,
-      matchReasoning: matchInfo.reasoning,
-      vol: listing.watchCount,
-      comp: comprehensiveCompetition(listing.watchCount),
-      trend: 'Live',
-      source: 'live',
-    });
   }
 
-  results.sort((a, b) => (b.roi ?? -Infinity) - (a.roi ?? -Infinity));
-  return results;
+  // ----- Fallback: filter mock data -----
+  let products = FALLBACK_PRODUCTS.slice();
+  if (q && q !== 'all') {
+    products = products.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.cat.toLowerCase().includes(q) ||
+      (p.keywords || []).some(k => k.toLowerCase().includes(q))
+    );
+  }
+  products.sort((a, b) => (b.roi || 0) - (a.roi || 0));
+  return { products, cached: false, source: 'mock' };
 }
-
-// ---- Implementation: mock ----
-
-function mockSearch(query) {
-  const matches = searchFallback(query);
-
-  return matches
-    .map((p) => {
-      const profit = calculateProfit({
-        ebayPrice: p.ebayPrice,
-        amazonPrice: p.amazonPrice,
-        shipping: p.shipping,
-        packaging: p.packaging,
-      });
-      return {
-        name: p.name,
-        cat: p.cat,
-        emoji: p.emoji,
-        ebayPrice: p.ebayPrice,
-        amazonPrice: p.amazonPrice,
-        ...profit,
-        vol: p.vol,
-        comp: p.comp,
-        trend: p.trend,
-        source: 'mock',
-      };
-    })
-    .sort((a, b) => b.roi - a.roi);
-}
-
-// ---- Helpers ----
-
-function cleanTitle(title) {
-  return title
-    .replace(/\([^)]*\)/g, '')
-    .replace(/\b(new|sealed|brand new|free shipping|fast ship|us seller|authentic)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80);
-}
-
-function comprehensiveCompetition(watchCount) {
-  if (watchCount > 50) return 'Very High';
-  if (watchCount > 20) return 'High';
-  if (watchCount > 5) return 'Medium';
-  return 'Low';
-}
-
