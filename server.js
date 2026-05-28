@@ -1,4 +1,6 @@
 import express from 'express';
+import watchlistRouter from './src/routes/watchlist.js';
+import authRouter from './src/routes/auth.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { searchEbay } from './src/services/ebay.js';
@@ -8,7 +10,6 @@ import { dirname, join } from 'path';
 import { searchProducts } from './src/services/research.js';
 import { initCache, isEnabled as cacheEnabled, getStats as cacheStats } from './src/services/cache.js';
 import { initDb, isEnabled as dbEnabled, ping as dbPing } from './src/services/db.js';
-import watchlistRouter from './src/routes/watchlist.js';
 import listingsRouter from './src/routes/listings.js';
 import ordersRouter from './src/routes/orders.js';
 import profitRouter from './src/routes/profit.js';
@@ -19,6 +20,7 @@ import billingRouter from './src/routes/billing.js';
 import affiliateRouter from './src/routes/affiliate.js';
 import staffRouter from './src/routes/staff.js';
 
+
 dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +30,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
+app.use('/api/watchlist', watchlistRouter);
+app.use('/api/auth', authRouter);
 
 // Boot infrastructure
 await initCache();

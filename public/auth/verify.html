@@ -360,7 +360,14 @@ if (!pending) {
 
 // Render the email + the preview code hint
 document.getElementById('email-display').textContent = pending.email;
-document.getElementById('code-hint').textContent = pending.otp;
+
+// Hide the preview-code panel when we're using the real backend
+if (pending.preview) {
+  document.getElementById('code-hint').textContent = pending.otp;
+} else {
+  const previewNote = document.querySelector('.preview-note');
+  if (previewNote) previewNote.style.display = 'none';
+}
 
 // ====================================================================
 // OTP input behavior (auto-advance, paste, backspace)
@@ -421,7 +428,9 @@ async function submitCode() {
   // Refresh pending state in case Resend just changed it
   pending = loadPending();
   if (!pending) { window.location.replace('/auth/signup.html'); return; }
-  if (Date.now() > pending.expiresAt) {
+
+  // Local expiry check only matters in preview mode (server enforces its own expiry)
+  if (pending.preview && Date.now() > pending.expiresAt) {
     showError('Code expired. Tap Resend to get a new one.');
     return;
   }
@@ -429,9 +438,7 @@ async function submitCode() {
   verifyBtn.disabled = true;
   verifyBtn.textContent = 'Verifying…';
 
-  // PRODUCTION: POST /api/auth/otp/verify { id, code }
-  // PREVIEW: check against the locally-stored code
-  let usedRealApi = false;
+  // Try the real API first
   try {
     const r = await fetch('/api/auth/otp/verify', {
       method: 'POST',
@@ -439,30 +446,50 @@ async function submitCode() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: pending.email, code }),
     });
-    if (r.ok) usedRealApi = true;
-  } catch {}
-
-  if (!usedRealApi) {
-    if (code !== pending.otp) {
+    if (r.ok) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      window.location.href = '/app/dashboard.html';
+      return;
+    }
+    // Real backend exists but rejected the code — show its error, do NOT fall through
+    if (!pending.preview) {
+      const data = await r.json().catch(() => ({}));
       verifyBtn.disabled = false;
       verifyBtn.textContent = 'Verify and continue';
-      showError('Wrong code. Try again.');
-      // Clear inputs so user can retype
+      showError(data.error || 'Verification failed');
       inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
       inputs[0].focus();
       return;
     }
-    // Code matched — promote pending signup to a real local user
-    localStorage.setItem('kempy_user_local', JSON.stringify({
-      email: pending.email,
-      name: pending.name,
-      role: 'owner',
-      createdAt: new Date().toISOString(),
-      loggedInAt: new Date().toISOString(),
-      preview: true,
-    }));
+    // Else fall through to preview-mode local check below
+  } catch (_) {
+    // Network error — only acceptable in preview mode
+    if (!pending.preview) {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = 'Verify and continue';
+      showError('Network error — please try again');
+      return;
+    }
   }
 
+  // ---- Preview-mode local check (only reached when pending.preview === true) ----
+  if (code !== pending.otp) {
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verify and continue';
+    showError('Wrong code. Try again.');
+    inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
+    inputs[0].focus();
+    return;
+  }
+  // Code matched locally — promote pending signup to a real local user
+  localStorage.setItem('kempy_user_local', JSON.stringify({
+    email: pending.email,
+    name: pending.name,
+    role: 'owner',
+    createdAt: new Date().toISOString(),
+    loggedInAt: new Date().toISOString(),
+    preview: true,
+  }));
   sessionStorage.removeItem(STORAGE_KEY);
   window.location.href = '/app/dashboard.html';
 }
@@ -500,12 +527,24 @@ resendBtn.addEventListener('click', async () => {
   clearError();
   resendBtn.disabled = true;
 
-  // PRODUCTION: POST /api/auth/otp/resend { id }
-  // PREVIEW: regenerate the code locally
-  const newCode = String(Math.floor(100000 + Math.random() * 900000));
-  pending = { ...pending, otp: newCode, issuedAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000 };
-  savePending(pending);
-  document.getElementById('code-hint').textContent = newCode;
+  if (pending.preview) {
+    // Local regenerate
+    const newCode = String(Math.floor(100000 + Math.random() * 900000));
+    pending = { ...pending, otp: newCode, issuedAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000 };
+    savePending(pending);
+    const hintEl = document.getElementById('code-hint');
+    if (hintEl) hintEl.textContent = newCode;
+  } else {
+    // Real API
+    try {
+      await fetch('/api/auth/otp/resend', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pending.email }),
+      });
+    } catch (_) {}
+  }
 
   // Clear inputs
   inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });

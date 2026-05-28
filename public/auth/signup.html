@@ -494,6 +494,7 @@ form.addEventListener('submit', async (e) => {
   // PREVIEW: generate a 6-digit code locally and stash everything in sessionStorage
   //   so verify.html can read it.
   let usedRealApi = false;
+  let serverError = null;
   try {
     const r = await fetch('/api/auth/signup', {
       method: 'POST',
@@ -501,10 +502,34 @@ form.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (r.ok) usedRealApi = true;
-  } catch (_) {}
+    if (r.ok) {
+      usedRealApi = true;
+    } else {
+      const e = await r.json().catch(() => ({}));
+      serverError = e.error || `Signup failed (${r.status})`;
+    }
+  } catch (_) {
+    // Network error / no backend — silent, fall through to preview mode
+  }
 
-  if (!usedRealApi) {
+  if (serverError) {
+    // Real backend exists but rejected us — show the error and stop
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create account';
+    showError(serverError);
+    return;
+  }
+
+  // Always store pending state so verify.html knows which email to verify.
+  // In preview mode we also include the OTP itself so the verify page can check locally.
+  if (usedRealApi) {
+    sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
+      name: data.name,
+      email: data.email,
+      issuedAt: Date.now(),
+      preview: false,
+    }));
+  } else {
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
       name: data.name,
