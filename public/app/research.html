@@ -989,14 +989,14 @@ function applyFiltersAndRender() {
           </div>
           <div class="rc-pricing">
             <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
-            <div class="item"><div class="l">Amazon ${amazonLink}</div><div class="v">${fmt$(p.amazonPrice)}</div></div>
+            <div class="item"><div class="l">Amazon${p.estimated ? ' <span title="Estimated — no confident Amazon match was found for this listing. ROI is approximate." style="color:var(--amber);font-size:11px;">(est.)</span>' : ''} ${amazonLink}</div><div class="v">${p.estimated ? '~' : ''}${fmt$(p.amazonPrice)}</div></div>
             <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
             <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(p.profit)}</div></div>
           </div>
         </div>
         <div class="rc-verdict">
           <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
-          <div class="rc-tag ${v.cls}">${v.label}</div>
+          <div class="rc-tag ${v.cls}">${p.estimated ? 'Estimated ROI' : v.label}</div>
           <button class="rc-save ${isSaved ? 'saved' : ''}" data-action="save" ${isSaved ? 'disabled' : ''}>
             ${isSaved ? 'Saved' : '⭐ Save'}
           </button>

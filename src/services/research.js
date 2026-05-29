@@ -1,6 +1,8 @@
 // src/services/research.js
 import { searchEbay } from './ebay.js';
-import { getProductData } from './keepa.js';
+import { findAmazonCandidates } from './amazon.js';
+import { bestMatch } from './match-local.js';
+import { matchAmazonProduct } from './claude.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
 
 const FEE_RATE = 0.129;
@@ -24,33 +26,44 @@ function emojiFor(name = '') {
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
-// Try to get real Amazon data from Keepa using an ASIN
-async function enrichWithKeepa(item) {
-  if (!item.asin) return null;           // No ASIN → can't use Keepa yet
+// Decide the Amazon match for one eBay listing against a shared candidate pool.
+// Uses the Claude matcher when ANTHROPIC_API_KEY is set, otherwise the local
+// heuristic matcher. Returns { candidate, confident, via } or null.
+async function matchOne(item, candidates) {
+  if (!candidates || !candidates.length) return null;
 
-  const keepaData = await getProductData(item.asin);
-  if (!keepaData) return null;
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const decision = await matchAmazonProduct({ title: item.name }, candidates);
+      if (decision && decision.match_index != null && candidates[decision.match_index]) {
+        return {
+          candidate: candidates[decision.match_index],
+          confident: (decision.confidence ?? 0) >= 0.6,
+          via: 'claude',
+        };
+      }
+      // Claude explicitly found no match → trust that, fall through to estimate.
+      return null;
+    } catch (err) {
+      console.error('[research] Claude match failed, using local matcher:', err.message);
+      // fall through to local matcher
+    }
+  }
 
-  // Keepa returns prices as integers (e.g. 1999 = \$19.99)
-  const amazonPrice = keepaData.stats?.current?.[0]
-    ? keepaData.stats.current[0] / 100
-    : null;
-
-  const volume = keepaData.stats?.avg30?.[0] || null; // 30-day average sales rank
-
-  return {
-    amazonPrice,
-    volume,
-    amazonUrl: `https://www.amazon.com/dp/${item.asin}`
-  };
+  const local = bestMatch(item.name, candidates);
+  if (!local) return null;
+  return { candidate: local.candidate, confident: local.confident, via: 'local' };
 }
 
-function buildProduct(item, keepaData = null) {
+// Build a product card. If `match` is a confident match with a real Amazon
+// price, use it (real ROI). Otherwise fall back to a clearly-flagged estimate
+// rather than presenting a fabricated price as if it were real.
+function buildProduct(item, match = null) {
   const ebayPrice = item.ebayPrice;
   const shipping = item.ebayShipping != null ? item.ebayShipping : 6;
 
-  // Use real Amazon price if Keepa gave us one, otherwise use the old estimate
-  const amazonPrice = keepaData?.amazonPrice ?? round2(ebayPrice * 0.72);
+  const hasReal = !!(match && match.confident && match.candidate?.amazonPrice > 0);
+  const amazonPrice = hasReal ? match.candidate.amazonPrice : round2(ebayPrice * 0.72);
 
   const fees = round2(ebayPrice * FEE_RATE);
   const packaging = PACKAGING;
@@ -61,20 +74,21 @@ function buildProduct(item, keepaData = null) {
     name: item.name,
     emoji: emojiFor(item.name),
     cat: item.categories?.[0] || 'Marketplace',
-    vol: keepaData?.volume ? Math.round(keepaData.volume) : '—',
+    vol: '—',
     comp: 'live',
     trend: '—',
     ebayPrice,
     amazonPrice,
     ebayUrl: item.ebayUrl,
-    amazonUrl: keepaData?.amazonUrl || null,
+    amazonUrl: hasReal ? match.candidate.url : null,
     fees,
     shipping,
     packaging,
     profit,
     roi,
-    asin: item.asin || null,
-    matchSource: keepaData ? 'ebay+keepa' : 'ebay',
+    asin: hasReal ? match.candidate.asin : null,
+    estimated: !hasReal,                                  // honest flag for the UI
+    matchSource: hasReal ? `ebay+keepa(${match.via})` : 'estimate',
     image: item.image,
     condition: item.condition,
     ebayItemId: item.ebayItemId,
@@ -89,19 +103,33 @@ export async function searchProducts(query) {
     try {
       const items = await searchEbay(query, { limit: 24 });
       if (items.length) {
-        // Try to enrich each item with Keepa data
+        // One Keepa search for the query → shared pool of real Amazon candidates
+        // (titles + prices). ~10 tokens regardless of how many eBay items we map.
+        let candidates = [];
+        try {
+          candidates = (await findAmazonCandidates(query, 20)) || [];
+        } catch (err) {
+          console.error('[research] Keepa candidate search failed:', err.message);
+        }
+
+        // Match each eBay listing against the shared pool.
         const enriched = await Promise.all(
           items.map(async (item) => {
-            const keepa = await enrichWithKeepa(item);
-            return buildProduct(item, keepa);
+            const match = await matchOne(item, candidates);
+            return buildProduct(item, match);
           })
         );
 
+        // Real (confident) matches first, then estimates; each block by ROI.
         const products = enriched
           .filter(p => p.amazonPrice > 0.5)
-          .sort((a, b) => (b.roi || 0) - (a.roi || 0));
+          .sort((a, b) => {
+            if (a.estimated !== b.estimated) return a.estimated ? 1 : -1;
+            return (b.roi || 0) - (a.roi || 0);
+          });
 
-        return { products, cached: false, source: 'ebay+keepa' };
+        const realCount = products.filter(p => !p.estimated).length;
+        return { products, cached: false, source: 'ebay+keepa', realCount };
       }
     } catch (err) {
       console.error('[research] eBay/Keepa failed, falling back:', err.message);

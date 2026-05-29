@@ -35,33 +35,22 @@ export async function findAmazonCandidates(query, n = 5) {
 
   const domain = process.env.KEEPA_DOMAIN || 1;
 
-  // Step 1 — search for ASINs matching the query
+  // Single call — Keepa's /search returns full product objects (with stats when
+  // stats:1 is passed), so we get titles + prices in one ~10-token request.
+  // NOTE: the response field is `products`, not `asinList` (that was a bug).
   const searchResp = await axios.get(`${KEEPA_BASE}/search`, {
     params: {
       key: process.env.KEEPA_API_KEY,
       domain,
       type: 'product',
       term: query,
-      page: 0,
-    },
-    timeout: 15_000,
-  });
-
-  const asins = searchResp.data?.asinList?.slice(0, n) || [];
-  if (asins.length === 0) return [];
-
-  // Step 2 — single batch call for all candidate prices/titles
-  const productResp = await axios.get(`${KEEPA_BASE}/product`, {
-    params: {
-      key: process.env.KEEPA_API_KEY,
-      domain,
-      asin: asins.join(','),
       stats: 1,
+      page: 0,
     },
     timeout: 20_000,
   });
 
-  const products = productResp.data?.products || [];
+  const products = searchResp.data?.products || [];
 
   const mapped = products
     .map((p) => {
