@@ -3,6 +3,7 @@ import { searchEbay } from './ebay.js';
 import { findAmazonCandidates } from './amazon.js';
 import { bestMatch } from './match-local.js';
 import { matchAmazonBatch } from './claude.js';
+import { getCachedSearch, setCachedSearch } from './cache.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
 
 const FEE_RATE = 0.129;
@@ -103,6 +104,11 @@ export async function searchProducts(query) {
 
   const hasEbay = !!process.env.EBAY_CLIENT_ID;
   if (hasEbay && q && q !== 'all') {
+    // Cache layer 1: the full response (eBay + Keepa + Claude matches). A hit
+    // skips all three upstream calls — turning a ~20s search into milliseconds.
+    const hit = await getCachedSearch(q);
+    if (hit) return { ...hit, cached: true };
+
     try {
       const items = await searchEbay(query, { limit: 24 });
       if (items.length) {
@@ -129,7 +135,9 @@ export async function searchProducts(query) {
           });
 
         const realCount = products.filter(p => !p.estimated).length;
-        return { products, cached: false, source: 'ebay+keepa', realCount };
+        const payload = { products, source: 'ebay+keepa', realCount };
+        await setCachedSearch(q, payload);   // no-op when Redis is off
+        return { ...payload, cached: false };
       }
     } catch (err) {
       console.error('[research] eBay/Keepa failed, falling back:', err.message);
