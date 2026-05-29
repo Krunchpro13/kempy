@@ -56,3 +56,46 @@ CREATE INDEX IF NOT EXISTS otp_codes_lookup_idx
   WHERE consumed_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS otp_codes_expires_idx ON otp_codes (expires_at);
+
+-- ====================================================================
+-- Watchlist
+-- One row per saved product per user.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS watchlist (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Product identifiers (both nullable — live eBay items may not have ASIN yet)
+  asin TEXT,
+  ebay_item_id TEXT,
+
+  -- Display
+  name TEXT NOT NULL,
+  emoji TEXT,
+  cat TEXT,
+
+  -- Prices at time of last refresh
+  ebay_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  amazon_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  fees NUMERIC(12,2) NOT NULL DEFAULT 0,
+  shipping NUMERIC(12,2) NOT NULL DEFAULT 0,
+  packaging NUMERIC(12,2) NOT NULL DEFAULT 0,
+  profit NUMERIC(12,2) NOT NULL DEFAULT 0,
+  roi NUMERIC(8,2) NOT NULL DEFAULT 0,
+
+  -- Prices at time of save (so we can show drift)
+  saved_ebay_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  saved_amazon_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+
+  -- Links
+  ebay_url TEXT,
+  amazon_url TEXT,
+
+  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS watchlist_user_idx ON watchlist (user_id);
+CREATE INDEX IF NOT EXISTS watchlist_asin_idx ON watchlist (user_id, asin) WHERE asin IS NOT NULL;
+CREATE INDEX IF NOT EXISTS watchlist_ebay_idx ON watchlist (user_id, ebay_item_id) WHERE ebay_item_id IS NOT NULL;
+

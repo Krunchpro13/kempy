@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { searchEbay } from './src/services/ebay.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { sessionMiddleware } from './src/middleware/auth.js';
 
 import { searchProducts } from './src/services/research.js';
 import { initCache, isEnabled as cacheEnabled, getStats as cacheStats } from './src/services/cache.js';
@@ -29,9 +30,11 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(sessionMiddleware);
 app.use(express.static(join(__dirname, 'public')));
 app.use('/api/watchlist', watchlistRouter);
 app.use('/api/auth', authRouter);
+
 
 // Boot infrastructure
 await initCache();

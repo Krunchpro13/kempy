@@ -34,12 +34,12 @@ async function main() {
     console.log(`✓ Schema applied (${Date.now() - start}ms)`);
 
     const { rows } = await pool.query(`
-      SELECT table_name,
+      SELECT t.table_name,
              (SELECT COUNT(*) FROM information_schema.columns
               WHERE table_name = t.table_name AND table_schema = 'public') AS columns
       FROM information_schema.tables t
-      WHERE table_schema = 'public' AND table_name IN ('users', 'sessions', 'otp_codes')
-      ORDER BY table_name
+      WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+      ORDER BY t.table_name
     `);
     console.log('\n  Tables ready:');
     for (const r of rows) {

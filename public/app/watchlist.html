@@ -706,53 +706,115 @@ function showToast(msg, type = '') {
 }
 
 // ====================================================================
-// Local watchlist storage
-//   Items are keyed by ASIN where available, otherwise by name.
-//   Shape: { id, addedAt, savedEbayPrice, savedAmazonPrice, ...product }
+// Local watchlist storage (fallback for guests + migration source)
 // ====================================================================
 const LS_KEY = 'kempy_watchlist_local';
+const LS_MIGRATED = 'kempy_watchlist_migrated';
 
 function loadLocal() {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (_) { return []; }
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+  catch (_) { return []; }
 }
 function saveLocal(items) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch (_) {}
 }
 
 // ====================================================================
-// User detection (real API → fallback to localStorage preview)
+// API helpers (DB-backed, require auth)
+// ====================================================================
+async function apiGet() {
+  const r = await fetch('/api/watchlist', { credentials: 'include' });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+async function apiSave(product) {
+  const r = await fetch('/api/watchlist', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error || `${r.status}`);
+  }
+  return r.json();
+}
+
+async function apiDelete(id) {
+  const r = await fetch(`/api/watchlist/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+async function apiRefresh() {
+  const r = await fetch('/api/watchlist/refresh', { method: 'POST', credentials: 'include' });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+// ====================================================================
+// Migrate localStorage → DB (runs once after first real sign-in)
+// ====================================================================
+async function migrateLocalToDb() {
+  if (localStorage.getItem(LS_MIGRATED)) return; // already done
+  const local = loadLocal();
+  if (!local.length) {
+    localStorage.setItem(LS_MIGRATED, '1');
+    return;
+  }
+  let migrated = 0;
+  for (const item of local) {
+    try {
+      await apiSave(item);
+      migrated++;
+    } catch (_) { /* skip duplicates / errors */ }
+  }
+  localStorage.setItem(LS_MIGRATED, '1');
+  if (migrated > 0) {
+    // Clear local items that are now in the DB
+    saveLocal([]);
+    showToast(`Moved ${migrated} saved item${migrated > 1 ? 's' : ''} to your account`, 'success');
+  }
+}
+
+// ====================================================================
+// User detection
 // ====================================================================
 let currentUser = null;
+let isRealUser = false;   // true = backed by DB session; false = localStorage preview
+
 async function loadMe() {
   try {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
     if (r.ok) {
       const data = await r.json();
-      if (data.user) currentUser = data.user;
+      if (data.user) { currentUser = data.user; isRealUser = true; }
     }
   } catch (_) {}
   if (!currentUser) {
     try {
       const raw = localStorage.getItem('kempy_user_local');
-      if (raw) currentUser = JSON.parse(raw);
+      if (raw) { currentUser = JSON.parse(raw); isRealUser = false; }
     } catch (_) {}
   }
   if (currentUser) {
     const label = currentUser.name || currentUser.email || 'You';
     document.getElementById('user-name').textContent = label;
-    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase() + (currentUser.preview ? ' · LOCAL' : '');
+    document.getElementById('user-role').textContent =
+      (currentUser.role || 'MEMBER').toUpperCase() + (!isRealUser ? ' · LOCAL' : '');
     document.getElementById('user-avatar').textContent = label[0].toUpperCase();
   }
-  const menuBtnEl = document.getElementById('user-menu-btn');
-  if (menuBtnEl) {
-    menuBtnEl.title = currentUser ? 'Sign out' : 'Sign in';
-    menuBtnEl.textContent = currentUser ? '⎋' : '→';
-    menuBtnEl.addEventListener('click', () => {
+  const mb = document.getElementById('user-menu-btn');
+  if (mb) {
+    mb.title = currentUser ? 'Sign out' : 'Sign in';
+    mb.textContent = currentUser ? '⎋' : '→';
+    mb.addEventListener('click', async () => {
       if (currentUser) {
         if (!confirm('Sign out of KEMPY?')) return;
+        if (isRealUser) {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+        }
         localStorage.removeItem('kempy_user_local');
         window.location.reload();
       } else {
@@ -763,7 +825,7 @@ async function loadMe() {
 }
 
 // ====================================================================
-// Render
+// Render helpers
 // ====================================================================
 const listEl = document.getElementById('wl-list');
 const statsEl = document.getElementById('stats-strip');
@@ -788,8 +850,7 @@ function timeAgo(iso) {
   if (hr < 24) return hr + 'h ago';
   const day = Math.floor(hr / 24);
   if (day < 30) return day + 'd ago';
-  const mo = Math.floor(day / 30);
-  return mo + 'mo ago';
+  return Math.floor(day / 30) + 'mo ago';
 }
 function roiClass(roi) {
   if (roi >= 30) return 'excellent';
@@ -803,7 +864,7 @@ function renderEmpty() {
     <div class="empty-state">
       <span class="icon">⭐</span>
       <h3>No saved items yet</h3>
-      <p>Find products on the Research page and tap Save to track them here. Prices, profit, and ROI all stay current.</p>
+      <p>Find products on the Research page and tap Save to track them here.</p>
       <a href="/app/research.html" class="btn">Go to Research →</a>
     </div>`;
   statsEl.style.display = 'none';
@@ -832,12 +893,11 @@ function renderStats(items) {
 function sortItems(items) {
   const arr = items.slice();
   switch (sortSelect.value) {
-    case 'added-asc': return arr.sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt));
-    case 'roi-desc': return arr.sort((a, b) => (b.roi || 0) - (a.roi || 0));
-    case 'profit-desc': return arr.sort((a, b) => (b.profit || 0) - (a.profit || 0));
-    case 'name-asc': return arr.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    case 'added-desc':
-    default: return arr.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+    case 'added-asc':    return arr.sort((a, b) => new Date(a.addedAt || a.added_at) - new Date(b.addedAt || b.added_at));
+    case 'roi-desc':     return arr.sort((a, b) => (b.roi || 0) - (a.roi || 0));
+    case 'profit-desc':  return arr.sort((a, b) => (b.profit || 0) - (a.profit || 0));
+    case 'name-asc':     return arr.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    default:             return arr.sort((a, b) => new Date(b.addedAt || b.added_at) - new Date(a.addedAt || a.added_at));
   }
 }
 
@@ -845,15 +905,14 @@ function renderCard(item) {
   const v = roiClass(item.roi || 0);
   const cardCls = (item.roi || 0) >= 30 ? 'excellent' : '';
   const drift = (saved, current) => {
-    if (saved == null || current == null || saved === current) return '';
+    if (!saved || !current || Math.abs(saved - current) < 0.01) return '';
     const diff = current - saved;
     const pct = ((diff / saved) * 100).toFixed(1);
-    const dir = diff > 0 ? 'up' : 'down';
-    const sign = diff > 0 ? '+' : '';
-    return `<div class="drift ${dir}">${sign}${pct}% vs saved</div>`;
+    return `<div class="drift ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '+' : ''}${pct}% vs saved</div>`;
   };
+  const addedAt = item.addedAt || item.added_at;
   return `
-    <div class="wl-card ${cardCls}" data-id="${escapeHtml(item.id)}">
+    <div class="wl-card ${cardCls}" data-id="${escapeHtml(String(item.id))}">
       <div>
         <div class="head">
           <div class="wl-thumb">${item.emoji || '📦'}</div>
@@ -861,7 +920,7 @@ function renderCard(item) {
             <div class="wl-name">${escapeHtml(item.name)}</div>
             <div class="wl-meta">
               ${escapeHtml(item.cat || '')}
-              <span class="sep">·</span> added ${timeAgo(item.addedAt)}
+              <span class="sep">·</span> added ${timeAgo(addedAt)}
               ${item.asin ? `<span class="sep">·</span> ${escapeHtml(item.asin)}` : ''}
             </div>
           </div>
@@ -888,86 +947,142 @@ function renderCard(item) {
         </div>
       </div>
       <div class="wl-side">
-        <div class="wl-roi ${v}">${item.roi != null ? item.roi.toFixed(1) + '%' : '—'}</div>
+        <div class="wl-roi ${v}">${item.roi != null ? Number(item.roi).toFixed(1) + '%' : '—'}</div>
         ${item.ebayUrl ? `<a href="${escapeHtml(item.ebayUrl)}" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;letter-spacing:0.5px;">↗ View on eBay</a>` : ''}
         <button class="wl-remove" data-action="remove">🗑 Remove</button>
       </div>
     </div>`;
 }
 
-function render() {
-  const items = loadLocal();
-  if (!items.length) { renderEmpty(); return; }
-  localBanner.classList.toggle('hidden', !!currentUser);
-  controlsEl.style.display = 'flex';
-  document.getElementById('visible-count').textContent = items.length;
-  renderStats(items);
-  const sorted = sortItems(items);
-  listEl.innerHTML = sorted.map(renderCard).join('');
+// ====================================================================
+// Main render (picks DB or localStorage based on auth state)
+// ====================================================================
+let dbItems = [];    // in-memory cache from last DB fetch
+
+async function render() {
+  if (isRealUser) {
+    try {
+      const data = await apiGet();
+      dbItems = data.items || [];
+    } catch (err) {
+      showToast('Could not load watchlist: ' + err.message, 'error');
+      dbItems = [];
+    }
+    localBanner.classList.add('hidden');
+    if (!dbItems.length) { renderEmpty(); return; }
+    controlsEl.style.display = 'flex';
+    document.getElementById('visible-count').textContent = dbItems.length;
+    renderStats(dbItems);
+    listEl.innerHTML = sortItems(dbItems).map(renderCard).join('');
+  } else {
+    // Guest / localStorage path
+    const items = loadLocal();
+    localBanner.classList.toggle('hidden', false);
+    if (!items.length) { renderEmpty(); return; }
+    controlsEl.style.display = 'flex';
+    document.getElementById('visible-count').textContent = items.length;
+    renderStats(items);
+    listEl.innerHTML = sortItems(items).map(renderCard).join('');
+  }
 }
 
 // ====================================================================
-// Remove + clear + refresh
+// Remove
 // ====================================================================
-listEl.addEventListener('click', (e) => {
+listEl.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="remove"]');
   if (!btn) return;
   const card = btn.closest('.wl-card');
   const id = card.dataset.id;
-  const items = loadLocal().filter(i => i.id !== id);
-  saveLocal(items);
-  card.classList.add('removing');
-  setTimeout(() => { render(); showToast('Removed from watchlist', 'success'); }, 200);
-});
 
-clearBtn.addEventListener('click', () => {
-  const items = loadLocal();
-  if (!items.length) return;
-  if (!confirm(`Remove all ${items.length} items from your watchlist?`)) return;
-  saveLocal([]);
-  render();
-  showToast('Watchlist cleared', 'success');
-});
-
-refreshBtn.addEventListener('click', async () => {
-  const items = loadLocal();
-  if (!items.length) {
-    showToast('Nothing to refresh', 'error');
-    return;
-  }
-  refreshBtn.disabled = true;
-  refreshBtn.textContent = '↻ Refreshing…';
-  let updated = 0;
-  // Strategy: re-search by name keyword and match by asin.
-  // With mock data the prices don't change, but the mechanism is in place
-  // for when real APIs are wired up.
-  for (const item of items) {
+  if (isRealUser) {
+    btn.disabled = true;
     try {
-      const q = (item.name || '').split(/\s+/).slice(0, 2).join(' ');
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      if (!r.ok) continue;
-      const data = await r.json();
-      const match = (data.products || []).find(p => p.asin && p.asin === item.asin);
-      if (!match) continue;
-      Object.assign(item, {
-        ebayPrice: match.ebayPrice,
-        amazonPrice: match.amazonPrice,
-        fees: match.fees,
-        shipping: match.shipping,
-        packaging: match.packaging,
-        profit: match.profit,
-        roi: match.roi,
-        ebayUrl: match.ebayUrl || item.ebayUrl,
-        amazonUrl: match.amazonUrl || item.amazonUrl,
-      });
-      updated++;
-    } catch (_) {}
+      await apiDelete(id);
+      card.classList.add('removing');
+      setTimeout(() => render(), 220);
+      showToast('Removed from watchlist', 'success');
+    } catch (err) {
+      btn.disabled = false;
+      showToast('Remove failed: ' + err.message, 'error');
+    }
+  } else {
+    saveLocal(loadLocal().filter(i => String(i.id) !== String(id)));
+    card.classList.add('removing');
+    setTimeout(() => render(), 220);
+    showToast('Removed from watchlist', 'success');
   }
-  saveLocal(items);
-  refreshBtn.disabled = false;
-  refreshBtn.textContent = '↻ Refresh prices';
-  render();
-  showToast(`Refreshed ${updated} of ${items.length}`, updated ? 'success' : 'error');
+});
+
+// ====================================================================
+// Clear all
+// ====================================================================
+clearBtn.addEventListener('click', async () => {
+  if (isRealUser) {
+    if (!dbItems.length) return;
+    if (!confirm(`Remove all ${dbItems.length} items from your watchlist?`)) return;
+    // Delete each one — no bulk endpoint yet
+    let failed = 0;
+    for (const item of dbItems) {
+      try { await apiDelete(item.id); } catch (_) { failed++; }
+    }
+    await render();
+    showToast(failed ? `Cleared (${failed} failed)` : 'Watchlist cleared', failed ? 'error' : 'success');
+  } else {
+    const items = loadLocal();
+    if (!items.length) return;
+    if (!confirm(`Remove all ${items.length} items from your watchlist?`)) return;
+    saveLocal([]);
+    render();
+    showToast('Watchlist cleared', 'success');
+  }
+});
+
+// ====================================================================
+// Refresh prices
+// ====================================================================
+refreshBtn.addEventListener('click', async () => {
+  if (isRealUser) {
+    // Server-side refresh using research engine
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '↻ Refreshing…';
+    try {
+      const data = await apiRefresh();
+      await render();
+      showToast(`Refreshed ${data.updated} of ${data.total}`, 'success');
+    } catch (err) {
+      showToast('Refresh failed: ' + err.message, 'error');
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = '↻ Refresh prices';
+    }
+  } else {
+    // Client-side refresh for localStorage items
+    const items = loadLocal();
+    if (!items.length) { showToast('Nothing to refresh', 'error'); return; }
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '↻ Refreshing…';
+    let updated = 0;
+    for (const item of items) {
+      try {
+        const q = (item.name || '').split(/\s+/).slice(0, 2).join(' ');
+        const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        if (!r.ok) continue;
+        const data = await r.json();
+        const match = (data.products || []).find(p => p.asin && p.asin === item.asin);
+        if (!match) continue;
+        Object.assign(item, { ebayPrice: match.ebayPrice, amazonPrice: match.amazonPrice,
+          fees: match.fees, shipping: match.shipping, packaging: match.packaging,
+          profit: match.profit, roi: match.roi });
+        updated++;
+      } catch (_) {}
+    }
+    saveLocal(items);
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Refresh prices';
+    render();
+    showToast(`Refreshed ${updated} of ${items.length}`, updated ? 'success' : 'error');
+  }
 });
 
 sortSelect.addEventListener('change', render);
@@ -977,8 +1092,10 @@ sortSelect.addEventListener('change', render);
 // ====================================================================
 (async function init() {
   await loadMe();
-  render();
+  if (isRealUser) await migrateLocalToDb();
+  await render();
 })();
+
 </script>
 
 </body>
