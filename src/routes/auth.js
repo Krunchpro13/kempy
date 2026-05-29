@@ -8,8 +8,9 @@ import express from 'express';
 import {
   hashPassword, verifyPassword,
   createOtp, verifyOtp,
-  createSession, findUserBySession, deleteSession,
+  createSession, findUserBySession, deleteSession, deleteAllSessionsForUser,
   findUserByEmail, createOrUpdateUser, markEmailVerified,
+  setPassword, updateName,
 } from '../services/auth.js';
 import { sendOtpEmail, sendWelcomeEmail } from '../services/email.js';
 import { isEnabled as dbEnabled } from '../services/db.js';
@@ -69,6 +70,12 @@ function dbRequired(_req, res, next) {
       error: 'Auth requires a database. Set DATABASE_URL in .env and run `npm run migrate`.',
     });
   }
+  next();
+}
+
+// req.user is set by sessionMiddleware (server.js) from the session cookie.
+function requireAuth(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Sign in to continue.' });
   next();
 }
 
@@ -260,6 +267,74 @@ router.post('/logout', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[auth/logout]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ====================================================================
+// POST /api/auth/change-password   { currentPassword, newPassword }
+// Verifies the current password, sets a new one, and revokes all OTHER
+// sessions (the current one stays signed in).
+// ====================================================================
+router.post('/change-password', dbRequired, requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required.' });
+    }
+    if (String(newPassword).length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+
+    // req.user (from sessionMiddleware) has no password_hash — fetch the full row.
+    const full = await findUserByEmail(req.user.email);
+    if (!full || !full.password_hash) {
+      return res.status(400).json({ error: 'This account has no password set (social login?).' });
+    }
+
+    const ok = await verifyPassword(currentPassword, full.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Current password is incorrect.' });
+
+    await setPassword(full.id, await hashPassword(newPassword));
+
+    // Security: revoke every other session, keep the current cookie valid.
+    const token = parseCookies(req)[COOKIE_NAME];
+    try { await deleteAllSessionsForUser(full.id, token); } catch (e) { console.error('[auth/change-password] revoke', e.message); }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth/change-password]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ====================================================================
+// POST /api/auth/profile   { name }
+// ====================================================================
+router.post('/profile', dbRequired, requireAuth, async (req, res) => {
+  try {
+    const name = (req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    await updateName(req.user.id, name);
+    const updated = await findUserByEmail(req.user.email);
+    res.json({ ok: true, user: publicUser(updated) });
+  } catch (err) {
+    console.error('[auth/profile]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ====================================================================
+// POST /api/auth/logout-all
+// Ends every session except the current one.
+// ====================================================================
+router.post('/logout-all', dbRequired, requireAuth, async (req, res) => {
+  try {
+    const token = parseCookies(req)[COOKIE_NAME];
+    await deleteAllSessionsForUser(req.user.id, token);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth/logout-all]', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

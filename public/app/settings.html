@@ -847,9 +847,10 @@ async function loadMe() {
   if (mb) {
     mb.title = currentUser ? 'Sign out' : 'Sign in';
     mb.textContent = currentUser ? '⎋' : '→';
-    mb.addEventListener('click', () => {
+    mb.addEventListener('click', async () => {
       if (currentUser) {
         if (!confirm('Sign out of KEMPY?')) return;
+        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
         localStorage.removeItem('kempy_user_local');
         window.location.reload();
       } else {
@@ -960,19 +961,34 @@ document.getElementById('connect-amazon-supplier').addEventListener('click', () 
 // ====================================================================
 // Profile + password forms
 // ====================================================================
-document.getElementById('profile-form').addEventListener('submit', (e) => {
+document.getElementById('profile-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser) {
     showToast('Sign in to save profile changes', 'error');
     return;
   }
-  currentUser.name = document.getElementById('profile-name').value.trim();
+  const name = document.getElementById('profile-name').value.trim();
+  currentUser.name = name;
   currentUser.email = document.getElementById('profile-email').value.trim();
   currentUser.business = document.getElementById('profile-business').value.trim();
+  // business/timezone have no DB column yet — keep them in the local mirror.
   localStorage.setItem('kempy_user_local', JSON.stringify(currentUser));
-  document.getElementById('user-name').textContent = currentUser.name || currentUser.email || 'You';
-  document.getElementById('user-avatar').textContent = (currentUser.name || currentUser.email || 'Y')[0].toUpperCase();
-  showToast('Profile updated', 'success');
+  document.getElementById('user-name').textContent = name || currentUser.email || 'You';
+  document.getElementById('user-avatar').textContent = (name || currentUser.email || 'Y')[0].toUpperCase();
+
+  // Persist the display name to the DB if we have a real session.
+  try {
+    const r = await fetch('/api/auth/profile', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (r.ok)            showToast('Profile updated', 'success');
+    else if (r.status === 401) showToast('Profile updated (preview)', 'success');
+    else { const d = await r.json().catch(() => ({})); showToast(d.error || 'Saved locally only', 'error'); }
+  } catch (_) {
+    showToast('Profile updated (preview)', 'success');
+  }
 });
 
 document.getElementById('profile-cancel').addEventListener('click', () => {
@@ -983,7 +999,7 @@ document.getElementById('profile-cancel').addEventListener('click', () => {
   }
 });
 
-document.getElementById('pw-form').addEventListener('submit', (e) => {
+document.getElementById('pw-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const cur = document.getElementById('pw-current').value;
   const nw = document.getElementById('pw-new').value;
@@ -991,8 +1007,32 @@ document.getElementById('pw-form').addEventListener('submit', (e) => {
   if (!cur || !nw || !cf) { showToast('Fill in all password fields', 'error'); return; }
   if (nw.length < 8)     { showToast('New password must be at least 8 characters', 'error'); return; }
   if (nw !== cf)         { showToast("Passwords don't match", 'error'); return; }
-  e.target.reset();
-  showToast('Password updated (preview)', 'success');
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/auth/change-password', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      e.target.reset();
+      showToast('Password updated. Other sessions signed out.', 'success');
+    } else if (r.status === 401 && !currentUser) {
+      // Not signed in with a real session → preview only
+      e.target.reset();
+      showToast('Password updated (preview — sign in to save for real)', 'success');
+    } else {
+      showToast(d.error || 'Could not update password', 'error');
+    }
+  } catch (_) {
+    e.target.reset();
+    showToast('Password updated (preview — backend offline)', 'success');
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 // ====================================================================
@@ -1051,9 +1091,16 @@ document.getElementById('api-regen').addEventListener('click', () => {
 document.getElementById('export-btn').addEventListener('click', () => {
   showToast("Export queued — we'll email when ready", 'success');
 });
-document.getElementById('signout-all-btn').addEventListener('click', () => {
+document.getElementById('signout-all-btn').addEventListener('click', async () => {
   if (!confirm('Sign out of all other sessions?')) return;
-  showToast('All other sessions signed out', 'success');
+  try {
+    const r = await fetch('/api/auth/logout-all', { method: 'POST', credentials: 'include' });
+    if (r.ok)                  showToast('All other sessions signed out', 'success');
+    else if (r.status === 401) showToast('Sign in first', 'error');
+    else                       showToast('Could not sign out other sessions', 'error');
+  } catch (_) {
+    showToast('All other sessions signed out (preview)', 'success');
+  }
 });
 document.getElementById('delete-btn').addEventListener('click', () => {
   const a = prompt('Type DELETE to confirm permanent account deletion:');

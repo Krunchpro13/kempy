@@ -195,3 +195,17 @@ export async function markEmailVerified(email) {
     [email]
   );
 }
+
+export async function setPassword(userId, passwordHash) {
+  await query(
+    `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
+    [userId, passwordHash]
+  );
+}
+
+export async function updateName(userId, name) {
+  await query(
+    `UPDATE users SET name = $2, updated_at = NOW() WHERE id = $1`,
+    [userId, name || null]
+  );
+}
