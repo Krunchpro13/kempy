@@ -99,3 +99,29 @@ CREATE INDEX IF NOT EXISTS watchlist_user_idx ON watchlist (user_id);
 CREATE INDEX IF NOT EXISTS watchlist_asin_idx ON watchlist (user_id, asin) WHERE asin IS NOT NULL;
 CREATE INDEX IF NOT EXISTS watchlist_ebay_idx ON watchlist (user_id, ebay_item_id) WHERE ebay_item_id IS NOT NULL;
 
+-- ====================================================================
+-- User preferences (notification toggles, etc.) — JSON blob per user.
+-- ====================================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- ====================================================================
+-- Team members
+-- Each row is a teammate belonging to an owner's workspace. The owner is
+-- the users row; teammates are tracked here by email + role + status.
+-- NOTE: scoped login for invited members needs the multi-tenant auth model
+-- (future) — for now this persists the roster and invite state.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS team_members (
+  id BIGSERIAL PRIMARY KEY,
+  owner_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  name TEXT,
+  role TEXT NOT NULL DEFAULT 'member',       -- 'admin' | 'member' | 'viewer'
+  status TEXT NOT NULL DEFAULT 'pending',    -- 'pending' | 'active'
+  invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT team_members_owner_email_unique UNIQUE (owner_user_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS team_members_owner_idx ON team_members (owner_user_id);
+

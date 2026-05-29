@@ -1036,25 +1036,54 @@ document.getElementById('pw-form').addEventListener('submit', async (e) => {
 });
 
 // ====================================================================
-// Notification prefs — persist
+// Notification prefs — persist to DB (signed in) or localStorage (preview)
 // ====================================================================
 const LS_PREFS = 'kempy_prefs_local';
-function loadPrefs() {
+let prefsMode = 'local';
+function loadLocalPrefs() {
   try { return JSON.parse(localStorage.getItem(LS_PREFS) || '{}'); } catch { return {}; }
 }
-function savePrefs(p) {
+function saveLocalPrefs(p) {
   try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {}
 }
-const prefs = loadPrefs();
-document.querySelectorAll('[data-pref]').forEach(el => {
-  if (prefs[el.dataset.pref] !== undefined) el.checked = !!prefs[el.dataset.pref];
-  el.addEventListener('change', () => {
-    const cur = loadPrefs();
-    cur[el.dataset.pref] = el.checked;
-    savePrefs(cur);
-    showToast('Preference saved', 'success');
+function applyPrefs(prefs) {
+  document.querySelectorAll('[data-pref]').forEach(el => {
+    if (prefs[el.dataset.pref] !== undefined) el.checked = !!prefs[el.dataset.pref];
   });
-});
+}
+function prefsFromUI() {
+  const p = {};
+  document.querySelectorAll('[data-pref]').forEach(el => { p[el.dataset.pref] = el.checked; });
+  return p;
+}
+(async function initPrefs() {
+  let prefs = null;
+  try {
+    const r = await fetch('/api/settings', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); prefs = d.notifications || {}; prefsMode = 'api'; }
+  } catch (_) {}
+  if (prefs === null) { prefs = loadLocalPrefs(); prefsMode = 'local'; }
+  applyPrefs(prefs);
+
+  document.querySelectorAll('[data-pref]').forEach(el => {
+    el.addEventListener('change', async () => {
+      const all = prefsFromUI();
+      if (prefsMode === 'api') {
+        try {
+          const r = await fetch('/api/settings/notifications', {
+            method: 'PUT', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notifications: all }),
+          });
+          showToast(r.ok ? 'Preference saved' : 'Could not save', r.ok ? 'success' : 'error');
+        } catch (_) { showToast('Network error', 'error'); }
+      } else {
+        saveLocalPrefs(all);
+        showToast('Preference saved (preview)', 'success');
+      }
+    });
+  });
+})();
 
 // ====================================================================
 // API token

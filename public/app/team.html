@@ -453,61 +453,76 @@ async function loadMe() {
 }
 
 // ====================================================================
-// Team data — localStorage with sensible seed
+// Team data — real API when signed in, localStorage preview otherwise
 // ====================================================================
 const LS_TEAM = 'kempy_team_local';
 const SEAT_LIMIT = 5;
+const state = { mode: 'local', rows: [] };
 
-function seedTeam() {
-  const you = currentUser
-    ? {
-        id: 'me',
-        name: currentUser.name || (currentUser.email ? currentUser.email.split('@')[0] : 'You'),
-        email: currentUser.email || 'you@example.com',
-        role: 'owner',
-        lastActive: 'just now',
-        you: true,
-        color: 'c1',
-      }
-    : {
-        id: 'me',
-        name: 'Guest',
-        email: 'guest@example.com',
-        role: 'owner',
-        lastActive: 'just now',
-        you: true,
-        color: 'c1',
-      };
-  return [
-    you,
-    { id: 'm2', name: 'Sarah Chen',   email: 'sarah@example.com',   role: 'admin',  lastActive: '2h ago',       color: 'c2' },
-    { id: 'm3', name: 'Marcus Patel', email: 'marcus@example.com',  role: 'member', lastActive: 'Yesterday',    color: 'c4' },
-    { id: 'p1', name: 'New invite',   email: 'alex@example.com',    role: 'pending', invitedRole: 'member', lastActive: 'Invited 1d ago', color: 'muted', pending: true },
-  ];
+function meRow() {
+  const email = currentUser?.email || 'guest@example.com';
+  const name = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Guest');
+  return { id: 'me', name, email, role: 'owner', you: true, color: 'c1', lastActive: 'just now' };
 }
 
-function loadTeam() {
+const PALETTE = ['c2', 'c4', 'c5', 'c3'];
+function rowsFromApi(data) {
+  const me = meRow();
+  const rows = [{ ...me, name: data.owner?.name || me.name, email: data.owner?.email || me.email }];
+  (data.members || []).forEach((m, i) => {
+    const pending = m.status === 'pending';
+    rows.push({
+      id: m.id,
+      name: m.name || (pending ? 'Invited' : (m.email || '').split('@')[0]),
+      email: m.email,
+      role: pending ? 'pending' : m.role,
+      invitedRole: m.role,
+      status: m.status,
+      color: pending ? 'muted' : PALETTE[i % PALETTE.length],
+      lastActive: pending ? 'Invited' : '—',
+    });
+  });
+  return rows;
+}
+
+// ----- localStorage preview backend -----
+function seedTeam() {
+  return [
+    meRow(),
+    { id: 'm2', name: 'Sarah Chen',   email: 'sarah@example.com',  role: 'admin',  lastActive: '2h ago',    color: 'c2' },
+    { id: 'm3', name: 'Marcus Patel', email: 'marcus@example.com', role: 'member', lastActive: 'Yesterday', color: 'c4' },
+    { id: 'p1', name: 'New invite',   email: 'alex@example.com',   role: 'pending', invitedRole: 'member', lastActive: 'Invited 1d ago', color: 'muted', pending: true },
+  ];
+}
+function loadLocal() {
   try {
     const raw = localStorage.getItem(LS_TEAM);
     if (raw) {
       const arr = JSON.parse(raw);
-      // Always refresh the "you" row from currentUser
-      if (currentUser) {
-        const me = arr.find(m => m.id === 'me');
-        if (me) {
-          me.name = currentUser.name || (currentUser.email ? currentUser.email.split('@')[0] : 'You');
-          me.email = currentUser.email || me.email;
-        }
-      }
+      const me = arr.find(m => m.id === 'me');
+      if (me && currentUser) { me.name = meRow().name; me.email = meRow().email; }
       return arr;
     }
   } catch {}
   const seeded = seedTeam();
-  saveTeam(seeded);
+  saveLocal(seeded);
   return seeded;
 }
-function saveTeam(arr) {
-  try { localStorage.setItem(LS_TEAM, JSON.stringify(arr)); } catch {}
+function saveLocal(arr) { try { localStorage.setItem(LS_TEAM, JSON.stringify(arr)); } catch {} }
+
+// ----- unified load: try the API, fall back to local preview -----
+async function load() {
+  try {
+    const r = await fetch('/api/team', { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      state.mode = 'api';
+      state.rows = rowsFromApi(data);
+      return;
+    }
+  } catch (_) {}
+  state.mode = 'local';
+  state.rows = loadLocal();
 }
 
 // ====================================================================
@@ -556,16 +571,16 @@ function renderMembers(team) {
   document.getElementById('pending-count').textContent = team.filter(m => m.role === 'pending').length;
 }
 
-function rerender() {
-  const team = loadTeam();
-  renderSeats(team);
-  renderMembers(team);
+function render() {
+  renderSeats(state.rows);
+  renderMembers(state.rows);
 }
+async function refresh() { await load(); render(); }
 
 // ====================================================================
 // Invite
 // ====================================================================
-document.getElementById('invite-form').addEventListener('submit', (e) => {
+document.getElementById('invite-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('invite-email').value.trim().toLowerCase();
   const role = document.getElementById('invite-role').value;
@@ -573,7 +588,28 @@ document.getElementById('invite-form').addEventListener('submit', (e) => {
     showToast('Enter a valid email address', 'error');
     return;
   }
-  const team = loadTeam();
+
+  if (state.mode === 'api') {
+    try {
+      const r = await fetch('/api/team', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) {
+        document.getElementById('invite-email').value = '';
+        await refresh();
+        showToast(`Added ${email} as ${role}`, 'success');
+      } else {
+        showToast(d.error || 'Could not add member', 'error');
+      }
+    } catch (_) { showToast('Network error — try again', 'error'); }
+    return;
+  }
+
+  // preview (localStorage)
+  const team = loadLocal();
   if (team.find(m => (m.email || '').toLowerCase() === email)) {
     showToast('That email is already on your team or pending', 'error');
     return;
@@ -582,75 +618,79 @@ document.getElementById('invite-form').addEventListener('submit', (e) => {
     showToast(`Seat limit reached (${SEAT_LIMIT}). Upgrade to invite more.`, 'error');
     return;
   }
-  // Random color (skip muted)
-  const colors = ['c1','c2','c3','c4','c5'];
-  team.push({
-    id: 'p_' + Date.now(),
-    name: 'New invite',
-    email,
-    role: 'pending',
-    invitedRole: role,
-    lastActive: 'Invited just now',
-    color: 'muted',
-    pending: true,
-  });
-  saveTeam(team);
+  team.push({ id: 'p_' + Date.now(), name: 'New invite', email, role: 'pending', invitedRole: role, lastActive: 'Invited just now', color: 'muted', pending: true });
+  saveLocal(team);
+  state.rows = team;
   document.getElementById('invite-email').value = '';
-  rerender();
-  showToast(`Invite sent to ${email}`, 'success');
+  render();
+  showToast(`Invite sent to ${email} (preview)`, 'success');
 });
 
 // ====================================================================
 // Member row actions (manage menu)
 // ====================================================================
-document.getElementById('members-list').addEventListener('click', (e) => {
+document.getElementById('members-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="manage"]');
   if (!btn || btn.disabled) return;
   const id = btn.dataset.id;
-  const team = loadTeam();
-  const member = team.find(m => m.id === id);
+  const member = state.rows.find(m => m.id === id);
   if (!member) return;
 
-  // Simple actions menu via confirm prompts — keeps the UI honest about preview mode
   const action = prompt(
-    `Manage ${member.name || member.email}\\n\\n` +
-    `Type one:\\n` +
-    `  role admin\\n` +
-    `  role member\\n` +
-    `  role viewer\\n` +
-    `  resend  (pending only)\\n` +
-    `  remove`,
+    `Manage ${member.name || member.email}\n\n` +
+    `Type one:\n` +
+    `  role admin\n  role member\n  role viewer\n  resend  (pending only)\n  remove`,
     member.role === 'pending' ? 'resend' : 'role member'
   );
   if (!action) return;
-
   const cmd = action.trim().toLowerCase();
-  if (cmd === 'remove') {
-    if (!confirm(`Remove ${member.name || member.email}?`)) return;
-    saveTeam(team.filter(m => m.id !== id));
-    rerender();
-    showToast(`Removed ${member.name || member.email}`, 'success');
-  } else if (cmd === 'resend' && member.role === 'pending') {
-    showToast(`Invite resent to ${member.email}`, 'success');
-  } else if (cmd.startsWith('role ')) {
-    const newRole = cmd.split(' ')[1];
-    if (!['admin','member','viewer'].includes(newRole)) {
-      showToast('Unknown role', 'error');
-      return;
-    }
-    member.role = newRole;
-    saveTeam(team);
-    rerender();
-    showToast(`${member.name || member.email} is now ${newRole}`, 'success');
-  } else {
-    showToast('Unknown command', 'error');
+  const isRole = cmd.startsWith('role ');
+  const newRole = isRole ? cmd.split(' ')[1] : null;
+  if (isRole && !['admin','member','viewer'].includes(newRole)) { showToast('Unknown role', 'error'); return; }
+
+  if (state.mode === 'api') {
+    try {
+      if (cmd === 'remove') {
+        if (!confirm(`Remove ${member.name || member.email}?`)) return;
+        const r = await fetch('/api/team/' + id, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) { await refresh(); showToast('Member removed', 'success'); }
+        else showToast('Failed to remove', 'error');
+      } else if (cmd === 'resend') {
+        const r = await fetch('/api/team/' + id + '/resend', { method: 'POST', credentials: 'include' });
+        showToast(r.ok ? 'Invite re-stamped' : 'Could not resend', r.ok ? 'success' : 'error');
+      } else if (isRole) {
+        const r = await fetch('/api/team/' + id, {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: newRole }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) { await refresh(); showToast(`Now ${newRole}`, 'success'); }
+        else showToast(d.error || 'Failed to update', 'error');
+      } else { showToast('Unknown command', 'error'); }
+    } catch (_) { showToast('Network error — try again', 'error'); }
+    return;
   }
+
+  // preview (localStorage)
+  const team = loadLocal();
+  const m = team.find(x => x.id === id);
+  if (!m) return;
+  if (cmd === 'remove') {
+    if (!confirm(`Remove ${m.name || m.email}?`)) return;
+    saveLocal(team.filter(x => x.id !== id)); state.rows = loadLocal(); render();
+    showToast(`Removed ${m.name || m.email}`, 'success');
+  } else if (cmd === 'resend' && m.role === 'pending') {
+    showToast(`Invite resent to ${m.email}`, 'success');
+  } else if (isRole) {
+    m.role = newRole; saveLocal(team); state.rows = loadLocal(); render();
+    showToast(`${m.name || m.email} is now ${newRole}`, 'success');
+  } else { showToast('Unknown command', 'error'); }
 });
 
 // Init
 (async function init() {
   await loadMe();
-  rerender();
+  await refresh();
 })();
 </script>
 
