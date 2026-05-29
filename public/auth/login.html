@@ -149,66 +149,6 @@ body::after {
 
 .form { display: flex; flex-direction: column; gap: 14px; }
 
-/* ---------- Social sign-in buttons ---------- */
-.social-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
-.social-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 11px 14px;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
-}
-.social-btn:hover { border-color: var(--border-cyan); background: var(--surface-2); }
-.social-btn:disabled { opacity: 0.55; cursor: wait; }
-
-.social-btn .logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  font-family: var(--font-display);
-  font-size: 11px;
-  flex-shrink: 0;
-}
-.social-btn .logo.g { background: #fff; color: #4285f4; }
-.social-btn .logo.e { background: #e53238; color: #fff; }
-.social-btn .logo.a { background: #ff9900; color: #131a22; }
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0 14px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-}
-.divider::before, .divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label {
   font-family: var(--font-mono);
@@ -329,20 +269,6 @@ body::after {
     <h1>Welcome <span class="accent">back</span>.</h1>
     <p class="sub">Log in to continue to your workspace.</p>
 
-    <div class="social-row">
-      <button type="button" class="social-btn" data-provider="google">
-        <span class="logo g">G</span> Continue with Google
-      </button>
-      <button type="button" class="social-btn" data-provider="ebay">
-        <span class="logo e">e</span> Continue with eBay
-      </button>
-      <button type="button" class="social-btn" data-provider="amazon">
-        <span class="logo a">a</span> Continue with Amazon
-      </button>
-    </div>
-
-    <div class="divider"><span>or with email</span></div>
-
     <form class="form" id="login-form" novalidate>
       <div class="field">
         <label for="email">Email</label>
@@ -434,49 +360,6 @@ form.addEventListener('submit', async (e) => {
   // 3. Redirect into the app
   const next = new URL(window.location).searchParams.get('next') || '/app/dashboard.html';
   window.location.href = next;
-});
-
-// ====================================================================
-// Social sign-in (Google / eBay / Amazon)
-// PRODUCTION: replace the simulated round-trip with a real redirect to
-//   /api/auth/oauth/{provider}  which kicks off the OAuth flow.
-// PREVIEW: fakes the round-trip, stores a demo user in localStorage.
-// ====================================================================
-const PROVIDER_DEMOS = {
-  google: { email: 'demo@gmail.com', name: 'Google Demo' },
-  ebay:   { email: 'demo@ebay.com',  name: 'eBay Demo'   },
-  amazon: { email: 'demo@amazon.com', name: 'Amazon Demo' },
-};
-
-document.querySelectorAll('.social-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const provider = btn.dataset.provider;
-
-    // Lock UI
-    document.querySelectorAll('.social-btn').forEach(b => b.disabled = true);
-    submitBtn.disabled = true;
-    const labelEl = btn.lastChild; // text node after the logo span
-    const original = labelEl.textContent;
-    labelEl.textContent = ' Redirecting…';
-
-    // Production switch — uncomment to use real OAuth once backend exists:
-    // const next = new URL(window.location).searchParams.get('next') || '/app/dashboard.html';
-    // window.location.href = `/api/auth/oauth/${provider}?next=${encodeURIComponent(next)}`;
-    // return;
-
-    // Preview: simulate round-trip latency, then sign user in locally
-    await new Promise(r => setTimeout(r, 700));
-    const u = PROVIDER_DEMOS[provider];
-    localStorage.setItem('kempy_user_local', JSON.stringify({
-      ...u,
-      role: 'owner',
-      provider,
-      loggedInAt: new Date().toISOString(),
-      preview: true,
-    }));
-    const next = new URL(window.location).searchParams.get('next') || '/app/dashboard.html';
-    window.location.href = next;
-  });
 });
 </script>
 
