@@ -1,0 +1,35 @@
+# Render Blueprint for KEMPY.
+# Deploy: Render dashboard → New → Blueprint → pick this repo → fill in the
+# secret env vars below (Render prompts for each one marked sync:false), then Apply.
+# Postgres (Neon) and Redis (Upstash) are external — no Render-managed DB needed.
+services:
+  - type: web
+    name: kempy
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      # PORT is provided by Render automatically — do not set it.
+      - key: NODE_ENV
+        value: production
+      # Secrets — Render will prompt for each value at deploy time.
+      # Copy the values from your local .env file.
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: KEEPA_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: REDIS_URL
+        sync: false
