@@ -2,7 +2,7 @@
 import { searchEbay } from './ebay.js';
 import { findAmazonCandidates } from './amazon.js';
 import { bestMatch } from './match-local.js';
-import { matchAmazonProduct } from './claude.js';
+import { matchAmazonBatch } from './claude.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
 
 const FEE_RATE = 0.129;
@@ -26,33 +26,36 @@ function emojiFor(name = '') {
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
-// Decide the Amazon match for one eBay listing against a shared candidate pool.
-// Uses the Claude matcher when ANTHROPIC_API_KEY is set, otherwise the local
-// heuristic matcher. Returns { candidate, confident, via } or null.
-async function matchOne(item, candidates) {
-  if (!candidates || !candidates.length) return null;
+// Decide the Amazon match for every eBay item against the shared candidate pool.
+// Strategy:
+//   - With ANTHROPIC_API_KEY: ONE batch Claude call for all items (fast, cheap,
+//     no per-connection rate-limit issues). Falls back to local if it errors.
+//   - Without a key (or on Claude error): the local heuristic matcher per item.
+// Returns an array (aligned to items) of { candidate, confident, via } | null.
+async function matchAll(items, candidates) {
+  if (!candidates || !candidates.length) return items.map(() => null);
 
+  let claudeMatches = null;
   if (process.env.ANTHROPIC_API_KEY) {
-    try {
-      const decision = await matchAmazonProduct({ title: item.name }, candidates);
-      if (decision && decision.match_index != null && candidates[decision.match_index]) {
+    claudeMatches = await matchAmazonBatch(items.map(i => ({ title: i.name })), candidates);
+  }
+
+  return items.map((item, idx) => {
+    if (claudeMatches) {
+      const cm = claudeMatches[idx];
+      if (cm && cm.match_index != null && candidates[cm.match_index]) {
         return {
-          candidate: candidates[decision.match_index],
-          confident: (decision.confidence ?? 0) >= 0.6,
+          candidate: candidates[cm.match_index],
+          confident: (cm.confidence ?? 0) >= 0.6,
           via: 'claude',
         };
       }
-      // Claude explicitly found no match → trust that, fall through to estimate.
-      return null;
-    } catch (err) {
-      console.error('[research] Claude match failed, using local matcher:', err.message);
-      // fall through to local matcher
+      return null; // Claude ran but found no match for this item → estimate
     }
-  }
-
-  const local = bestMatch(item.name, candidates);
-  if (!local) return null;
-  return { candidate: local.candidate, confident: local.confident, via: 'local' };
+    // No Claude (no key, or batch failed) → local heuristic
+    const local = bestMatch(item.name, candidates);
+    return local ? { candidate: local.candidate, confident: local.confident, via: 'local' } : null;
+  });
 }
 
 // Build a product card. If `match` is a confident match with a real Amazon
@@ -112,13 +115,10 @@ export async function searchProducts(query) {
           console.error('[research] Keepa candidate search failed:', err.message);
         }
 
-        // Match each eBay listing against the shared pool.
-        const enriched = await Promise.all(
-          items.map(async (item) => {
-            const match = await matchOne(item, candidates);
-            return buildProduct(item, match);
-          })
-        );
+        // Match all eBay listings against the shared pool (one batch Claude call
+        // when the key is set, else the local matcher), then build cards.
+        const matches = await matchAll(items, candidates);
+        const enriched = items.map((item, idx) => buildProduct(item, matches[idx]));
 
         // Real (confident) matches first, then estimates; each block by ROI.
         const products = enriched

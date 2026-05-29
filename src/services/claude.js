@@ -29,9 +29,7 @@ const MATCH_SCHEMA = {
     },
     confidence: {
       type: 'number',
-      minimum: 0,
-      maximum: 1,
-      description: 'Confidence in the decision (0=guess, 1=certain)',
+      description: 'Confidence in the decision from 0 (guess) to 1 (certain)',
     },
     reasoning: {
       type: 'string',
@@ -115,6 +113,105 @@ Which candidate is the SAME product? Return the index, or null if none match.`;
   } catch (err) {
     const msg = err.response?.data?.error?.message || err.message;
     console.error('[claude.match] error:', msg);
+    return null;
+  }
+}
+
+const BATCH_SCHEMA = {
+  type: 'object',
+  properties: {
+    matches: {
+      type: 'array',
+      description: 'One entry per eBay listing, in the same order as given',
+      items: {
+        type: 'object',
+        properties: {
+          ebay_index: { type: 'integer', description: 'Index of the eBay listing' },
+          match_index: {
+            type: ['integer', 'null'],
+            description: 'Index of the matching Amazon candidate, or null if none match',
+          },
+          confidence: { type: 'number', description: 'Confidence 0 (guess) to 1 (certain)' },
+        },
+        required: ['ebay_index', 'match_index', 'confidence'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['matches'],
+  additionalProperties: false,
+};
+
+/**
+ * Match MANY eBay listings to a shared Amazon candidate pool in ONE Claude call.
+ * Far cheaper/faster than calling matchAmazonProduct per listing, and avoids the
+ * per-account concurrent-connection limit.
+ *
+ * @param {Array<{ title: string }>} ebayListings
+ * @param {Array<{ title: string, asin: string, brand?: string, amazonPrice: number }>} candidates
+ * @returns {Promise<Array<{ match_index: number|null, confidence: number } | null>>}
+ *          Array aligned to ebayListings (null where Claude gave no entry). Returns
+ *          null entirely if the key is missing, there are no candidates, or it errors.
+ */
+export async function matchAmazonBatch(ebayListings, candidates) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!candidates || candidates.length === 0) return null;
+  if (!ebayListings || ebayListings.length === 0) return [];
+
+  const candidateList = candidates
+    .map((c, i) => {
+      const brand = c.brand ? `[${c.brand}] ` : '';
+      const price = c.amazonPrice ? `$${c.amazonPrice.toFixed(2)}` : 'no price';
+      return `${i}: ${brand}"${c.title}" — ASIN ${c.asin}, ${price}`;
+    })
+    .join('\n');
+
+  const ebayList = ebayListings
+    .map((e, i) => `${i}: "${e.title}"`)
+    .join('\n');
+
+  const userPrompt = `Amazon candidates:
+${candidateList}
+
+eBay listings:
+${ebayList}
+
+For EACH eBay listing, return the index of the Amazon candidate that is the SAME product, or null if none match. Return one entry per eBay listing.`;
+
+  try {
+    const { data } = await axios.post(
+      CLAUDE_API,
+      {
+        model: MODEL,
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+        output_config: { format: { type: 'json_schema', schema: BATCH_SCHEMA } },
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        timeout: 30_000,
+      }
+    );
+
+    const text = data?.content?.[0]?.text;
+    if (!text) return null;
+
+    const parsed = JSON.parse(text);
+    const out = new Array(ebayListings.length).fill(null);
+    for (const m of parsed.matches || []) {
+      if (m.ebay_index >= 0 && m.ebay_index < out.length) {
+        out[m.ebay_index] = { match_index: m.match_index, confidence: m.confidence ?? 0 };
+      }
+    }
+    return out;
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    console.error('[claude.batch] error:', msg);
     return null;
   }
 }
