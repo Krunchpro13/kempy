@@ -423,31 +423,6 @@ html.sb-collapsed .nav-item:hover::after {
   letter-spacing: 0.3px;
 }
 
-/* API key display */
-.api-key-row {
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.3px;
-}
-.api-key-row .label { color: var(--text-muted); }
-.api-key-row .value { color: var(--cyan); flex: 1; word-break: break-all; }
-.api-key-row .value.hidden { letter-spacing: 4px; }
-.api-key-row button {
-  background: none; border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  font-size: 14px;
-  padding: 2px;
-}
-.api-key-row button:hover { color: var(--cyan); }
-
 /* Toast */
 .toast {
   position: fixed; bottom: 24px; left: 50%;
@@ -698,20 +673,6 @@ html.sb-collapsed .nav-item:hover::after {
 
           <!-- ============ API & INTEGRATIONS ============ -->
           <div class="panel" id="panel-api">
-            <div class="section">
-              <h2>Personal API token</h2>
-              <p class="help">Use this token to access the KEMPY API from your own scripts. Keep it secret.</p>
-              <div class="api-key-row">
-                <span class="label">Token</span>
-                <span class="value hidden" id="api-token">kempy_sk_••••••••••••••••••••••••</span>
-                <button id="api-toggle" title="Show / hide">👁</button>
-                <button id="api-copy" title="Copy">📋</button>
-              </div>
-              <div class="section-footer" style="padding-top: 14px; margin-top: 14px;">
-                <button class="btn ghost sm" id="api-regen">Regenerate token</button>
-              </div>
-            </div>
-
             <div class="section">
               <h2>Webhooks</h2>
               <p class="help">Send events to your own URL when orders are placed or fulfilled. POSTed as JSON.</p>
@@ -1084,35 +1045,6 @@ function prefsFromUI() {
     });
   });
 })();
-
-// ====================================================================
-// API token
-// ====================================================================
-const FAKE_TOKEN = 'kempy_sk_a8f2k9d7m4p1q3z8x6y2v0n5r9c7e4j1';
-const tokenEl = document.getElementById('api-token');
-let tokenShown = false;
-document.getElementById('api-toggle').addEventListener('click', () => {
-  tokenShown = !tokenShown;
-  if (tokenShown) {
-    tokenEl.textContent = FAKE_TOKEN;
-    tokenEl.classList.remove('hidden');
-  } else {
-    tokenEl.textContent = 'kempy_sk_••••••••••••••••••••••••';
-    tokenEl.classList.add('hidden');
-  }
-});
-document.getElementById('api-copy').addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(FAKE_TOKEN);
-    showToast('Token copied', 'success');
-  } catch {
-    showToast('Copy failed — select manually', 'error');
-  }
-});
-document.getElementById('api-regen').addEventListener('click', () => {
-  if (!confirm('Regenerate token? Any scripts using the old token will stop working immediately.')) return;
-  showToast('Token regenerated (preview)', 'success');
-});
 
 // ====================================================================
 // Danger zone
