@@ -43,8 +43,27 @@
     document.head.appendChild(f);
   }
 
+  // When signed in, the KEMPY logo should go to the Research workspace.
+  function pointLogo() {
+    var inApp = location.pathname.indexOf('/app/') === 0;
+    var signedIn = false;
+    try { signedIn = !!localStorage.getItem('kempy_user_local'); } catch (e) {}
+    if (!inApp && !signedIn) return;
+    var dest = '/app/research.html';
+    document.querySelectorAll('a.brand, a.auth-brand').forEach(function (a) { a.setAttribute('href', dest); });
+    var logo = document.querySelector('nav .logo');
+    if (logo && logo.tagName !== 'A') {
+      logo.style.cursor = 'pointer';
+      logo.setAttribute('role', 'link');
+      logo.setAttribute('tabindex', '0');
+      logo.addEventListener('click', function () { location.href = dest; });
+      logo.addEventListener('keydown', function (e) { if (e.key === 'Enter') location.href = dest; });
+    }
+  }
+
   function init() {
     injectFavicon();
+    pointLogo();
     injectButton();
     requestAnimationFrame(function () { root.classList.add('theme-ready'); });
     try {

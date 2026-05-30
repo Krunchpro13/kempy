@@ -14,7 +14,6 @@ import { initDb, isEnabled as dbEnabled, ping as dbPing } from './src/services/d
 
 import authRouter from './src/routes/auth.js';
 import watchlistRouter from './src/routes/watchlist.js';
-import teamRouter from './src/routes/team.js';
 import settingsRouter from './src/routes/settings.js';
 import listingsRouter from './src/routes/listings.js';
 
@@ -103,7 +102,6 @@ app.get('/api/search', async (req, res, next) => {
 // ---- API routes ----
 app.use('/api/auth', authRouter);
 app.use('/api/watchlist', watchlistRouter);
-app.use('/api/team', teamRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/listings', listingsRouter);
 
