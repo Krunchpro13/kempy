@@ -283,6 +283,8 @@ h1 .accent { color: var(--cyan); }
   .back-home { top: 14px; left: 14px; }
 }
 </style>
+  <link rel="stylesheet" href="/assets/css/theme.css" />
+  <script>(function(){try{var t=localStorage.getItem('kempy-theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
 </head>
 <body>
 
@@ -556,5 +558,6 @@ resendBtn.addEventListener('click', async () => {
 startCooldown();
 </script>
 
+<script src="/assets/js/theme.js"></script>
 </body>
 </html>
