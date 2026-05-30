@@ -462,6 +462,7 @@ async function loadEbay(url) {
   try {
     const r = await fetch(url, { credentials: 'include' });
     if (r.status === 401) return { auth: false };
+    if (r.status === 402) return { paywall: true };
     if (!r.ok) return { error: true };
     return await r.json();
   } catch (_) {
@@ -476,6 +477,19 @@ function showConnectState(msg) {
     if (msg) banner.querySelector('h4').textContent = msg;
   }
   // Render the (empty) dashboard so every panel shows its own empty/zero state.
+  PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], channels: [], transactions: [] };
+  renderAll();
+}
+
+function showPaywall() {
+  const banner = document.getElementById('preview-banner');
+  if (banner) {
+    banner.hidden = false;
+    banner.querySelector('.badge').textContent = 'Locked';
+    banner.querySelector('h4').textContent = 'Subscribe to unlock profit analytics';
+    banner.querySelector('p').textContent = 'Your profit dashboard is part of your KEMPY subscription — $50 your first month.';
+    const a = banner.querySelector('a'); if (a) { a.textContent = 'See plans'; a.href = '/app/settings.html?panel=billing'; }
+  }
   PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], channels: [], transactions: [] };
   renderAll();
 }
@@ -714,6 +728,7 @@ function renderAll() {
 async function loadPeriod(period) {
   const d = await loadEbay('/api/profit?period=' + period);
   if (d.auth === false) { showConnectState('Sign in to view profit'); return false; }
+  if (d.paywall)        { showPaywall(); return false; }
   if (!d.connected)     { showConnectState(); return false; }
   if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return false; }
   const banner = document.getElementById('preview-banner');

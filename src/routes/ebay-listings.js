@@ -14,6 +14,7 @@ import { isEnabled as dbEnabled } from '../services/db.js';
 import * as oauth from '../services/ebay-oauth.js';
 import { getSetupStatus, saveSellerAddress, runFullSetup, EbayStepError } from '../services/ebay-account.js';
 import { publishProduct } from '../services/ebay-listing.js';
+import { requireSubscription } from '../middleware/subscription.js';
 
 const router = express.Router();
 
@@ -58,7 +59,7 @@ router.get('/listing-setup-status', requireDb, requireAuth, async (req, res, nex
 });
 
 // POST /api/ebay/listing-setup  { country, postalCode, addressLine1?, city?, stateOrProvince? }
-router.post('/listing-setup', requireDb, requireAuth, async (req, res, next) => {
+router.post('/listing-setup', requireDb, requireAuth, requireSubscription, async (req, res, next) => {
   const { country, postalCode } = req.body || {};
   if (!postalCode) return res.json({ ok: false, step: 'address', detail: 'Postal/ZIP code is required.' });
   try {
@@ -72,7 +73,7 @@ router.post('/listing-setup', requireDb, requireAuth, async (req, res, next) => 
 });
 
 // POST /api/ebay/list  { product, title, price, quantity, condition, description }
-router.post('/list', requireDb, requireAuth, async (req, res, next) => {
+router.post('/list', requireDb, requireAuth, requireSubscription, async (req, res, next) => {
   const { product, title, price, quantity, condition, description } = req.body || {};
   if (!product || !(product.name || title)) {
     return res.json({ ok: false, step: 'input', detail: 'Missing product details.' });

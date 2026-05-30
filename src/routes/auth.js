@@ -61,6 +61,8 @@ function publicUser(u) {
     name: u.name,
     role: 'owner',                      // single-tenant for now; team roles arrive later
     email_verified_at: u.email_verified_at,
+    subscription_status: u.subscription_status || null,
+    current_period_end: u.current_period_end || null,
   };
 }
 

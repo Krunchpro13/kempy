@@ -20,6 +20,9 @@ import ordersRouter from './src/routes/orders.js';
 import profitRouter from './src/routes/profit.js';
 import ebayRouter from './src/routes/ebay.js';
 import ebayListingsRouter from './src/routes/ebay-listings.js';
+import billingRouter from './src/routes/billing.js';
+import * as billing from './src/services/billing.js';
+import { requireSubscription } from './src/middleware/subscription.js';
 import { isConfigured as ebaySellerConfigured } from './src/services/ebay-oauth.js';
 
 dotenv.config();
@@ -35,6 +38,27 @@ app.set('trust proxy', 1);
 // headers (HSTS, nosniff, frameguard, etc.) still apply.
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors());
+
+// ---- Stripe webhook (MUST be before express.json so the raw body survives for
+// signature verification). The webhook is unauthenticated (verified by signature). ----
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  if (!billing.isEnabled()) return res.status(503).end();
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = billing.constructEvent(req.body, sig);
+  } catch (err) {
+    console.error('[stripe] webhook signature failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+  try {
+    await billing.handleWebhookEvent(event);
+  } catch (err) {
+    console.error('[stripe] webhook handler error:', err.message);
+  }
+  res.json({ received: true });
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use(sessionMiddleware);
 
@@ -74,6 +98,7 @@ app.get('/api/health', async (_req, res, next) => {
         amazon: process.env.KEEPA_API_KEY ? 'live (Keepa)' : 'mock',
         matcher: process.env.ANTHROPIC_API_KEY ? 'claude' : 'first-result',
         ebaySeller: ebaySellerConfigured() ? 'configured' : 'not configured',
+        billing: billing.isEnabled() ? 'configured' : 'not configured',
       },
       cache: cacheStats(),
       db,
@@ -109,11 +134,13 @@ app.get('/api/search', async (req, res, next) => {
 app.use('/api/auth', authRouter);
 app.use('/api/watchlist', watchlistRouter);
 app.use('/api/settings', settingsRouter);
-app.use('/api/listings', listingsRouter);
-app.use('/api/orders', ordersRouter);
-app.use('/api/profit', profitRouter);
+// Money features require an active subscription (freemium gate; fails open if Stripe unset).
+app.use('/api/listings', requireSubscription, listingsRouter);
+app.use('/api/orders', requireSubscription, ordersRouter);
+app.use('/api/profit', requireSubscription, profitRouter);
 app.use('/api/ebay', ebayRouter);
 app.use('/api/ebay', ebayListingsRouter);
+app.use('/api/billing', billingRouter);
 
 // ---- 404 (API) + error handler — must be last ----
 app.use(notFound);
@@ -127,5 +154,6 @@ app.listen(PORT, () => {
   console.log(`  Matcher:  ${process.env.ANTHROPIC_API_KEY ? '✓ Claude' : '○ first-result'}`);
   console.log(`  Cache:    ${cacheEnabled() ? '✓ Redis' : '○ disabled'}`);
   console.log(`  Database: ${dbEnabled() ? '✓ Postgres' : '○ disabled'}`);
-  console.log(`  eBay sell:${ebaySellerConfigured() ? ' ✓ OAuth ready' : ' ○ not configured'}\n`);
+  console.log(`  eBay sell:${ebaySellerConfigured() ? ' ✓ OAuth ready' : ' ○ not configured'}`);
+  console.log(`  Billing:  ${billing.isEnabled() ? '✓ Stripe' : '○ not configured'}\n`);
 });

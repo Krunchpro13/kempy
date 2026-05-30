@@ -746,6 +746,7 @@ async function loadEbay(url) {
   try {
     const r = await fetch(url, { credentials: 'include' });
     if (r.status === 401) return { auth: false };
+    if (r.status === 402) return { paywall: true };
     if (!r.ok) return { error: true };
     return await r.json();
   } catch (_) {
@@ -762,6 +763,18 @@ function showConnectState(msg) {
       <h3>${escapeHtml(msg || 'Connect your eBay store')}</h3>
       <p>Link your eBay seller account and real orders will sync here automatically.</p>
       <a class="btn" href="/api/ebay/connect" style="margin-top:14px;display:inline-block">Connect eBay</a>
+    </div>`;
+}
+
+function showPaywall() {
+  const banner = document.getElementById('preview-banner');
+  if (banner) banner.hidden = true;
+  ordersEl.innerHTML = `
+    <div class="empty-state">
+      <span class="icon">${window.KEMPY ? window.KEMPY.icon('orders','42px') : ''}</span>
+      <h3>Subscribe to unlock orders</h3>
+      <p>Your eBay orders dashboard is part of your KEMPY subscription — $50 your first month.</p>
+      <a class="btn" href="/app/settings.html?panel=billing" style="margin-top:14px;display:inline-block">See plans</a>
     </div>`;
 }
 
@@ -937,6 +950,7 @@ document.getElementById('export-btn').addEventListener('click', () => {
   await loadMe();
   const d = await loadEbay('/api/orders');
   if (d.auth === false) { showConnectState('Sign in to view your orders'); return; }
+  if (d.paywall)        { showPaywall(); return; }
   if (!d.connected)     { showConnectState(); return; }
   if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return; }
   ORDERS = d.orders || [];

@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import { isEnabled as dbEnabled } from '../services/db.js';
 import { setOAuthState, getOAuthState, clearCachedEbay } from '../services/cache.js';
 import * as oauth from '../services/ebay-oauth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 
 const router = express.Router();
 
@@ -27,8 +28,8 @@ function requireDb(req, res, next) {
   next();
 }
 
-// GET /api/ebay/connect -> 302 to eBay consent
-router.get('/connect', requireDb, requireAuth, async (req, res, next) => {
+// GET /api/ebay/connect -> 302 to eBay consent (paid feature)
+router.get('/connect', requireDb, requireAuth, requireSubscription, async (req, res, next) => {
   try {
     if (!oauth.isConfigured()) {
       return res

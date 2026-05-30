@@ -109,6 +109,16 @@ CREATE INDEX IF NOT EXISTS watchlist_ebay_idx ON watchlist (user_id, ebay_item_i
 ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- ====================================================================
+-- Billing (Stripe) — subscription state mirrored from webhooks.
+-- ====================================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT;   -- active|trialing|past_due|canceled|...
+ALTER TABLE users ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT;
+CREATE INDEX IF NOT EXISTS users_stripe_customer_idx ON users (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+
+-- ====================================================================
 -- Team members
 -- Each row is a teammate belonging to an owner's workspace. The owner is
 -- the users row; teammates are tracked here by email + role + status.
