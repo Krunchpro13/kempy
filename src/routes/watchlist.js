@@ -31,7 +31,7 @@ router.get('/', requireDb, requireAuth, async (req, res) => {
               ebay_price, amazon_price,
               saved_ebay_price, saved_amazon_price,
               fees, shipping, packaging, profit, roi,
-              ebay_url, amazon_url, added_at
+              ebay_url, amazon_url, image_url, added_at
        FROM watchlist
        WHERE user_id = $1
        ORDER BY added_at DESC`,
@@ -56,6 +56,7 @@ router.get('/', requireDb, requireAuth, async (req, res) => {
       roi: Number(r.roi),
       ebayUrl: r.ebay_url,
       amazonUrl: r.amazon_url,
+      image: r.image_url,
       addedAt: r.added_at,
     }));
 
@@ -88,8 +89,8 @@ router.post('/', requireDb, requireAuth, async (req, res) => {
       `INSERT INTO watchlist
          (user_id, asin, ebay_item_id, name, emoji, cat,
           ebay_price, amazon_price, saved_ebay_price, saved_amazon_price,
-          fees, shipping, packaging, profit, roi, ebay_url, amazon_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+          fees, shipping, packaging, profit, roi, ebay_url, amazon_url, image_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING id`,
       [
         req.user.user_id,
@@ -109,6 +110,7 @@ router.post('/', requireDb, requireAuth, async (req, res) => {
         product.roi || 0,
         product.ebayUrl || null,
         product.amazonUrl || null,
+        product.image || null,
       ],
     );
 

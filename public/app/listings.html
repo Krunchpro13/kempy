@@ -344,6 +344,8 @@ html.sb-collapsed .nav-item:hover::after {
   width: 56px;
   height: 56px;
   border-radius: 10px;
+  position: relative;
+  overflow: hidden;
   background: var(--bg-2);
   border: 1px solid var(--border);
   display: flex;
@@ -352,6 +354,7 @@ html.sb-collapsed .nav-item:hover::after {
   font-size: 28px;
   flex-shrink: 0;
 }
+.listing-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 .listing-body { min-width: 0; }
 .listing-title {
@@ -703,48 +706,56 @@ async function loadMe() {
 // ====================================================================
 const MOCK_LISTINGS = [
   { id: 'LST-001', emoji: '🎧', name: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
+    img: 'https://loremflickr.com/112/112/headphones?lock=1',
     sku: 'B09Y2KC2D2', channel: 'ebay', status: 'active',
     sellPrice: 349.99, costPrice: 278.00, profit: 26.92,
     views: 412, watchers: 23, sold: 7,
     listedAt: '2025-04-12', url: 'https://www.ebay.com/sch/i.html?_nkw=Sony+WH-1000XM5' },
 
   { id: 'LST-002', emoji: '🔌', name: 'Anker USB-C to Lightning Cable 6ft (MFi)',
+    img: 'https://loremflickr.com/112/112/usb,cable?lock=2',
     sku: 'B07ZSMMTQ4', channel: 'ebay', status: 'active',
     sellPrice: 18.99, costPrice: 11.99, profit: 4.55,
     views: 1042, watchers: 6, sold: 32,
     listedAt: '2025-03-01', url: 'https://www.ebay.com/sch/i.html?_nkw=Anker+USB-C' },
 
   { id: 'LST-003', emoji: '⌚', name: 'Apple Watch Series 9 GPS 45mm Aluminum',
+    img: 'https://loremflickr.com/112/112/smartwatch?lock=3',
     sku: 'B0CHX7VZNY', channel: 'ebay', status: 'active',
     sellPrice: 459.99, costPrice: 389.00, profit: 12.40,
     views: 798, watchers: 41, sold: 4,
     listedAt: '2025-04-20', url: 'https://www.ebay.com/sch/i.html?_nkw=Apple+Watch+S9' },
 
   { id: 'LST-004', emoji: '📷', name: 'Logitech C920 HD Pro Webcam 1080p',
+    img: 'https://loremflickr.com/112/112/webcam?lock=4',
     sku: 'B006JH8T3S', channel: 'ebay', status: 'draft',
     sellPrice: 79.99, costPrice: 49.99, profit: 19.68,
     views: 0, watchers: 0, sold: 0,
     listedAt: null, url: null },
 
   { id: 'LST-005', emoji: '⌚', name: 'Casio Vintage A158WA-1 Digital Watch',
+    img: 'https://loremflickr.com/112/112/wristwatch?lock=5',
     sku: 'B000GAWSDG', channel: 'ebay', status: 'active',
     sellPrice: 39.99, costPrice: 19.99, profit: 9.84,
     views: 234, watchers: 5, sold: 12,
     listedAt: '2025-02-14', url: 'https://www.ebay.com/sch/i.html?_nkw=Casio+A158WA' },
 
   { id: 'LST-006', emoji: '🔌', name: 'Anker 65W USB-C Charger GaN PIQ 3.0',
+    img: 'https://loremflickr.com/112/112/charger?lock=6',
     sku: 'B095JZSH2X', channel: 'ebay', status: 'active',
     sellPrice: 39.99, costPrice: 27.99, profit: 6.84,
     views: 567, watchers: 11, sold: 19,
     listedAt: '2025-03-22', url: 'https://www.ebay.com/sch/i.html?_nkw=Anker+65W' },
 
   { id: 'LST-007', emoji: '👜', name: 'Coach Outlet Mini Bennett Satchel Crossgrain',
+    img: 'https://loremflickr.com/112/112/handbag?lock=7',
     sku: 'B07VWXFLQJ', channel: 'ebay', status: 'ended',
     sellPrice: 159.99, costPrice: 99.00, profit: 39.96,
     views: 312, watchers: 14, sold: 2,
     listedAt: '2025-01-08', url: null },
 
   { id: 'LST-008', emoji: '🎧', name: 'Anker Soundcore Liberty 4 NC Earbuds',
+    img: 'https://loremflickr.com/112/112/earbuds?lock=8',
     sku: 'B0CCRTRMV6', channel: 'ebay', status: 'draft',
     sellPrice: 99.99, costPrice: 79.99, profit: 7.10,
     views: 0, watchers: 0, sold: 0,
@@ -780,7 +791,7 @@ function renderCard(l) {
   const margin = marginPct(l.profit, l.costPrice);
   return `
     <div class="listing-card ${l.status}" data-id="${l.id}">
-      <div class="listing-thumb">${l.emoji}</div>
+      <div class="listing-thumb">${l.emoji}${l.img ? `<img src="${l.img}" alt="${l.name}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
       <div class="listing-body">
         <div class="listing-title">
           <span class="name">${escapeHtml(l.name)}</span>

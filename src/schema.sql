@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS watchlist (
   name TEXT NOT NULL,
   emoji TEXT,
   cat TEXT,
+  image_url TEXT,
 
   -- Prices at time of last refresh
   ebay_price NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -94,6 +95,9 @@ CREATE TABLE IF NOT EXISTS watchlist (
   added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- For databases created before image_url existed:
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 CREATE INDEX IF NOT EXISTS watchlist_user_idx ON watchlist (user_id);
 CREATE INDEX IF NOT EXISTS watchlist_asin_idx ON watchlist (user_id, asin) WHERE asin IS NOT NULL;
