@@ -280,7 +280,7 @@ body::after {
       <div class="field">
         <div class="field-row">
           <label for="password">Password</label>
-          <a href="#" tabindex="-1" title="Forgot password flow coming soon">Forgot?</a>
+          <a href="/auth/forgot.html">Forgot?</a>
         </div>
         <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required minlength="6" />
       </div>
@@ -301,6 +301,15 @@ body::after {
 const form = document.getElementById('login-form');
 const errorEl = document.getElementById('error');
 const submitBtn = document.getElementById('submit-btn');
+
+// Show a confirmation after a successful password reset (redirected here with ?reset=1).
+if (new URLSearchParams(window.location.search).get('reset') === '1') {
+  const note = document.querySelector('.auth-card .sub');
+  if (note) {
+    note.textContent = 'Password updated — log in with your new password.';
+    note.style.color = 'var(--green)';
+  }
+}
 
 function showError(msg) {
   errorEl.textContent = msg;

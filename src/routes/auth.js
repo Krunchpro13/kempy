@@ -12,7 +12,7 @@ import {
   findUserByEmail, createOrUpdateUser, markEmailVerified,
   setPassword, updateName,
 } from '../services/auth.js';
-import { sendOtpEmail, sendWelcomeEmail } from '../services/email.js';
+import { sendOtpEmail, sendWelcomeEmail, sendPasswordResetEmail } from '../services/email.js';
 import { isEnabled as dbEnabled } from '../services/db.js';
 
 const router = express.Router();
@@ -193,6 +193,74 @@ router.post('/otp/resend', dbRequired, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[auth/otp/resend]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ====================================================================
+// POST /api/auth/forgot-password
+// Body: { email }
+// Emails a 6-digit reset code if (and only if) the account exists and has a
+// password. Always returns { ok: true } to avoid leaking which emails exist.
+// ====================================================================
+router.post('/forgot-password', dbRequired, async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ error: 'Email required' });
+
+    const user = await findUserByEmail(email);
+    if (user && user.password_hash) {
+      const code = await createOtp(email, 'reset');
+      try { await sendPasswordResetEmail(email, code); }
+      catch (err) { console.error('[auth/forgot-password] email send failed:', err.message); }
+    }
+    // Same response whether or not the email matched an account.
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth/forgot-password]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ====================================================================
+// POST /api/auth/reset-password
+// Body: { email, code, password }
+// Verifies the reset OTP, sets the new password, and revokes ALL sessions
+// (so a compromised session can't survive a reset).
+// ====================================================================
+router.post('/reset-password', dbRequired, async (req, res) => {
+  try {
+    const { email, code, password } = req.body || {};
+    if (!email || !code || !password) {
+      return res.status(400).json({ error: 'Email, code and new password are required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+
+    const result = await verifyOtp(email, code, 'reset');
+    if (!result.ok) {
+      const map = {
+        no_code: 'No reset request found — start over.',
+        expired: 'That code has expired — request a new one.',
+        too_many_attempts: 'Too many attempts — request a new code.',
+        wrong_code: 'Incorrect code.',
+      };
+      return res.status(400).json({ error: map[result.reason] || 'Invalid code', reason: result.reason });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) return res.status(400).json({ error: 'Account not found.' });
+
+    const passwordHash = await hashPassword(password);
+    await setPassword(user.id, passwordHash);
+    // A reset implies the email is controlled by the user — mark it verified too.
+    if (!user.email_verified_at) { try { await markEmailVerified(email); } catch (_) {} }
+    try { await deleteAllSessionsForUser(user.id); } catch (e) { console.error('[auth/reset-password] revoke', e.message); }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth/reset-password]', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

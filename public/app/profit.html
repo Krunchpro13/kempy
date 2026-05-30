@@ -261,7 +261,7 @@ html.sb-collapsed .nav-item:hover::after {
 
       <div class="nav-label">Account</div>
       <a href="/app/settings.html" class="nav-item" data-label="Settings"><span class="icon">⚙</span> <span class="label">Settings</span></a>
-      <a href="#" class="nav-item soon" data-label="Billing (coming soon)"><span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span></a>
+      <a href="/app/billing.html" class="nav-item" data-label="Billing"><span class="icon">💳</span> <span class="label">Billing</span></a>
 
     </nav>
     <div class="sidebar-footer">
@@ -488,7 +488,7 @@ function showPaywall() {
     banner.querySelector('.badge').textContent = 'Locked';
     banner.querySelector('h4').textContent = 'Subscribe to unlock profit analytics';
     banner.querySelector('p').textContent = 'Your profit dashboard is part of your KEMPY subscription — $50 your first month.';
-    const a = banner.querySelector('a'); if (a) { a.textContent = 'See plans'; a.href = '/app/settings.html?panel=billing'; }
+    const a = banner.querySelector('a'); if (a) { a.textContent = 'See plans'; a.href = '/app/billing.html'; }
   }
   PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], channels: [], transactions: [] };
   renderAll();

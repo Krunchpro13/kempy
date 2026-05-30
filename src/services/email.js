@@ -57,6 +57,23 @@ export async function sendOtpEmail(to, code) {
   return send({ to, subject, html, text });
 }
 
+export async function sendPasswordResetEmail(to, code) {
+  const subject = `KEMPY password reset code: ${code}`;
+  const html = `
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;background:#0a0d10;color:#e6f1f5;padding:32px;border-radius:12px;border:1px solid #1a2329;">
+  <div style="font-family:'Arial Black',Arial,sans-serif;letter-spacing:-1px;color:#00e5ff;font-size:24px;margin-bottom:8px;">KEMPY</div>
+  <h2 style="font-size:18px;margin:16px 0 8px;color:#e6f1f5;">Reset your password</h2>
+  <p style="color:#8a9ba3;font-size:14px;line-height:1.5;margin:0 0 20px;">Enter this code on the password reset page, then choose a new password.</p>
+  <div style="background:#131a1e;border:1px solid #1e3a44;border-radius:10px;padding:24px;text-align:center;margin:20px 0;">
+    <div style="font-family:'Courier New',monospace;font-size:36px;font-weight:bold;color:#00e5ff;letter-spacing:10px;">${code}</div>
+  </div>
+  <p style="color:#8a9ba3;font-size:13px;line-height:1.5;margin:0 0 8px;">This code expires in 10 minutes.</p>
+  <p style="color:#5a6970;font-size:12px;line-height:1.5;margin:0;">If you didn't request a password reset, you can safely ignore this email — your password won't change.</p>
+</div>`.trim();
+  const text = `Your KEMPY password reset code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, you can ignore this email — your password won't change.`;
+  return send({ to, subject, html, text });
+}
+
 export async function sendWelcomeEmail(to, name) {
   const subject = `Welcome to KEMPY${name ? `, ${name}` : ''}`;
   const html = `
