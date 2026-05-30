@@ -294,12 +294,13 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
       </div>
 
-      <div class="preview-banner">
-        <span class="badge">Preview</span>
+      <div class="preview-banner" id="preview-banner" hidden>
+        <span class="badge">Not connected</span>
         <div class="body">
-          <h4>Sample numbers shown</h4>
-          <p>Once a store is connected, real orders and fees flow into this dashboard automatically and these charts will reflect your actual sales.</p>
+          <h4>Connect your eBay store</h4>
+          <p>Link your eBay seller account and real orders, fees and profit will flow into this dashboard automatically.</p>
         </div>
+        <a class="btn sm" href="/api/ebay/connect">Connect eBay</a>
       </div>
 
       <div class="period-row">
@@ -320,12 +321,11 @@ html.sb-collapsed .nav-item:hover::after {
           <div class="label">Net profit · <span id="hero-period-label">last 30 days</span></div>
           <div class="value" id="hero-profit">$0</div>
           <div class="delta up" id="hero-delta">— vs prior</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;max-width:260px;line-height:1.5;">Profit = sale − eBay fees. Supplier cost is not yet tracked.</div>
         </div>
         <div class="breakdown">
           <div class="row"><span class="l">Revenue</span><span class="v" id="bd-rev">$0</span></div>
-          <div class="row"><span class="l">Supplier</span><span class="v neg" id="bd-cost">−$0</span></div>
-          <div class="row"><span class="l">Fees</span><span class="v neg" id="bd-fees">−$0</span></div>
-          <div class="row"><span class="l">Shipping</span><span class="v neg" id="bd-ship">−$0</span></div>
+          <div class="row"><span class="l">eBay fees</span><span class="v neg" id="bd-fees">−$0</span></div>
           <div class="row"><span class="l">Net</span><span class="v pos" id="bd-net">$0</span></div>
         </div>
       </div>
@@ -457,57 +457,31 @@ async function loadMe() {
 }
 
 // ====================================================================
-// Mock data — generates realistic daily series with weekend dips
+// Live profit data — populated from /api/profit?period=
 // ====================================================================
-function genSeries(days, baseRev = 240, jitter = 80, marginPct = 0.18) {
-  const series = [];
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dow = d.getDay();
-    const weekend = (dow === 0 || dow === 6) ? 0.75 : 1;
-    const trend = 1 + (days - i) / (days * 6);
-    const noise = 1 + (Math.random() - 0.5) * (jitter / baseRev);
-    const revenue = Math.max(20, baseRev * weekend * trend * noise);
-    const profit = revenue * marginPct * (1 + (Math.random() - 0.5) * 0.4);
-    series.push({
-      date: d.toISOString().slice(0, 10),
-      label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      revenue, profit,
-    });
+let PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], channels: [], transactions: [] };
+
+async function loadEbay(url) {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (r.status === 401) return { auth: false };
+    if (!r.ok) return { error: true };
+    return await r.json();
+  } catch (_) {
+    return { error: true };
   }
-  return series;
 }
 
-const PERIOD_DATA = {
-  7:   genSeries(7,   240, 100, 0.18),
-  30:  genSeries(30,  240, 80,  0.18),
-  90:  genSeries(90,  240, 100, 0.17),
-  365: genSeries(52,  1600, 700, 0.16),
-};
-
-const TOP_PRODUCTS = [
-  { emoji: '🎧', name: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones', cat: 'Headphones', units: 24, profit: 645.84 },
-  { emoji: '👜', name: 'Coach Outlet Mini Bennett Satchel Crossgrain', cat: 'Handbags', units: 9, profit: 359.64 },
-  { emoji: '📷', name: 'Razer Kiyo Pro Streaming Webcam with HDR', cat: 'Webcams', units: 11, profit: 251.46 },
-  { emoji: '🔌', name: 'Anker USB-C to Lightning Cable 6ft (MFi)', cat: 'Cables', units: 52, profit: 236.60 },
-  { emoji: '⌚', name: 'Casio Vintage A158WA-1 Digital Watch', cat: 'Watches', units: 22, profit: 216.48 },
-];
-
-const CHANNELS = [
-  { name: 'eBay',    sub: '1 store',          value: 78, color: '#e53238', cls: 'ebay' },
-  { name: 'Other',   sub: 'Direct invoices',  value: 22, color: '#5a6970', cls: 'other' },
-];
-
-const TXS = [
-  { date: '2h ago',    item: 'Sony WH-1000XM5 Wireless Noise Cancelling', id: 'KMP-2841', gross: 349.99, net: 26.86 },
-  { date: '5h ago',    item: 'Apple Watch Series 9 GPS 45mm',              id: 'KMP-2840', gross: 459.99, net: 11.65 },
-  { date: 'Yesterday', item: 'Anker USB-C to Lightning Cable 6ft',         id: 'KMP-2839', gross: 18.99,  net: 4.55 },
-  { date: '2 days',    item: 'Casio Vintage A158WA-1 Digital Watch',       id: 'KMP-2838', gross: 39.99,  net: 9.84 },
-  { date: '3 days',    item: 'Anker 65W USB-C Charger GaN PIQ 3.0',        id: 'KMP-2837', gross: 39.99,  net: 6.84 },
-  { date: '4 days',    item: 'Logitech C920 HD Pro Webcam 1080p',          id: 'KMP-2834', gross: 79.99,  net: 19.68 },
-];
+function showConnectState(msg) {
+  const banner = document.getElementById('preview-banner');
+  if (banner) {
+    banner.hidden = false;
+    if (msg) banner.querySelector('h4').textContent = msg;
+  }
+  // Render the (empty) dashboard so every panel shows its own empty/zero state.
+  PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], channels: [], transactions: [] };
+  renderAll();
+}
 
 // Helpers
 function fmt$(n) {
@@ -520,65 +494,60 @@ function escapeHtml(s) {
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// Aggregate a series into rev/cost/fees/ship/net buckets
-function aggregate(series) {
-  const rev = series.reduce((s, d) => s + d.revenue, 0);
-  const prof = series.reduce((s, d) => s + d.profit, 0);
-  const fees = rev * 0.13;
-  const ship = rev * 0.06;
-  const cost = rev - prof - fees - ship;
-  return { rev, prof, fees, ship, cost, orders: Math.round(rev / 65) };
+// Aggregate the loaded profit data. In our model the only deduction is the
+// real eBay fee (supplier cost not yet tracked), so fees = revenue − net.
+function aggregate() {
+  const rev = PROFIT.revenue || 0;
+  const prof = PROFIT.profit || 0;
+  const fees = Math.max(0, rev - prof);
+  const orders = PROFIT.orders || 0;
+  return { rev, prof, fees, orders };
 }
 
 // State + render
 let currentPeriod = 30;
 
 function renderHero() {
-  const data = PERIOD_DATA[currentPeriod];
-  const { rev, prof, fees, ship, cost, orders } = aggregate(data);
-  const deltaPct = 8 + Math.random() * 18;
+  const { rev, prof, fees, orders } = aggregate();
 
   document.getElementById('hero-profit').textContent = fmt$(prof);
-  document.getElementById('hero-delta').textContent = `↑ ${deltaPct.toFixed(1)}% vs prior period`;
-  document.getElementById('hero-delta').className = 'delta up';
+  document.getElementById('hero-delta').textContent = '— vs prior';
+  document.getElementById('hero-delta').className = 'delta';
   document.getElementById('hero-period-label').textContent =
     { 7: 'last 7 days', 30: 'last 30 days', 90: 'last 90 days', 365: 'last 12 months' }[currentPeriod];
 
   document.getElementById('bd-rev').textContent  = fmtCents(rev);
-  document.getElementById('bd-cost').textContent = '−' + fmtCents(cost);
   document.getElementById('bd-fees').textContent = '−' + fmtCents(fees);
-  document.getElementById('bd-ship').textContent = '−' + fmtCents(ship);
   document.getElementById('bd-net').textContent  = fmtCents(prof);
 
-  document.getElementById('kpi-margin').textContent = ((prof / rev) * 100).toFixed(1) + '%';
-  document.getElementById('kpi-margin-delta').textContent = '↑ 1.4 pts';
-  document.getElementById('kpi-margin-delta').className = 'delta up';
+  document.getElementById('kpi-margin').textContent = rev ? ((prof / rev) * 100).toFixed(1) + '%' : '—';
+  document.getElementById('kpi-margin-delta').textContent = '—';
+  document.getElementById('kpi-margin-delta').className = 'delta';
 
   document.getElementById('kpi-orders').textContent = orders;
-  document.getElementById('kpi-orders-delta').textContent = `↑ ${Math.round(orders * 0.14)} vs prior`;
-  document.getElementById('kpi-orders-delta').className = 'delta up';
+  document.getElementById('kpi-orders-delta').textContent = '—';
+  document.getElementById('kpi-orders-delta').className = 'delta';
 
-  const aov = rev / orders;
-  document.getElementById('kpi-aov').textContent = fmtCents(aov);
-  document.getElementById('kpi-aov-delta').textContent = `↓ ${(2 + Math.random() * 3).toFixed(1)}%`;
-  document.getElementById('kpi-aov-delta').className = 'delta down';
+  document.getElementById('kpi-aov').textContent = orders ? fmtCents(rev / orders) : '—';
+  document.getElementById('kpi-aov-delta').textContent = '—';
+  document.getElementById('kpi-aov-delta').className = 'delta';
 
-  const aop = prof / orders;
-  document.getElementById('kpi-aop').textContent = fmtCents(aop);
-  document.getElementById('kpi-aop-delta').textContent = `↑ ${(3 + Math.random() * 4).toFixed(1)}%`;
-  document.getElementById('kpi-aop-delta').className = 'delta up';
+  document.getElementById('kpi-aop').textContent = orders ? fmtCents(prof / orders) : '—';
+  document.getElementById('kpi-aop-delta').textContent = '—';
+  document.getElementById('kpi-aop-delta').className = 'delta';
 }
 
 // SVG chart (custom, no library)
 function renderChart() {
-  const data = PERIOD_DATA[currentPeriod];
+  const data = PROFIT.series || [];
   const svg = document.getElementById('chart');
+  if (!svg) return;
   const W = 800, H = 260;
   const padL = 50, padR = 20, padT = 14, padB = 28;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
-  const maxRev = Math.max(...data.map(d => d.revenue)) * 1.15;
+  const maxRev = (data.length ? Math.max(...data.map(d => d.revenue)) : 0) * 1.15 || 100;
   const xStep = innerW / Math.max(1, (data.length - 1));
   const xOf = (i) => padL + i * xStep;
   const yOf = (v) => padT + innerH - (v / maxRev) * innerH;
@@ -657,7 +626,13 @@ function renderChart() {
 }
 
 function renderTopProducts() {
-  document.getElementById('top-list').innerHTML = TOP_PRODUCTS.map(p => `
+  const items = PROFIT.topProducts || [];
+  if (!items.length) {
+    document.getElementById('top-list').innerHTML =
+      `<div class="empty-state" style="padding:24px 12px;"><p style="color:var(--text-dim);">No sales in this period yet.</p></div>`;
+    return;
+  }
+  document.getElementById('top-list').innerHTML = items.map(p => `
     <div class="top-row">
       <div class="thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}</div>
       <div class="info">
@@ -671,11 +646,12 @@ function renderTopProducts() {
 }
 
 function renderChannels() {
+  const channels = PROFIT.channels || [];
   const donut = document.getElementById('donut');
   donut.querySelectorAll('circle.seg').forEach(c => c.remove());
-  const total = CHANNELS.reduce((s, c) => s + c.value, 0) || 1;
+  const total = channels.reduce((s, c) => s + c.value, 0) || 1;
   let offset = 25;
-  CHANNELS.filter(c => c.value > 0).forEach(c => {
+  channels.filter(c => c.value > 0).forEach(c => {
     const pct = (c.value / total) * 100;
     const seg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     seg.setAttribute('class', 'seg');
@@ -692,28 +668,62 @@ function renderChannels() {
     offset = (offset + (100 - pct)) % 100;
   });
 
-  document.getElementById('channel-list').innerHTML = CHANNELS.map(c => `
+  document.getElementById('channel-list').innerHTML = channels.length ? channels.map(c => `
     <div class="channel-row">
       <div class="dot ${c.cls}"></div>
       <div class="label">${escapeHtml(c.name)}<div class="sub">${escapeHtml(c.sub)}</div></div>
       <div class="val">${c.value}%</div>
     </div>
-  `).join('');
+  `).join('') : `<div style="padding:18px 12px;color:var(--text-dim);font-size:13px;">No channel data yet.</div>`;
+}
+
+function txDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return escapeHtml(String(iso));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function renderTransactions() {
-  document.getElementById('tx-table').innerHTML = TXS.map(t => `
+  const txs = PROFIT.transactions || [];
+  if (!txs.length) {
+    document.getElementById('tx-table').innerHTML =
+      `<div class="empty-state" style="padding:24px 12px;"><p style="color:var(--text-dim);">No transactions in this period yet.</p></div>`;
+    return;
+  }
+  document.getElementById('tx-table').innerHTML = txs.map(t => `
     <div class="tx-row">
-      <div class="date">${escapeHtml(t.date)}</div>
+      <div class="date">${escapeHtml(txDate(t.date))}</div>
       <div class="desc">
         <div class="item">${escapeHtml(t.item)}</div>
         <div class="id">${escapeHtml(t.id)}</div>
       </div>
       <div class="channel-tag">eBay</div>
       <div class="amt">${fmtCents(t.gross)}</div>
-      <div class="net">+${fmtCents(t.net)}</div>
+      <div class="net">${t.net >= 0 ? '+' : ''}${fmtCents(t.net)}</div>
     </div>
   `).join('');
+}
+
+function renderAll() {
+  renderHero();
+  renderChart();
+  renderTopProducts();
+  renderChannels();
+  renderTransactions();
+}
+
+// Load a period's data from the server, then render everything.
+async function loadPeriod(period) {
+  const d = await loadEbay('/api/profit?period=' + period);
+  if (d.auth === false) { showConnectState('Sign in to view profit'); return false; }
+  if (!d.connected)     { showConnectState(); return false; }
+  if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return false; }
+  const banner = document.getElementById('preview-banner');
+  if (banner) banner.hidden = true;
+  PROFIT = d;
+  renderAll();
+  return true;
 }
 
 // Period switching
@@ -725,8 +735,7 @@ document.getElementById('period-tabs').addEventListener('click', (e) => {
   currentPeriod = +tab.dataset.period;
   document.getElementById('period-range').textContent =
     { 7: 'last 7 days', 30: 'last 30 days', 90: 'last 90 days', 365: 'last 12 months' }[currentPeriod];
-  renderHero();
-  renderChart();
+  loadPeriod(currentPeriod);
 });
 
 document.getElementById('export-btn').addEventListener('click', () => {
@@ -743,11 +752,7 @@ window.addEventListener('resize', () => {
 // Init
 (async function init() {
   await loadMe();
-  renderHero();
-  renderChart();
-  renderTopProducts();
-  renderChannels();
-  renderTransactions();
+  await loadPeriod(currentPeriod);
 })();
 </script>
 

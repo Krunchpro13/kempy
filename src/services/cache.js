@@ -20,8 +20,8 @@ let client = null;
 let connecting = null;
 
 const stats = {
-  hits: { search: 0, keepa: 0, claude: 0 },
-  misses: { search: 0, keepa: 0, claude: 0 },
+  hits: { search: 0, keepa: 0, claude: 0, ebay: 0 },
+  misses: { search: 0, keepa: 0, claude: 0, ebay: 0 },
   errors: 0,
 };
 
@@ -29,6 +29,8 @@ export const TTL = {
   SEARCH: 60 * 10,           // 10 minutes
   KEEPA: 60 * 60 * 6,        // 6 hours
   CLAUDE: 60 * 60 * 24 * 7,  // 7 days
+  OAUTH_STATE: 60 * 10,      // 10 minutes (CSRF state)
+  EBAY_DATA: 60 * 5,         // 5 minutes (per-user orders/profit, rate-limit relief)
 };
 
 /**
@@ -81,6 +83,7 @@ export function getStats() {
       search: rate('search'),
       keepa: rate('keepa'),
       claude: rate('claude'),
+      ebay: rate('ebay'),
     },
     errors: stats.errors,
   };
@@ -163,4 +166,37 @@ function matchKey(ebayTitle, candidates) {
     .digest('hex')
     .slice(0, 16);
   return `claude:${h}`;
+}
+
+// ---- eBay OAuth CSRF state ----
+// Random `state` -> { userId }. Verified in the OAuth callback. Short-lived.
+// Degrades to no-op without Redis; the callback also requires a valid session.
+
+export async function setOAuthState(state, userId) {
+  return rawSet(`ebay_oauth:${state}`, { userId }, TTL.OAUTH_STATE);
+}
+
+export async function getOAuthState(state) {
+  return rawGet(`ebay_oauth:${state}`, 'ebay');
+}
+
+// ---- eBay per-user data (orders/profit) ----
+// Short TTL to relieve Sell API rate limits. Keyed by user + logical name.
+
+export async function getCachedEbay(userId, name) {
+  return rawGet(`ebay:${userId}:${name}`, 'ebay');
+}
+
+export async function setCachedEbay(userId, name, payload) {
+  return rawSet(`ebay:${userId}:${name}`, payload, TTL.EBAY_DATA);
+}
+
+export async function clearCachedEbay(userId) {
+  if (!client) return;
+  try {
+    const keys = await client.keys(`ebay:${userId}:*`);
+    if (keys.length) await client.del(keys);
+  } catch {
+    stats.errors += 1;
+  }
 }

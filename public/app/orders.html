@@ -610,12 +610,13 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
       </div>
 
-      <div class="preview-banner">
-        <span class="badge">Preview</span>
+      <div class="preview-banner" id="preview-banner" hidden>
+        <span class="badge">Not connected</span>
         <div class="body">
-          <h4>Sample orders shown</h4>
-          <p>Once an eBay store is connected, real orders will sync in automatically and the fulfillment pipeline will drive Amazon auto-purchasing.</p>
+          <h4>Connect your eBay store</h4>
+          <p>Link your eBay seller account to sync real orders here automatically.</p>
         </div>
+        <a class="btn sm" href="/api/ebay/connect">Connect eBay</a>
       </div>
 
       <!-- KPI -->
@@ -741,55 +742,48 @@ async function loadMe() {
 const STATUS_FLOW = ['new', 'ordered', 'shipped', 'delivered'];
 const STATUS_LABEL = { new: 'Paid', ordered: 'Ordered', shipped: 'Shipped', delivered: 'Delivered' };
 
-const MOCK_ORDERS = [
-  { id: 'KMP-2841', emoji: '🎧', item: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
-    channel: 'ebay', status: 'new',
-    salePrice: 349.99, costPrice: 278.00, fees: 45.13, profit: 26.86,
-    customer: 'John D.', location: 'Austin, TX',
-    placedAt: '32 min ago', tracking: null },
+let ORDERS = [];
 
-  { id: 'KMP-2840', emoji: '⌚', item: 'Apple Watch Series 9 GPS 45mm',
-    channel: 'ebay', status: 'ordered',
-    salePrice: 459.99, costPrice: 389.00, fees: 59.34, profit: 11.65,
-    customer: 'Sarah M.', location: 'San Diego, CA',
-    placedAt: '2h ago', tracking: null },
+// Fetch helper shared across the eBay-backed pages.
+async function loadEbay(url) {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (r.status === 401) return { auth: false };
+    if (!r.ok) return { error: true };
+    return await r.json();
+  } catch (_) {
+    return { error: true };
+  }
+}
 
-  { id: 'KMP-2839', emoji: '🔌', item: 'Anker USB-C to Lightning Cable 6ft',
-    channel: 'ebay', status: 'shipped',
-    salePrice: 18.99, costPrice: 11.99, fees: 2.45, profit: 4.55,
-    customer: 'Mike R.', location: 'Brooklyn, NY',
-    placedAt: 'Yesterday', tracking: '1Z999AA10123456784' },
+function showConnectState(msg) {
+  const banner = document.getElementById('preview-banner');
+  if (banner) banner.hidden = false;
+  ordersEl.innerHTML = `
+    <div class="empty-state">
+      <span class="icon">${window.KEMPY ? window.KEMPY.icon('orders','42px') : ''}</span>
+      <h3>${escapeHtml(msg || 'Connect your eBay store')}</h3>
+      <p>Link your eBay seller account and real orders will sync here automatically.</p>
+      <a class="btn" href="/api/ebay/connect" style="margin-top:14px;display:inline-block">Connect eBay</a>
+    </div>`;
+}
 
-  { id: 'KMP-2838', emoji: '⌚', item: 'Casio Vintage A158WA-1 Digital Watch',
-    channel: 'ebay', status: 'delivered',
-    salePrice: 39.99, costPrice: 19.99, fees: 5.16, profit: 9.84,
-    customer: 'Emma L.', location: 'Portland, OR',
-    placedAt: '3 days ago', tracking: '1Z999AA10123456722' },
-
-  { id: 'KMP-2837', emoji: '🔌', item: 'Anker 65W USB-C Charger GaN PIQ 3.0',
-    channel: 'ebay', status: 'delivered',
-    salePrice: 39.99, costPrice: 27.99, fees: 5.16, profit: 6.84,
-    customer: 'David K.', location: 'Chicago, IL',
-    placedAt: '4 days ago', tracking: '1Z999AA10123456711' },
-
-  { id: 'KMP-2836', emoji: '⌚', item: 'Apple Watch Series 9 GPS 45mm',
-    channel: 'ebay', status: 'ordered',
-    salePrice: 459.99, costPrice: 389.00, fees: 59.34, profit: 11.65,
-    customer: 'Lisa T.', location: 'Boston, MA',
-    placedAt: '5h ago', tracking: null },
-
-  { id: 'KMP-2835', emoji: '🎧', item: 'Anker Soundcore Liberty 4 NC Earbuds',
-    channel: 'ebay', status: 'new',
-    salePrice: 99.99, costPrice: 79.99, fees: 12.90, profit: 7.10,
-    customer: 'Marcus W.', location: 'Phoenix, AZ',
-    placedAt: '1h ago', tracking: null },
-
-  { id: 'KMP-2834', emoji: '📷', item: 'Logitech C920 HD Pro Webcam 1080p',
-    channel: 'ebay', status: 'delivered',
-    salePrice: 79.99, costPrice: 49.99, fees: 10.32, profit: 19.68,
-    customer: 'Olivia B.', location: 'Seattle, WA',
-    placedAt: '6 days ago', tracking: '1Z999AA10123456655' },
-];
+// Format an ISO date into a relative-ish label for the order card.
+function relDate(iso) {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return escapeHtml(String(iso));
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return days + ' days ago';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 // ====================================================================
 // Render
@@ -841,7 +835,7 @@ function renderCard(o) {
           </div>
         </div>
         <div class="order-head-right">
-          <div class="order-date">${escapeHtml(o.placedAt)}</div>
+          <div class="order-date">${escapeHtml(relDate(o.placedAt))}</div>
           <div class="order-customer">to <span class="name">${escapeHtml(o.customer)}</span> · ${escapeHtml(o.location)}</div>
           ${o.tracking ? `<a class="tracking" href="#" data-action="track-view">↗ ${escapeHtml(o.tracking)}</a>` : ''}
         </div>
@@ -865,7 +859,7 @@ function renderCard(o) {
 
 function filterAndRender() {
   const q = searchQuery.toLowerCase();
-  const filtered = MOCK_ORDERS.filter(o => {
+  const filtered = ORDERS.filter(o => {
     if (activeStatus !== 'all' && o.status !== activeStatus) return false;
     if (q) {
       const hay = (o.id + ' ' + o.item + ' ' + o.customer).toLowerCase();
@@ -886,18 +880,18 @@ function filterAndRender() {
 }
 
 function updateCounts() {
-  document.getElementById('ct-all').textContent = MOCK_ORDERS.length;
+  document.getElementById('ct-all').textContent = ORDERS.length;
   for (const s of STATUS_FLOW) {
-    const n = MOCK_ORDERS.filter(o => o.status === s).length;
+    const n = ORDERS.filter(o => o.status === s).length;
     document.getElementById('ct-' + s).textContent = n;
   }
 }
 
 function updateKpis() {
-  const newCount = MOCK_ORDERS.filter(o => o.status === 'new').length;
-  const transit = MOCK_ORDERS.filter(o => o.status === 'ordered' || o.status === 'shipped').length;
-  const revenue = MOCK_ORDERS.reduce((s, o) => s + o.salePrice, 0);
-  const profit = MOCK_ORDERS.reduce((s, o) => s + o.profit, 0);
+  const newCount = ORDERS.filter(o => o.status === 'new').length;
+  const transit = ORDERS.filter(o => o.status === 'ordered' || o.status === 'shipped').length;
+  const revenue = ORDERS.reduce((s, o) => s + o.salePrice, 0);
+  const profit = ORDERS.reduce((s, o) => s + o.profit, 0);
   document.getElementById('kpi-new').textContent = newCount;
   document.getElementById('kpi-transit').textContent = transit;
   document.getElementById('kpi-revenue').textContent = '$' + revenue.toFixed(0);
@@ -944,9 +938,15 @@ document.getElementById('export-btn').addEventListener('click', () => {
 // ====================================================================
 (async function init() {
   await loadMe();
+  const d = await loadEbay('/api/orders');
+  if (d.auth === false) { showConnectState('Sign in to view your orders'); return; }
+  if (!d.connected)     { showConnectState(); return; }
+  if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return; }
+  ORDERS = d.orders || [];
+  document.getElementById('preview-banner').hidden = true;
   updateCounts();
   updateKpis();
-  filterAndRender();
+  filterAndRender();   // empty array -> existing "No orders match" empty state
 })();
 </script>
 

@@ -574,13 +574,14 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
       </div>
 
-      <!-- Preview banner -->
-      <div class="preview-banner">
-        <span class="badge">Preview</span>
+      <!-- Connect banner (shown until eBay is connected) -->
+      <div class="preview-banner" id="preview-banner" hidden>
+        <span class="badge">Not connected</span>
         <div class="body">
-          <h4>Sample listings shown</h4>
-          <p>Connect an eBay store under Settings → Stores to see your real listings. Until then, these placeholders demonstrate how the page will look.</p>
+          <h4>Connect your eBay store</h4>
+          <p>Link your eBay seller account to sync your real listings here.</p>
         </div>
+        <a class="btn sm" href="/api/ebay/connect" id="banner-connect">Connect eBay</a>
       </div>
 
       <!-- KPI tiles -->
@@ -699,65 +700,34 @@ async function loadMe() {
 }
 
 // ====================================================================
-// Mock listings data — production will replace with /api/listings
+// Live listings — populated from /api/listings (the user's eBay store)
 // ====================================================================
-const MOCK_LISTINGS = [
-  { id: 'LST-001', emoji: '🎧', name: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
-    img: 'https://loremflickr.com/112/112/headphones?lock=1',
-    sku: 'B09Y2KC2D2', channel: 'ebay', status: 'active',
-    sellPrice: 349.99, costPrice: 278.00, profit: 26.92,
-    views: 412, watchers: 23, sold: 7,
-    listedAt: '2025-04-12', url: 'https://www.ebay.com/sch/i.html?_nkw=Sony+WH-1000XM5' },
+let LISTINGS = [];
 
-  { id: 'LST-002', emoji: '🔌', name: 'Anker USB-C to Lightning Cable 6ft (MFi)',
-    img: 'https://loremflickr.com/112/112/usb,cable?lock=2',
-    sku: 'B07ZSMMTQ4', channel: 'ebay', status: 'active',
-    sellPrice: 18.99, costPrice: 11.99, profit: 4.55,
-    views: 1042, watchers: 6, sold: 32,
-    listedAt: '2025-03-01', url: 'https://www.ebay.com/sch/i.html?_nkw=Anker+USB-C' },
+// Fetch helper shared across the eBay-backed pages.
+async function loadEbay(url) {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (r.status === 401) return { auth: false };
+    if (!r.ok) return { error: true };
+    return await r.json();
+  } catch (_) {
+    return { error: true };
+  }
+}
 
-  { id: 'LST-003', emoji: '⌚', name: 'Apple Watch Series 9 GPS 45mm Aluminum',
-    img: 'https://loremflickr.com/112/112/smartwatch?lock=3',
-    sku: 'B0CHX7VZNY', channel: 'ebay', status: 'active',
-    sellPrice: 459.99, costPrice: 389.00, profit: 12.40,
-    views: 798, watchers: 41, sold: 4,
-    listedAt: '2025-04-20', url: 'https://www.ebay.com/sch/i.html?_nkw=Apple+Watch+S9' },
-
-  { id: 'LST-004', emoji: '📷', name: 'Logitech C920 HD Pro Webcam 1080p',
-    img: 'https://loremflickr.com/112/112/webcam?lock=4',
-    sku: 'B006JH8T3S', channel: 'ebay', status: 'draft',
-    sellPrice: 79.99, costPrice: 49.99, profit: 19.68,
-    views: 0, watchers: 0, sold: 0,
-    listedAt: null, url: null },
-
-  { id: 'LST-005', emoji: '⌚', name: 'Casio Vintage A158WA-1 Digital Watch',
-    img: 'https://loremflickr.com/112/112/wristwatch?lock=5',
-    sku: 'B000GAWSDG', channel: 'ebay', status: 'active',
-    sellPrice: 39.99, costPrice: 19.99, profit: 9.84,
-    views: 234, watchers: 5, sold: 12,
-    listedAt: '2025-02-14', url: 'https://www.ebay.com/sch/i.html?_nkw=Casio+A158WA' },
-
-  { id: 'LST-006', emoji: '🔌', name: 'Anker 65W USB-C Charger GaN PIQ 3.0',
-    img: 'https://loremflickr.com/112/112/charger?lock=6',
-    sku: 'B095JZSH2X', channel: 'ebay', status: 'active',
-    sellPrice: 39.99, costPrice: 27.99, profit: 6.84,
-    views: 567, watchers: 11, sold: 19,
-    listedAt: '2025-03-22', url: 'https://www.ebay.com/sch/i.html?_nkw=Anker+65W' },
-
-  { id: 'LST-007', emoji: '👜', name: 'Coach Outlet Mini Bennett Satchel Crossgrain',
-    img: 'https://loremflickr.com/112/112/handbag?lock=7',
-    sku: 'B07VWXFLQJ', channel: 'ebay', status: 'ended',
-    sellPrice: 159.99, costPrice: 99.00, profit: 39.96,
-    views: 312, watchers: 14, sold: 2,
-    listedAt: '2025-01-08', url: null },
-
-  { id: 'LST-008', emoji: '🎧', name: 'Anker Soundcore Liberty 4 NC Earbuds',
-    img: 'https://loremflickr.com/112/112/earbuds?lock=8',
-    sku: 'B0CCRTRMV6', channel: 'ebay', status: 'draft',
-    sellPrice: 99.99, costPrice: 79.99, profit: 7.10,
-    views: 0, watchers: 0, sold: 0,
-    listedAt: null, url: null },
-];
+// Show the "connect eBay" state (banner + empty list CTA).
+function showConnectState(msg) {
+  const banner = document.getElementById('preview-banner');
+  if (banner) banner.hidden = false;
+  listingsEl.innerHTML = `
+    <div class="empty-state">
+      <span class="icon">${window.KEMPY ? window.KEMPY.icon('listings','42px') : ''}</span>
+      <h3>${escapeHtml(msg || 'Connect your eBay store')}</h3>
+      <p>Link your eBay seller account to sync your real listings, stock and performance.</p>
+      <a class="btn" href="/api/ebay/connect" style="margin-top:14px;display:inline-block">Connect eBay</a>
+    </div>`;
+}
 
 // ====================================================================
 // Render
@@ -822,7 +792,7 @@ function renderCard(l) {
 
 function filterAndRender() {
   const q = searchQuery.toLowerCase();
-  const filtered = MOCK_LISTINGS.filter(l => {
+  const filtered = LISTINGS.filter(l => {
     if (activeStatus !== 'all' && l.status !== activeStatus) return false;
     if (q && !l.name.toLowerCase().includes(q) && !l.sku.toLowerCase().includes(q)) return false;
     return true;
@@ -840,10 +810,10 @@ function filterAndRender() {
 }
 
 function updateCounts() {
-  const all = MOCK_LISTINGS.length;
-  const active = MOCK_LISTINGS.filter(l => l.status === 'active').length;
-  const draft = MOCK_LISTINGS.filter(l => l.status === 'draft').length;
-  const ended = MOCK_LISTINGS.filter(l => l.status === 'ended').length;
+  const all = LISTINGS.length;
+  const active = LISTINGS.filter(l => l.status === 'active').length;
+  const draft = LISTINGS.filter(l => l.status === 'draft').length;
+  const ended = LISTINGS.filter(l => l.status === 'ended').length;
   document.getElementById('ct-all').textContent = all;
   document.getElementById('ct-active').textContent = active;
   document.getElementById('ct-draft').textContent = draft;
@@ -851,16 +821,16 @@ function updateCounts() {
 }
 
 function updateKpis() {
-  const active = MOCK_LISTINGS.filter(l => l.status === 'active');
-  const drafts = MOCK_LISTINGS.filter(l => l.status === 'draft').length;
-  const views = MOCK_LISTINGS.reduce((s, l) => s + l.views, 0);
-  const sold = MOCK_LISTINGS.reduce((s, l) => s + l.sold, 0);
+  const active = LISTINGS.filter(l => l.status === 'active');
+  const drafts = LISTINGS.filter(l => l.status === 'draft').length;
+  const views = LISTINGS.reduce((s, l) => s + (l.views || 0), 0);
+  const sold = LISTINGS.reduce((s, l) => s + (l.sold || 0), 0);
   document.getElementById('kpi-active').textContent = active.length;
   document.getElementById('kpi-drafts').textContent = drafts;
   document.getElementById('kpi-views').textContent = views.toLocaleString();
   document.getElementById('kpi-sold').textContent = sold;
-  document.getElementById('kpi-views-delta').textContent = '↑ 12% vs prior week';
-  document.getElementById('kpi-sold-delta').textContent = '↑ 4 vs prior week';
+  document.getElementById('kpi-views-delta').textContent = '—';
+  document.getElementById('kpi-sold-delta').textContent = '—';
 }
 
 // ====================================================================
@@ -895,9 +865,15 @@ document.getElementById('create-btn').addEventListener('click', () => {
 // ====================================================================
 (async function init() {
   await loadMe();
+  const d = await loadEbay('/api/listings');
+  if (d.auth === false) { showConnectState('Sign in to view your listings'); return; }
+  if (!d.connected)     { showConnectState(); return; }
+  if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return; }
+  LISTINGS = d.listings || [];
+  document.getElementById('preview-banner').hidden = true;
   updateCounts();
   updateKpis();
-  filterAndRender();
+  filterAndRender();   // empty array -> existing "No listings match" empty state
 })();
 </script>
 

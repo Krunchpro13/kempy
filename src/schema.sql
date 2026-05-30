@@ -129,3 +129,23 @@ CREATE TABLE IF NOT EXISTS team_members (
 
 CREATE INDEX IF NOT EXISTS team_members_owner_idx ON team_members (owner_user_id);
 
+-- ====================================================================
+-- eBay seller OAuth connections — one row per user (single eBay store).
+-- The access_token is short-lived (~2h) and disposable; the refresh_token
+-- is long-lived (~18mo) and MUST be encrypted at rest (AES-256-GCM).
+-- Storing user_id as PK enforces one connected store per user.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS ebay_connections (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  ebay_user_id TEXT,                            -- eBay username, if fetched (nullable)
+  marketplace_id TEXT NOT NULL DEFAULT 'EBAY_US',
+  scopes TEXT,                                  -- space-delimited granted scopes (diagnostics)
+  access_token TEXT,                            -- current short-lived token (refreshable)
+  access_token_expires_at TIMESTAMPTZ,          -- when access_token dies
+  refresh_token_enc TEXT NOT NULL,              -- AES-256-GCM ciphertext "ivB64:tagB64:dataB64"
+  refresh_token_expires_at TIMESTAMPTZ,         -- ~18 months out
+  connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_error TEXT                               -- last refresh/api failure (for status endpoint)
+);
+

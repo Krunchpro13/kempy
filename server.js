@@ -16,6 +16,10 @@ import authRouter from './src/routes/auth.js';
 import watchlistRouter from './src/routes/watchlist.js';
 import settingsRouter from './src/routes/settings.js';
 import listingsRouter from './src/routes/listings.js';
+import ordersRouter from './src/routes/orders.js';
+import profitRouter from './src/routes/profit.js';
+import ebayRouter from './src/routes/ebay.js';
+import { isConfigured as ebaySellerConfigured } from './src/services/ebay-oauth.js';
 
 dotenv.config();
 
@@ -68,6 +72,7 @@ app.get('/api/health', async (_req, res, next) => {
         ebay: process.env.EBAY_CLIENT_ID ? 'live' : 'mock',
         amazon: process.env.KEEPA_API_KEY ? 'live (Keepa)' : 'mock',
         matcher: process.env.ANTHROPIC_API_KEY ? 'claude' : 'first-result',
+        ebaySeller: ebaySellerConfigured() ? 'configured' : 'not configured',
       },
       cache: cacheStats(),
       db,
@@ -104,6 +109,9 @@ app.use('/api/auth', authRouter);
 app.use('/api/watchlist', watchlistRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/listings', listingsRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/profit', profitRouter);
+app.use('/api/ebay', ebayRouter);
 
 // ---- 404 (API) + error handler — must be last ----
 app.use(notFound);
@@ -116,5 +124,6 @@ app.listen(PORT, () => {
   console.log(`  Amazon:   ${process.env.KEEPA_API_KEY ? '✓ live (Keepa)' : '○ mock'}`);
   console.log(`  Matcher:  ${process.env.ANTHROPIC_API_KEY ? '✓ Claude' : '○ first-result'}`);
   console.log(`  Cache:    ${cacheEnabled() ? '✓ Redis' : '○ disabled'}`);
-  console.log(`  Database: ${dbEnabled() ? '✓ Postgres' : '○ disabled'}\n`);
+  console.log(`  Database: ${dbEnabled() ? '✓ Postgres' : '○ disabled'}`);
+  console.log(`  eBay sell:${ebaySellerConfigured() ? ' ✓ OAuth ready' : ' ○ not configured'}\n`);
 });

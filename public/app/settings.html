@@ -806,70 +806,91 @@ function switchPanel(name) {
   }
 }
 subLinks.forEach(l => l.addEventListener('click', () => switchPanel(l.dataset.panel)));
-const initialPanel = (window.location.hash.slice(1)) || 'profile';
+const initialPanel = (new URLSearchParams(window.location.search).get('panel'))
+  || (window.location.hash.slice(1)) || 'profile';
 if (['profile','stores','notifications','danger'].includes(initialPanel)) {
   switchPanel(initialPanel);
 }
 
 // ====================================================================
-// Stores (read/write localStorage in preview)
+// Stores — real eBay seller OAuth connection
 // ====================================================================
-const LS_STORES = 'kempy_stores_local';
-function loadStores() {
-  try { return JSON.parse(localStorage.getItem(LS_STORES) || '[]'); } catch { return []; }
-}
-function saveStores(arr) {
-  try { localStorage.setItem(LS_STORES, JSON.stringify(arr)); } catch {}
-}
-
 const EBAY_LOGO = '<svg viewBox="0 0 96 36" role="img" aria-label="eBay"><text x="0" y="28" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-style="italic" font-size="30"><tspan fill="#e53238">e</tspan><tspan fill="#0064d2">b</tspan><tspan fill="#f5af02">a</tspan><tspan fill="#86b817">y</tspan></text></svg>';
 
-function renderStores() {
-  const stores = loadStores();
-  const ebay = stores.find(s => s.kind === 'ebay');
-  const wrap = document.getElementById('stores-list');
-  wrap.innerHTML = [
-    {
-      kind: 'ebay', logo: EBAY_LOGO, label: 'eBay',
-      hint: ebay ? (ebay.handle || 'Connected') : 'Not connected — sync orders, listings, and stock',
-      conn: !!ebay,
-    },
-  ].map(s => `
-    <div class="store-card ${s.conn ? 'connected' : ''}">
-      <div class="store-logo">${s.logo}</div>
-      <div class="store-info">
-        <div class="name">${s.label}</div>
-        <div class="meta">${escapeHtml(s.hint)}</div>
-      </div>
-      ${s.conn
-        ? `<button class="btn ghost sm" data-action="disconnect" data-kind="${s.kind}">Disconnect</button>`
-        : `<button class="btn sm" data-action="connect" data-kind="${s.kind}">Connect</button>`}
-    </div>
-  `).join('');
+let ebayStatus = { connected: false, configured: true };
+
+async function fetchEbayStatus() {
+  try {
+    const r = await fetch('/api/ebay/status', { credentials: 'include' });
+    if (r.ok) ebayStatus = await r.json();
+  } catch (_) {}
 }
 
-document.getElementById('stores-list').addEventListener('click', (e) => {
+function ebayHint() {
+  if (!ebayStatus.configured) return 'eBay integration not configured yet';
+  if (ebayStatus.lastError) return 'Connection needs attention — reconnect to refresh';
+  if (ebayStatus.connected) {
+    const mkt = ebayStatus.marketplace ? ` · ${ebayStatus.marketplace}` : '';
+    return `Connected${mkt} — syncing orders, listings & profit`;
+  }
+  return 'Not connected — sync orders, listings, and stock';
+}
+
+function renderStores() {
+  const conn = !!ebayStatus.connected;
+  const wrap = document.getElementById('stores-list');
+  wrap.innerHTML = `
+    <div class="store-card ${conn ? 'connected' : ''}">
+      <div class="store-logo">${EBAY_LOGO}</div>
+      <div class="store-info">
+        <div class="name">eBay</div>
+        <div class="meta">${escapeHtml(ebayHint())}</div>
+      </div>
+      ${conn
+        ? `<button class="btn ghost sm" data-action="disconnect">Disconnect</button>`
+        : `<button class="btn sm" data-action="connect" ${ebayStatus.configured ? '' : 'disabled'}>Connect</button>`}
+    </div>`;
+}
+
+document.getElementById('stores-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   const action = btn.dataset.action;
-  const kind = btn.dataset.kind;
-  const stores = loadStores();
 
   if (action === 'connect') {
-    // PRODUCTION: window.location.href = `/api/auth/oauth/${kind}/store`
-    const handle = prompt(`Enter a ${kind} store name/handle (preview only):`, `my-${kind}-shop`);
-    if (!handle) return;
-    stores.push({ kind, handle, connectedAt: Date.now() });
-    saveStores(stores);
-    renderStores();
-    showToast(`Connected ${kind}: ${handle}`, 'success');
+    if (!currentUser) { showToast('Sign in to connect eBay', 'error'); return; }
+    if (!ebayStatus.configured) { showToast('eBay integration is not configured yet', 'error'); return; }
+    window.location.href = '/api/ebay/connect';
   } else if (action === 'disconnect') {
-    if (!confirm(`Disconnect ${kind}? Existing orders won't be cancelled.`)) return;
-    saveStores(stores.filter(s => s.kind !== kind));
-    renderStores();
-    showToast(`Disconnected ${kind}`, 'success');
+    if (!confirm('Disconnect eBay? Your existing orders are unaffected.')) return;
+    try {
+      const r = await fetch('/api/ebay/disconnect', { method: 'POST', credentials: 'include' });
+      if (!r.ok) throw new Error();
+      await fetchEbayStatus();
+      renderStores();
+      showToast('Disconnected eBay', 'success');
+    } catch (_) {
+      showToast('Could not disconnect — try again', 'error');
+    }
   }
 });
+
+// Surface the result of the OAuth callback redirect (?ebay=connected|denied|error).
+function flashEbayResult() {
+  const p = new URLSearchParams(window.location.search);
+  const r = p.get('ebay');
+  if (!r) return;
+  const msg = {
+    connected: ['eBay connected — your store is now syncing', 'success'],
+    denied: ['eBay connection cancelled', 'error'],
+    error: ['eBay connection failed — please try again', 'error'],
+  }[r];
+  if (msg) showToast(msg[0], msg[1]);
+  // Clean the URL so a refresh doesn't re-toast.
+  p.delete('ebay'); p.delete('panel');
+  const qs = p.toString();
+  window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+}
 
 document.getElementById('add-store-btn').addEventListener('click', () => {
   showToast('More marketplaces coming soon (Etsy, Mercari, TikTok Shop)', '');
@@ -1062,7 +1083,9 @@ async function initCurrency() {
 
 (async function init() {
   await loadMe();
+  await fetchEbayStatus();
   renderStores();
+  flashEbayResult();
   initCurrency();
 })();
 </script>
