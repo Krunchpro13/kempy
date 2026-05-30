@@ -83,6 +83,17 @@ const authLimiter = rateLimit({
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
 
+// ---- Never cache API responses ----
+// Auth-dependent JSON (e.g. /api/listings, /api/orders, /api/ebay/status) must
+// never be served stale from the browser cache — otherwise a "connected:false"
+// from one account can survive an account switch. Disable ETag/conditional GETs
+// and force no-store on every /api response.
+app.set('etag', false);
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  next();
+});
+
 // ---- Boot infrastructure ----
 await initCache();
 initDb();

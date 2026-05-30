@@ -758,7 +758,7 @@ function showConnectState(msg) {
   const banner = document.getElementById('preview-banner');
   if (banner) banner.hidden = false;
   const who = currentUser && currentUser.email
-    ? `<p style="margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">Signed in as ${escapeHtml(currentUser.email)} — this account has no eBay store connected.</p>`
+    ? `<p style="margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">Signed in as ${escapeHtml(currentUser.email)}</p>`
     : '';
   ordersEl.innerHTML = `
     <div class="empty-state">
