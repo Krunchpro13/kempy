@@ -1475,6 +1475,36 @@ footer .container { display: flex; justify-content: space-between; align-items: 
 
 <div class="toast" id="toast"></div>
 
+<!-- AUTH MODAL (must precede the inline script that references #auth-modal) -->
+<div id="auth-modal" class="auth-modal" style="display:none;">
+  <div class="auth-backdrop"></div>
+  <div class="auth-panel">
+    <button class="auth-close" id="auth-close">×</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-mode="login">Sign in</button>
+      <button class="auth-tab" data-mode="signup">Create account</button>
+    </div>
+    <h3 id="auth-title">Welcome back</h3>
+    <p class="auth-sub" id="auth-sub">Sign in to save research and track price drift.</p>
+    <form id="auth-form">
+      <label class="auth-field">
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="email" required />
+      </label>
+      <label class="auth-field" id="field-name" style="display:none;">
+        <span>Display name <em style="opacity:.5;">(optional)</em></span>
+        <input type="text" name="displayName" autocomplete="name" />
+      </label>
+      <label class="auth-field">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" minlength="8" required />
+      </label>
+      <button type="submit" class="auth-submit" id="auth-submit">Sign in</button>
+      <div class="auth-error" id="auth-error" style="display:none;"></div>
+    </form>
+  </div>
+</div>
+
 <script>
 // ============= API-BACKED RESEARCH =============
 // Live data comes from POST /api/search. The server orchestrates eBay (Browse
@@ -2199,36 +2229,6 @@ document.querySelectorAll('a.hero-cta, a.nav-cta').forEach(a => {
   });
 });
 </script>
-
-<!-- AUTH MODAL -->
-<div id="auth-modal" class="auth-modal" style="display:none;">
-  <div class="auth-backdrop"></div>
-  <div class="auth-panel">
-    <button class="auth-close" id="auth-close">×</button>
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-mode="login">Sign in</button>
-      <button class="auth-tab" data-mode="signup">Create account</button>
-    </div>
-    <h3 id="auth-title">Welcome back</h3>
-    <p class="auth-sub" id="auth-sub">Sign in to save research and track price drift.</p>
-    <form id="auth-form">
-      <label class="auth-field">
-        <span>Email</span>
-        <input type="email" name="email" autocomplete="email" required />
-      </label>
-      <label class="auth-field" id="field-name" style="display:none;">
-        <span>Display name <em style="opacity:.5;">(optional)</em></span>
-        <input type="text" name="displayName" autocomplete="name" />
-      </label>
-      <label class="auth-field">
-        <span>Password</span>
-        <input type="password" name="password" autocomplete="current-password" minlength="8" required />
-      </label>
-      <button type="submit" class="auth-submit" id="auth-submit">Sign in</button>
-      <div class="auth-error" id="auth-error" style="display:none;"></div>
-    </form>
-  </div>
-</div>
 
 <script src="/assets/js/theme.js"></script>
 </body>
