@@ -36,7 +36,15 @@
     updateButton(current());
   }
 
+  function injectFavicon() {
+    if (document.querySelector('link[rel~="icon"]')) return;
+    var f = document.createElement('link');
+    f.rel = 'icon'; f.type = 'image/svg+xml'; f.href = '/favicon.svg';
+    document.head.appendChild(f);
+  }
+
   function init() {
+    injectFavicon();
     injectButton();
     requestAnimationFrame(function () { root.classList.add('theme-ready'); });
     try {
