@@ -63,7 +63,15 @@ app.use(express.json({ limit: '1mb' }));
 app.use(sessionMiddleware);
 
 // ---- Static frontend ----
-app.use(express.static(join(__dirname, 'public')));
+// HTML must always be revalidated so users pick up the latest app JS immediately
+// (otherwise a cached page can keep running stale logic). Other assets cache normally.
+app.use(express.static(join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
 // ---- Rate limiting (per IP, in-memory) ----
 const apiLimiter = rateLimit({
