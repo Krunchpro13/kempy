@@ -827,8 +827,9 @@ function ebayHint() {
   if (!ebayStatus.configured) return 'eBay integration not configured yet';
   if (ebayStatus.lastError) return 'Connection needs attention — reconnect to refresh';
   if (ebayStatus.connected) {
+    const who = ebayStatus.ebayUser ? `Connected as ${ebayStatus.ebayUser}` : 'Connected';
     const mkt = ebayStatus.marketplace ? ` · ${ebayStatus.marketplace}` : '';
-    return `Connected${mkt} — syncing orders, listings & profit`;
+    return `${who}${mkt} — syncing orders, listings & profit`;
   }
   return 'Not connected — sync orders, listings, and stock';
 }

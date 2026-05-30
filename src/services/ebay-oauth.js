@@ -30,6 +30,7 @@ const DEFAULT_SCOPES = [
   'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
   'https://api.ebay.com/oauth/api_scope/sell.inventory.readonly',
   'https://api.ebay.com/oauth/api_scope/sell.finances',
+  'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly', // to show "Connected as <username>"
 ];
 const SCOPES = process.env.EBAY_SCOPES
   ? process.env.EBAY_SCOPES.split(/\s+/).filter(Boolean)
@@ -89,16 +90,20 @@ export async function exchangeCode(userId, code) {
   const accessExp = new Date(now + (data.expires_in || 7200) * 1000);
   const refreshExp = new Date(now + (data.refresh_token_expires_in || DEFAULT_REFRESH_TTL) * 1000);
 
+  // Best-effort: fetch the eBay username so the UI can show "Connected as <user>".
+  const ebayUser = await fetchEbayUsername(data.access_token);
+
   await query(
     `INSERT INTO ebay_connections
-       (user_id, marketplace_id, scopes, access_token, access_token_expires_at,
+       (user_id, ebay_user_id, marketplace_id, scopes, access_token, access_token_expires_at,
         refresh_token_enc, refresh_token_expires_at, connected_at, updated_at, last_error)
-     VALUES ($1,$2,$3,$4,$5,$6,$7, now(), now(), NULL)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now(), now(), NULL)
      ON CONFLICT (user_id) DO UPDATE SET
-       marketplace_id = $2, scopes = $3, access_token = $4, access_token_expires_at = $5,
-       refresh_token_enc = $6, refresh_token_expires_at = $7, updated_at = now(), last_error = NULL`,
+       ebay_user_id = $2, marketplace_id = $3, scopes = $4, access_token = $5, access_token_expires_at = $6,
+       refresh_token_enc = $7, refresh_token_expires_at = $8, updated_at = now(), last_error = NULL`,
     [
       userId,
+      ebayUser,
       marketplace(),
       data.scope || SCOPES.join(' '),
       data.access_token,
@@ -107,6 +112,21 @@ export async function exchangeCode(userId, code) {
       refreshExp,
     ],
   );
+}
+
+// Fetch the connected eBay account's username via the Identity API.
+// Requires the commerce.identity.readonly scope. Best-effort — returns null on any failure
+// (e.g. older connections granted before the scope was added).
+async function fetchEbayUsername(accessToken) {
+  try {
+    const { data } = await axios.get('https://apiz.ebay.com/commerce/identity/v1/user/', {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      timeout: 8_000,
+    });
+    return data.username || data.userId || null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------- step 4: return a valid access token, refreshing if needed ----------
