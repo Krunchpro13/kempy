@@ -400,20 +400,16 @@ html.sb-collapsed .nav-item:hover::after {
 }
 .store-card.connected { border-color: rgba(0,255,157,0.25); }
 .store-logo {
-  width: 42px; height: 42px;
+  height: 44px; min-width: 64px; padding: 0 14px;
   border-radius: 8px;
-  background: var(--surface-3);
+  background: #ffffff;
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
-  font-size: 14px;
   flex-shrink: 0;
 }
-.store-logo.ebay { background: #e53238; color: white; border-color: #c92a30; }
-.store-logo.amazon { background: #ff9900; color: #131a22; border-color: #cc7a00; }
-.store-logo.shopify { background: #96bf48; color: #1a1a1a; border-color: #7ea63b; }
+.store-logo svg { display: block; height: 22px; width: auto; }
 .store-info .name { font-size: 14px; font-weight: 600; }
 .store-info .meta {
   font-family: var(--font-mono);
@@ -506,7 +502,6 @@ html.sb-collapsed .nav-item:hover::after {
           <button class="sub-link active" data-panel="profile"><span class="icon">👤</span> Profile</button>
           <button class="sub-link" data-panel="stores"><span class="icon">🏪</span> Stores</button>
           <button class="sub-link" data-panel="notifications"><span class="icon">🔔</span> Notifications</button>
-          <button class="sub-link" data-panel="api"><span class="icon">🔌</span> API & Integrations</button>
           <button class="sub-link danger" data-panel="danger"><span class="icon">⚠</span> Danger zone</button>
         </aside>
 
@@ -533,16 +528,23 @@ html.sb-collapsed .nav-item:hover::after {
                   <input type="text" id="profile-business" name="business" placeholder="My eBay Shop LLC" />
                   <div class="hint">Appears on invoices, packing slips and customer emails.</div>
                 </div>
-                <div class="field">
-                  <label for="profile-timezone">Time zone</label>
-                  <select id="profile-timezone" name="timezone">
-                    <option>(UTC+00:00) London</option>
-                    <option>(UTC-05:00) New York</option>
-                    <option>(UTC-08:00) Los Angeles</option>
-                    <option>(UTC+01:00) Berlin / Amsterdam</option>
-                    <option>(UTC+09:00) Tokyo</option>
-                    <option>(UTC+10:00) Sydney</option>
-                  </select>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="profile-timezone">Time zone</label>
+                    <select id="profile-timezone" name="timezone">
+                      <option>(UTC+00:00) London</option>
+                      <option>(UTC-05:00) New York</option>
+                      <option>(UTC-08:00) Los Angeles</option>
+                      <option>(UTC+01:00) Berlin / Amsterdam</option>
+                      <option>(UTC+09:00) Tokyo</option>
+                      <option>(UTC+10:00) Sydney</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="profile-currency">Display currency</label>
+                    <select id="profile-currency" name="currency"></select>
+                    <div class="hint">All prices across KEMPY are shown in this currency.</div>
+                  </div>
                 </div>
                 <div class="section-footer">
                   <button type="button" class="btn ghost" id="profile-cancel">Cancel</button>
@@ -592,7 +594,7 @@ html.sb-collapsed .nav-item:hover::after {
               <h2>Fulfillment supplier</h2>
               <p class="help">When an order comes in, KEMPY uses this account to auto-purchase from your supplier.</p>
               <div class="store-card" id="amazon-supplier">
-                <div class="store-logo amazon">a</div>
+                <div class="store-logo"><svg viewBox="0 0 116 40" role="img" aria-label="Amazon"><text x="2" y="27" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="27" fill="#221f1f">amazon</text><path d="M16 31 C 42 41, 78 41, 100 31" stroke="#ff9900" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M100 31 l-1.5 -6 l8.5 3 z" fill="#ff9900"/></svg></div>
                 <div class="store-info">
                   <div class="name">Amazon</div>
                   <div class="meta">Used to auto-fulfill orders from your eBay store</div>
@@ -665,42 +667,6 @@ html.sb-collapsed .nav-item:hover::after {
                   <div class="desc">When a store loses connection or an API rate-limits us.</div>
                 </div>
                 <label class="switch"><input type="checkbox" data-pref="push-system" checked /><span class="slider"></span></label>
-              </div>
-            </div>
-          </div>
-
-          <!-- ============ API & INTEGRATIONS ============ -->
-          <div class="panel" id="panel-api">
-            <div class="section">
-              <h2>Webhooks</h2>
-              <p class="help">Send events to your own URL when orders are placed or fulfilled. POSTed as JSON.</p>
-              <div class="field">
-                <label for="webhook-url">Endpoint URL</label>
-                <input type="text" id="webhook-url" placeholder="https://yourdomain.com/webhooks/kempy" />
-              </div>
-              <div class="toggle-row">
-                <div class="info">
-                  <div class="title"><code style="font-family:var(--font-mono);color:var(--cyan);">order.created</code></div>
-                  <div class="desc">When a new order syncs in from any store.</div>
-                </div>
-                <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="info">
-                  <div class="title"><code style="font-family:var(--font-mono);color:var(--cyan);">order.fulfilled</code></div>
-                  <div class="desc">When tracking has been added to an order.</div>
-                </div>
-                <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="info">
-                  <div class="title"><code style="font-family:var(--font-mono);color:var(--cyan);">listing.outofstock</code></div>
-                  <div class="desc">When a listing's supplier reports out of stock.</div>
-                </div>
-                <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
-              </div>
-              <div class="section-footer">
-                <button class="btn">Save webhook</button>
               </div>
             </div>
           </div>
@@ -831,7 +797,7 @@ function switchPanel(name) {
   panels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
   const labelMap = {
     profile: 'Profile', stores: 'Stores',
-    notifications: 'Notifications', api: 'API & Integrations',
+    notifications: 'Notifications',
     danger: 'Danger zone',
   };
   crumb.textContent = 'Settings · ' + (labelMap[name] || 'Profile');
@@ -841,7 +807,7 @@ function switchPanel(name) {
 }
 subLinks.forEach(l => l.addEventListener('click', () => switchPanel(l.dataset.panel)));
 const initialPanel = (window.location.hash.slice(1)) || 'profile';
-if (['profile','stores','notifications','api','danger'].includes(initialPanel)) {
+if (['profile','stores','notifications','danger'].includes(initialPanel)) {
   switchPanel(initialPanel);
 }
 
@@ -856,25 +822,21 @@ function saveStores(arr) {
   try { localStorage.setItem(LS_STORES, JSON.stringify(arr)); } catch {}
 }
 
+const EBAY_LOGO = '<svg viewBox="0 0 96 36" role="img" aria-label="eBay"><text x="0" y="28" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-style="italic" font-size="30"><tspan fill="#e53238">e</tspan><tspan fill="#0064d2">b</tspan><tspan fill="#f5af02">a</tspan><tspan fill="#86b817">y</tspan></text></svg>';
+
 function renderStores() {
   const stores = loadStores();
   const ebay = stores.find(s => s.kind === 'ebay');
-  const shopify = stores.find(s => s.kind === 'shopify');
   const wrap = document.getElementById('stores-list');
   wrap.innerHTML = [
     {
-      kind: 'ebay', logo: 'e', logoCls: 'ebay', label: 'eBay',
+      kind: 'ebay', logo: EBAY_LOGO, label: 'eBay',
       hint: ebay ? (ebay.handle || 'Connected') : 'Not connected — sync orders, listings, and stock',
       conn: !!ebay,
     },
-    {
-      kind: 'shopify', logo: 'S', logoCls: 'shopify', label: 'Shopify',
-      hint: shopify ? (shopify.handle || 'Connected') : 'Optional — list to your own Shopify store too',
-      conn: !!shopify,
-    },
   ].map(s => `
     <div class="store-card ${s.conn ? 'connected' : ''}">
-      <div class="store-logo ${s.logoCls}">${s.logo}</div>
+      <div class="store-logo">${s.logo}</div>
       <div class="store-info">
         <div class="name">${s.label}</div>
         <div class="meta">${escapeHtml(s.hint)}</div>
@@ -1072,9 +1034,36 @@ document.getElementById('delete-btn').addEventListener('click', () => {
 // ====================================================================
 // Init
 // ====================================================================
+async function initCurrency() {
+  const sel = document.getElementById('profile-currency');
+  if (!sel || !window.KEMPY) return;
+  const curs = window.KEMPY.currencies;
+  sel.innerHTML = Object.keys(curs)
+    .map(code => `<option value="${code}">${code} (${curs[code].symbol}) — ${curs[code].label}</option>`)
+    .join('');
+  // A saved server-side preference (authed users) wins over the local default.
+  try {
+    const r = await fetch('/api/settings', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); if (d.currency && curs[d.currency]) window.KEMPY.setCurrency(d.currency); }
+  } catch (_) {}
+  sel.value = window.KEMPY.currencyCode();
+  sel.addEventListener('change', async () => {
+    window.KEMPY.setCurrency(sel.value);
+    showToast('Currency set to ' + sel.value, 'success');
+    try {
+      await fetch('/api/settings/currency', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency: sel.value }),
+      });
+    } catch (_) {}
+  });
+}
+
 (async function init() {
   await loadMe();
   renderStores();
+  initCurrency();
 })();
 </script>
 

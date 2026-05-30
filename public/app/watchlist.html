@@ -836,7 +836,10 @@ const refreshBtn = document.getElementById('refresh-btn');
 const clearBtn = document.getElementById('clear-btn');
 const sortSelect = document.getElementById('sort-select');
 
-function fmt$(n) { return '$' + (n == null ? '—' : Number(n).toFixed(2)); }
+function fmt$(n) {
+  if (n == null) return '—';
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+}
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

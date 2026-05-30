@@ -767,7 +767,9 @@ const statusTabs = document.getElementById('status-tabs');
 let activeStatus = 'all';
 let searchQuery = '';
 
-function fmt$(n) { return '$' + Number(n).toFixed(2); }
+function fmt$(n) {
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+}
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }

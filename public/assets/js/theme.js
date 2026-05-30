@@ -61,6 +61,43 @@
     }
   }
 
+  // ---- Currency (config-driven; static USD-based conversion rates) ----
+  var CUR_KEY = 'kempy-currency';
+  var CURRENCIES = {
+    USD: { code: 'USD', symbol: '$',   rate: 1,    locale: 'en-US', label: 'US Dollar' },
+    EUR: { code: 'EUR', symbol: '€',   rate: 0.92, locale: 'de-DE', label: 'Euro' },
+    GBP: { code: 'GBP', symbol: '£',   rate: 0.79, locale: 'en-GB', label: 'British Pound' },
+    CAD: { code: 'CAD', symbol: 'CA$', rate: 1.37, locale: 'en-CA', label: 'Canadian Dollar' },
+    AUD: { code: 'AUD', symbol: 'A$',  rate: 1.52, locale: 'en-AU', label: 'Australian Dollar' },
+    JPY: { code: 'JPY', symbol: '¥',   rate: 157,  locale: 'ja-JP', label: 'Japanese Yen' }
+  };
+  function currencyCode() {
+    var c; try { c = localStorage.getItem(CUR_KEY); } catch (e) {}
+    return CURRENCIES[c] ? c : 'USD';
+  }
+  function setCurrency(code) {
+    if (!CURRENCIES[code]) return;
+    try { localStorage.setItem(CUR_KEY, code); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('kempy:currency', { detail: code })); } catch (e) {}
+  }
+  // Format a USD amount in the user's chosen currency (converted at a static rate).
+  function formatMoney(usd) {
+    var n = Number(usd); if (!isFinite(n)) n = 0;
+    var c = CURRENCIES[currencyCode()];
+    var v = n * c.rate;
+    var dp = c.code === 'JPY' ? 0 : 2;
+    try {
+      return new Intl.NumberFormat(c.locale, { style: 'currency', currency: c.code, minimumFractionDigits: dp, maximumFractionDigits: dp }).format(v);
+    } catch (e) {
+      return c.symbol + v.toFixed(dp);
+    }
+  }
+  window.KEMPY = window.KEMPY || {};
+  window.KEMPY.currencies = CURRENCIES;
+  window.KEMPY.currencyCode = currencyCode;
+  window.KEMPY.setCurrency = setCurrency;
+  window.KEMPY.formatMoney = formatMoney;
+
   function init() {
     injectFavicon();
     pointLogo();

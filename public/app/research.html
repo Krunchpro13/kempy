@@ -889,7 +889,10 @@ let lastProducts = [];   // raw response — filters operate on this
 let lastMeta = null;
 
 const FEE_RATE = 0.129;
-function fmt$(n) { return '$' + (n == null ? '—' : Number(n).toFixed(2)); }
+function fmt$(n) {
+  if (n == null) return '—';
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+}
 function verdictFor(roi) {
   if (roi >= 50) return { label: 'Premium opportunity', cls: 'excellent' };
   if (roi >= 30) return { label: 'Excellent — list it', cls: 'excellent' };
