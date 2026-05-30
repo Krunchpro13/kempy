@@ -793,17 +793,12 @@ async function loadMe() {
       if (data.user) { currentUser = data.user; isRealUser = true; }
     }
   } catch (_) {}
-  if (!currentUser) {
-    try {
-      const raw = localStorage.getItem('kempy_user_local');
-      if (raw) { currentUser = JSON.parse(raw); isRealUser = false; }
-    } catch (_) {}
-  }
+  // No local-user fallback: a real session is the only "signed in" state.
+  // Guests (no session) keep using the localStorage watchlist below (isRealUser stays false).
   if (currentUser) {
     const label = currentUser.name || currentUser.email || 'You';
     document.getElementById('user-name').textContent = label;
-    document.getElementById('user-role').textContent =
-      (currentUser.role || 'MEMBER').toUpperCase() + (!isRealUser ? ' · LOCAL' : '');
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase();
     document.getElementById('user-avatar').textContent = label[0].toUpperCase();
   }
   const mb = document.getElementById('user-menu-btn');
@@ -816,7 +811,7 @@ async function loadMe() {
         if (isRealUser) {
           await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
         }
-        localStorage.removeItem('kempy_user_local');
+        localStorage.removeItem('kempy_signed_in');
         window.location.href = '/';
       } else {
         window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);

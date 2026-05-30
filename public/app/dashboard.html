@@ -956,17 +956,10 @@ async function loadMe() {
       if (data.user) user = data.user;
     }
   } catch (_) {}
-  // 2. Fallback: preview-mode user in localStorage
-  if (!user) {
-    try {
-      const raw = localStorage.getItem('kempy_user_local');
-      if (raw) user = JSON.parse(raw);
-    } catch (_) {}
-  }
   if (user) {
     const label = user.name || user.email || 'You';
     document.getElementById('user-name').textContent = label;
-    document.getElementById('user-role').textContent = (user.role || 'MEMBER').toUpperCase() + (user.preview ? ' · LOCAL' : '');
+    document.getElementById('user-role').textContent = (user.role || 'MEMBER').toUpperCase();
     document.getElementById('user-avatar').textContent = label[0].toUpperCase();
     document.getElementById('preview-banner').style.display = 'none';
     document.getElementById('welcome-sub').textContent =
@@ -980,7 +973,7 @@ async function loadMe() {
     menuBtnEl.addEventListener('click', () => {
       if (user) {
         if (!confirm('Sign out of KEMPY?')) return;
-        localStorage.removeItem('kempy_user_local');
+        localStorage.removeItem('kempy_signed_in');
         fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}).finally(() => { window.location.href = '/'; });
       } else {
         window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);

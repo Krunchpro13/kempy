@@ -1960,19 +1960,7 @@ async function loadMe() {
       currentUser = data.user;
     }
   } catch (_) {}
-  // 2. Preview-mode fallback: localStorage user from /auth/login or /auth/signup
-  if (!currentUser) {
-    try {
-      const raw = localStorage.getItem('kempy_user_local');
-      if (raw) {
-        const u = JSON.parse(raw);
-        currentUser = {
-          email: u.email,
-          display_name: u.name || (u.email ? u.email.split('@')[0] : 'You'),
-        };
-      }
-    } catch (_) {}
-  }
+  // A real session is the only "signed in" state — no localStorage fallback.
   renderAccount();
 }
 
@@ -1999,7 +1987,7 @@ function renderAccount() {
 
 async function signOut() {
   try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
-  localStorage.removeItem('kempy_user_local');
+  localStorage.removeItem('kempy_signed_in');
   // Already on the landing page — reload it in signed-out state.
   window.location.href = '/';
 }

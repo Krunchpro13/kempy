@@ -290,10 +290,6 @@ body::after {
       <button type="submit" class="auth-submit" id="submit-btn">Log in</button>
     </form>
 
-    <div class="preview-note">
-      <span class="badge">PREVIEW</span>
-      Accounts are stored locally in this browser until real authentication is wired up. Any email + password will work.
-    </div>
 
     <div class="auth-footer">
       Don't have an account? <a href="/auth/signup.html">Sign up</a>
@@ -335,8 +331,7 @@ form.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Signing in…';
 
-  // 1. Try the real backend (will 404 until auth routes are built)
-  let usedRealApi = false;
+  // Real backend is the only source of truth — no local fallback.
   try {
     const r = await fetch('/api/auth/login', {
       method: 'POST',
@@ -344,22 +339,22 @@ form.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: data.email, password: data.password }),
     });
-    if (r.ok) usedRealApi = true;
-  } catch (_) {}
-
-  // 2. Preview-mode fallback: store user locally
-  if (!usedRealApi) {
-    const user = {
-      email: data.email,
-      name: data.email.split('@')[0],
-      role: 'owner',
-      loggedInAt: new Date().toISOString(),
-      preview: true,
-    };
-    localStorage.setItem('kempy_user_local', JSON.stringify(user));
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Log in';
+      showError(e.error || 'Wrong email or password.');
+      return;
+    }
+  } catch (_) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Log in';
+    showError('Network error — please try again.');
+    return;
   }
 
-  // 3. Redirect into the app
+  // Signed in for real (session cookie set). Mark the UX hint and go.
+  try { localStorage.setItem('kempy_signed_in', '1'); } catch (_) {}
   const next = new URL(window.location).searchParams.get('next') || '/app/dashboard.html';
   window.location.href = next;
 });

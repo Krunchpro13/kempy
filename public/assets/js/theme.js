@@ -47,7 +47,7 @@
   function pointLogo() {
     var inApp = location.pathname.indexOf('/app/') === 0;
     var signedIn = false;
-    try { signedIn = !!localStorage.getItem('kempy_user_local'); } catch (e) {}
+    try { signedIn = !!localStorage.getItem('kempy_signed_in'); } catch (e) {}
     if (!inApp && !signedIn) return;
     var dest = '/app/research.html';
     document.querySelectorAll('a.brand, a.auth-brand').forEach(function (a) { a.setAttribute('href', dest); });

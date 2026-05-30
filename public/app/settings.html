@@ -756,13 +756,10 @@ async function loadMe() {
       if (d.user) currentUser = d.user;
     }
   } catch (_) {}
-  if (!currentUser) {
-    try { const raw = localStorage.getItem('kempy_user_local'); if (raw) currentUser = JSON.parse(raw); } catch (_) {}
-  }
   if (currentUser) {
     const label = currentUser.name || currentUser.email || 'You';
     document.getElementById('user-name').textContent = label;
-    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase() + (currentUser.preview ? ' · LOCAL' : '');
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase();
     document.getElementById('user-avatar').textContent = label[0].toUpperCase();
     document.getElementById('profile-name').value = currentUser.name || '';
     document.getElementById('profile-email').value = currentUser.email || '';
@@ -776,7 +773,7 @@ async function loadMe() {
       if (currentUser) {
         if (!confirm('Sign out of KEMPY?')) return;
         try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
-        localStorage.removeItem('kempy_user_local');
+        localStorage.removeItem('kempy_signed_in');
         window.location.href = '/';
       } else {
         window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);
@@ -926,8 +923,7 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
   currentUser.name = name;
   currentUser.email = document.getElementById('profile-email').value.trim();
   currentUser.business = document.getElementById('profile-business').value.trim();
-  // business/timezone have no DB column yet — keep them in the local mirror.
-  localStorage.setItem('kempy_user_local', JSON.stringify(currentUser));
+  // business/timezone have no DB column yet — kept in memory for this session only.
   document.getElementById('user-name').textContent = name || currentUser.email || 'You';
   document.getElementById('user-avatar').textContent = (name || currentUser.email || 'Y')[0].toUpperCase();
 

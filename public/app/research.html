@@ -826,17 +826,10 @@ async function loadMe() {
       if (data.user) currentUser = data.user;
     }
   } catch (_) {}
-  // 2. Local preview fallback
-  if (!currentUser) {
-    try {
-      const raw = localStorage.getItem('kempy_user_local');
-      if (raw) currentUser = JSON.parse(raw);
-    } catch (_) {}
-  }
   if (currentUser) {
     const label = currentUser.name || currentUser.email || 'You';
     document.getElementById('user-name').textContent = label;
-    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase() + (currentUser.preview ? ' · LOCAL' : '');
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase();
     document.getElementById('user-avatar').textContent = label[0].toUpperCase();
   }
   // User-menu button: sign out if signed in, otherwise → login
@@ -847,7 +840,7 @@ async function loadMe() {
     menuBtnEl.addEventListener('click', () => {
       if (currentUser) {
         if (!confirm('Sign out of KEMPY?')) return;
-        localStorage.removeItem('kempy_user_local');
+        localStorage.removeItem('kempy_signed_in');
         fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}).finally(() => { window.location.href = '/'; });
       } else {
         window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.search);

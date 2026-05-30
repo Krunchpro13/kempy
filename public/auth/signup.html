@@ -351,10 +351,6 @@ body::after {
       By signing up you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
     </div>
 
-    <div class="preview-note">
-      <span class="badge">PREVIEW</span>
-      Accounts are stored locally in this browser until real authentication is wired up. Your data lives only on this device.
-    </div>
 
     <div class="auth-footer">
       Already have an account? <a href="/auth/login.html">Log in</a>
@@ -422,8 +418,7 @@ form.addEventListener('submit', async (e) => {
   //   The server returns { pendingId } and we redirect to /auth/verify.html?id=pendingId
   // PREVIEW: generate a 6-digit code locally and stash everything in sessionStorage
   //   so verify.html can read it.
-  let usedRealApi = false;
-  let serverError = null;
+  // Real backend is the only source of truth — no local/preview fallback.
   try {
     const r = await fetch('/api/auth/signup', {
       method: 'POST',
@@ -431,45 +426,26 @@ form.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (r.ok) {
-      usedRealApi = true;
-    } else {
+    if (!r.ok) {
       const e = await r.json().catch(() => ({}));
-      serverError = e.error || `Signup failed (${r.status})`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create account';
+      showError(e.error || `Signup failed (${r.status})`);
+      return;
     }
   } catch (_) {
-    // Network error / no backend — silent, fall through to preview mode
-  }
-
-  if (serverError) {
-    // Real backend exists but rejected us — show the error and stop
     submitBtn.disabled = false;
     submitBtn.textContent = 'Create account';
-    showError(serverError);
+    showError('Network error — please try again.');
     return;
   }
 
-  // Always store pending state so verify.html knows which email to verify.
-  // In preview mode we also include the OTP itself so the verify page can check locally.
-  if (usedRealApi) {
-    sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
-      name: data.name,
-      email: data.email,
-      issuedAt: Date.now(),
-      preview: false,
-    }));
-  } else {
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
-      name: data.name,
-      email: data.email,
-      otp,
-      issuedAt: Date.now(),
-      expiresAt: Date.now() + 10 * 60 * 1000, // 10 min
-      preview: true,
-    }));
-  }
-
+  // Store pending email so verify.html knows whom to verify (OTP was emailed).
+  sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
+    name: data.name,
+    email: data.email,
+    issuedAt: Date.now(),
+  }));
   window.location.href = '/auth/verify.html';
 });
 </script>

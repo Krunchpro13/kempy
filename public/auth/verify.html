@@ -320,11 +320,6 @@ h1 .accent { color: var(--cyan); }
       <button id="resend-btn" type="button" disabled>Resend in <span id="resend-timer">60</span>s</button>
     </div>
 
-    <div class="preview-note">
-      <span class="badge">PREVIEW</span>
-      No real email is sent yet. Your code is shown here for testing:
-      <span class="code" id="code-hint">000000</span>
-    </div>
 
     <div class="auth-footer">
       Wrong email? <a href="/auth/signup.html">Start over</a>
@@ -363,13 +358,9 @@ if (!pending) {
 // Render the email + the preview code hint
 document.getElementById('email-display').textContent = pending.email;
 
-// Hide the preview-code panel when we're using the real backend
-if (pending.preview) {
-  document.getElementById('code-hint').textContent = pending.otp;
-} else {
-  const previewNote = document.querySelector('.preview-note');
-  if (previewNote) previewNote.style.display = 'none';
-}
+// The OTP is always emailed by the backend — never show a local code hint.
+const previewNote = document.querySelector('.preview-note');
+if (previewNote) previewNote.style.display = 'none';
 
 // ====================================================================
 // OTP input behavior (auto-advance, paste, backspace)
@@ -431,16 +422,10 @@ async function submitCode() {
   pending = loadPending();
   if (!pending) { window.location.replace('/auth/signup.html'); return; }
 
-  // Local expiry check only matters in preview mode (server enforces its own expiry)
-  if (pending.preview && Date.now() > pending.expiresAt) {
-    showError('Code expired. Tap Resend to get a new one.');
-    return;
-  }
-
   verifyBtn.disabled = true;
   verifyBtn.textContent = 'Verifying…';
 
-  // Try the real API first
+  // Real backend is the only source of truth.
   try {
     const r = await fetch('/api/auth/otp/verify', {
       method: 'POST',
@@ -449,51 +434,22 @@ async function submitCode() {
       body: JSON.stringify({ email: pending.email, code }),
     });
     if (r.ok) {
+      try { localStorage.setItem('kempy_signed_in', '1'); } catch (_) {}
       sessionStorage.removeItem(STORAGE_KEY);
       window.location.href = '/app/dashboard.html';
       return;
     }
-    // Real backend exists but rejected the code — show its error, do NOT fall through
-    if (!pending.preview) {
-      const data = await r.json().catch(() => ({}));
-      verifyBtn.disabled = false;
-      verifyBtn.textContent = 'Verify and continue';
-      showError(data.error || 'Verification failed');
-      inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
-      inputs[0].focus();
-      return;
-    }
-    // Else fall through to preview-mode local check below
-  } catch (_) {
-    // Network error — only acceptable in preview mode
-    if (!pending.preview) {
-      verifyBtn.disabled = false;
-      verifyBtn.textContent = 'Verify and continue';
-      showError('Network error — please try again');
-      return;
-    }
-  }
-
-  // ---- Preview-mode local check (only reached when pending.preview === true) ----
-  if (code !== pending.otp) {
+    const data = await r.json().catch(() => ({}));
     verifyBtn.disabled = false;
     verifyBtn.textContent = 'Verify and continue';
-    showError('Wrong code. Try again.');
+    showError(data.error || 'Verification failed');
     inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
     inputs[0].focus();
-    return;
+  } catch (_) {
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verify and continue';
+    showError('Network error — please try again');
   }
-  // Code matched locally — promote pending signup to a real local user
-  localStorage.setItem('kempy_user_local', JSON.stringify({
-    email: pending.email,
-    name: pending.name,
-    role: 'owner',
-    createdAt: new Date().toISOString(),
-    loggedInAt: new Date().toISOString(),
-    preview: true,
-  }));
-  sessionStorage.removeItem(STORAGE_KEY);
-  window.location.href = '/app/dashboard.html';
 }
 
 document.getElementById('otp-form').addEventListener('submit', (e) => {
@@ -529,24 +485,14 @@ resendBtn.addEventListener('click', async () => {
   clearError();
   resendBtn.disabled = true;
 
-  if (pending.preview) {
-    // Local regenerate
-    const newCode = String(Math.floor(100000 + Math.random() * 900000));
-    pending = { ...pending, otp: newCode, issuedAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000 };
-    savePending(pending);
-    const hintEl = document.getElementById('code-hint');
-    if (hintEl) hintEl.textContent = newCode;
-  } else {
-    // Real API
-    try {
-      await fetch('/api/auth/otp/resend', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: pending.email }),
-      });
-    } catch (_) {}
-  }
+  try {
+    await fetch('/api/auth/otp/resend', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pending.email }),
+    });
+  } catch (_) {}
 
   // Clear inputs
   inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
