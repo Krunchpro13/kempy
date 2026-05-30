@@ -22,12 +22,18 @@ import { encrypt, decrypt } from './crypto.js';
 const TOKEN_URL   = 'https://api.ebay.com/identity/v1/oauth2/token';
 const CONSENT_URL = 'https://auth.ebay.com/oauth2/authorize';
 
-// Read-only Sell scopes: orders (fulfillment), listings (inventory), fees (finances).
-const SCOPES = [
+// Sell scopes: orders (fulfillment), listings (inventory), fees (finances).
+// NOTE: fulfillment/inventory have `.readonly` variants, but Finances does NOT —
+// its only scope is `sell.finances` (requesting `sell.finances.readonly` returns
+// invalid_scope and fails the whole consent). Override via EBAY_SCOPES (space-sep).
+const DEFAULT_SCOPES = [
   'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
   'https://api.ebay.com/oauth/api_scope/sell.inventory.readonly',
-  'https://api.ebay.com/oauth/api_scope/sell.finances.readonly',
+  'https://api.ebay.com/oauth/api_scope/sell.finances',
 ];
+const SCOPES = process.env.EBAY_SCOPES
+  ? process.env.EBAY_SCOPES.split(/\s+/).filter(Boolean)
+  : DEFAULT_SCOPES;
 
 // eBay refresh tokens last ~18 months; default if the response omits the field.
 const DEFAULT_REFRESH_TTL = 47_304_000; // seconds (~547 days)
