@@ -1,67 +1,85 @@
 import express from 'express';
-import watchlistRouter from './src/routes/watchlist.js';
-import authRouter from './src/routes/auth.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { searchEbay } from './src/services/ebay.js';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { sessionMiddleware } from './src/middleware/auth.js';
 
+import { sessionMiddleware } from './src/middleware/auth.js';
+import { notFound, errorHandler } from './src/middleware/error.js';
 import { searchProducts } from './src/services/research.js';
 import { initCache, isEnabled as cacheEnabled, getStats as cacheStats } from './src/services/cache.js';
 import { initDb, isEnabled as dbEnabled, ping as dbPing } from './src/services/db.js';
-import listingsRouter from './src/routes/listings.js';
-import ordersRouter from './src/routes/orders.js';
-import profitRouter from './src/routes/profit.js';
-import storesRouter from './src/routes/stores.js';
+
+import authRouter from './src/routes/auth.js';
+import watchlistRouter from './src/routes/watchlist.js';
 import teamRouter from './src/routes/team.js';
 import settingsRouter from './src/routes/settings.js';
-import billingRouter from './src/routes/billing.js';
-import affiliateRouter from './src/routes/affiliate.js';
-import staffRouter from './src/routes/staff.js';
-
+import listingsRouter from './src/routes/listings.js';
 
 dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
 const app = express();
 
+// Behind Railway's proxy: trust it so req.ip / rate-limiting see the real client.
+app.set('trust proxy', 1);
+
+// ---- Security & parsing ----
+// CSP is disabled because pages use inline styles/scripts; the other helmet
+// headers (HSTS, nosniff, frameguard, etc.) still apply.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(sessionMiddleware);
+
+// ---- Static frontend ----
 app.use(express.static(join(__dirname, 'public')));
-app.use('/api/watchlist', watchlistRouter);
-app.use('/api/auth', authRouter);
 
+// ---- Rate limiting (per IP, in-memory) ----
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' },
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
 
-// Boot infrastructure
+// ---- Boot infrastructure ----
 await initCache();
 initDb();
 
-// Health check — surfaces everything so you can debug quickly
-app.get('/api/health', async (req, res) => {
-  const db = await dbPing();
-  res.json({
-    status: 'ok',
-    sources: {
-      ebay: process.env.EBAY_CLIENT_ID ? 'live' : 'mock',
-      amazon: process.env.KEEPA_API_KEY ? 'live (Keepa)' : 'mock',
-      matcher: process.env.ANTHROPIC_API_KEY ? 'claude' : 'first-result',
-    },
-    cache: cacheStats(),
-    db,
-  });
+// ---- Health ----
+app.get('/api/health', async (_req, res, next) => {
+  try {
+    const db = await dbPing();
+    res.json({
+      status: 'ok',
+      sources: {
+        ebay: process.env.EBAY_CLIENT_ID ? 'live' : 'mock',
+        amazon: process.env.KEEPA_API_KEY ? 'live (Keepa)' : 'mock',
+        matcher: process.env.ANTHROPIC_API_KEY ? 'claude' : 'first-result',
+      },
+      cache: cacheStats(),
+      db,
+    });
+  } catch (err) { next(err); }
 });
 
-// Main search endpoint
-app.get('/api/search', async (req, res) => {
+// ---- Search ----
+app.get('/api/search', async (req, res, next) => {
   const q = (req.query.q || '').trim();
-  if (!q) {
-    return res.json({ products: [], meta: { query: q, count: 0 } });
-  }
-
+  if (!q) return res.json({ products: [], meta: { query: q, count: 0 } });
   try {
     const start = Date.now();
     const { products, cached } = await searchProducts(q);
@@ -79,48 +97,26 @@ app.get('/api/search', async (req, res) => {
         },
       },
     });
-  } catch (err) {
-    console.error('[search] error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { next(err); }
 });
 
-// Watchlist
+// ---- API routes ----
+app.use('/api/auth', authRouter);
 app.use('/api/watchlist', watchlistRouter);
-
-// Listings
-app.use('/api/listings', listingsRouter);
-
-// Orders
-app.use('/api/orders', ordersRouter);
-
-// New Pages
-app.use('/api/profit', profitRouter);
-app.use('/api/stores', storesRouter);
 app.use('/api/team', teamRouter);
 app.use('/api/settings', settingsRouter);
-app.use('/api/billing', billingRouter);
-app.use('/api/affiliate', affiliateRouter);
-app.use('/api/staff', staffRouter);
+app.use('/api/listings', listingsRouter);
+
+// ---- 404 (API) + error handler — must be last ----
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('');
-  console.log('  ╔══════════════════════════════════════════╗');
-  console.log('  ║   🤖  KEMPY backend running              ║');
-  console.log('  ╚══════════════════════════════════════════╝');
-  console.log('');
-  console.log(`  ▸ Frontend:   http://localhost:${PORT}`);
-  console.log(`  ▸ Health:     http://localhost:${PORT}/api/health`);
-  console.log(`  ▸ Search:     http://localhost:${PORT}/api/search?q=headphones`);
-  console.log(`  ▸ Watchlist:  http://localhost:${PORT}/api/watchlist`);
-  console.log(`  ▸ Listings:   http://localhost:${PORT}/api/listings`);
-  console.log(`  ▸ Orders:     http://localhost:${PORT}/api/orders`);
-  console.log('');
-  console.log(`  eBay:      ${process.env.EBAY_CLIENT_ID ? '✓ live' : '○ mock (set EBAY_CLIENT_ID)'}`);
-  console.log(`  Amazon:    ${process.env.KEEPA_API_KEY ? '✓ live (Keepa)' : '○ mock (set KEEPA_API_KEY)'}`);
-  console.log(`  Matcher:   ${process.env.ANTHROPIC_API_KEY ? '✓ Claude Haiku 4.5' : '○ first-result (set ANTHROPIC_API_KEY)'}`);
-  console.log(`  Cache:     ${cacheEnabled() ? '✓ Redis' : '○ disabled (set REDIS_URL)'}`);
-  console.log(`  Database:  ${dbEnabled() ? '✓ Postgres' : '○ disabled (set DATABASE_URL, then npm run migrate)'}`);
-  console.log('');
+  console.log(`\n  🤖  KEMPY running on http://localhost:${PORT}\n`);
+  console.log(`  eBay:     ${process.env.EBAY_CLIENT_ID ? '✓ live' : '○ mock'}`);
+  console.log(`  Amazon:   ${process.env.KEEPA_API_KEY ? '✓ live (Keepa)' : '○ mock'}`);
+  console.log(`  Matcher:  ${process.env.ANTHROPIC_API_KEY ? '✓ Claude' : '○ first-result'}`);
+  console.log(`  Cache:    ${cacheEnabled() ? '✓ Redis' : '○ disabled'}`);
+  console.log(`  Database: ${dbEnabled() ? '✓ Postgres' : '○ disabled'}\n`);
 });
