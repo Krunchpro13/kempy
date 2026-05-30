@@ -669,6 +669,68 @@ html.sb-collapsed .nav-item:hover::after {
   .welcome h2 { font-size: 28px; }
   .topbar { padding: 0 16px; }
 }
+
+/* ---------- Dashboard overhaul additions ---------- */
+a.tile { text-decoration: none; color: inherit; display: block; }
+a.tile .value { transition: color 0.15s; }
+a.tile:hover .value:not(.muted) { filter: brightness(1.08); }
+.tile .ico-badge {
+  position: absolute; top: 16px; right: 16px;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: rgba(0,229,255,0.07); border: 1px solid var(--border-cyan);
+  color: var(--cyan); display: flex; align-items: center; justify-content: center;
+  opacity: 0.85;
+}
+.tile .value.value-sm { font-size: 26px; }
+
+/* Recent-search chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px; border-radius: 100px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 13px; text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.chip:hover { border-color: var(--border-cyan); color: var(--cyan); background: var(--surface-2); }
+.chip .ic { width: 12px; height: 12px; display: inline-flex; opacity: 0.7; }
+
+/* Connected store cards */
+.store-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.store-card + .store-card { margin-top: 10px; }
+.store-card .logo { width: 56px; height: 30px; display: flex; align-items: center; flex-shrink: 0; }
+.store-card .logo svg { max-width: 100%; max-height: 100%; }
+.store-card .info { flex: 1; min-width: 0; }
+.store-card .info .nm { font-size: 13px; font-weight: 600; }
+.store-card .info .meta { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.3px; }
+.store-card .live { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); flex-shrink: 0; }
+
+/* Activity feed icons */
+.feed-item .ic {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(0,229,255,0.08); border: 1px solid var(--border-cyan);
+  color: var(--cyan); display: flex; align-items: center; justify-content: center;
+}
+.feed-item .ic.green { background: rgba(0,255,157,0.08); border-color: rgba(0,255,157,0.25); color: var(--green); }
+.feed-item .body a { color: inherit; text-decoration: none; }
+.feed-item .body a:hover { color: var(--cyan); }
+
+.right-stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* Slim sign-in prompt (replaces the old mock banner) */
+.signin-banner {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,255,157,0.03));
+  border: 1px solid var(--border-cyan); border-radius: 12px;
+  padding: 14px 20px; margin-bottom: 24px;
+}
+.signin-banner .body { flex: 1; min-width: 200px; }
+.signin-banner h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.signin-banner p { font-size: 13px; color: var(--text-dim); }
 </style>
   <link rel="stylesheet" href="/assets/css/theme.css" />
   <script>(function(){try{var t=localStorage.getItem('kempy-theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
@@ -692,7 +754,7 @@ html.sb-collapsed .nav-item:hover::after {
 
       <div class="nav-label">Account</div>
       <a href="/app/settings.html" class="nav-item" data-label="Settings"><span class="icon">⚙</span> <span class="label">Settings</span></a>
-      <a href="#" class="nav-item soon" data-label="Billing (coming soon)"><span class="icon">💳</span> <span class="label">Billing</span> <span class="pill">soon</span></a>
+      <a href="/app/settings.html?panel=billing" class="nav-item" data-label="Billing"><span class="icon">💳</span> <span class="label">Billing</span></a>
 
     </nav>
 
@@ -726,185 +788,121 @@ html.sb-collapsed .nav-item:hover::after {
 
       <!-- Welcome -->
       <section class="welcome">
-        <h2>Welcome back<span class="accent">.</span></h2>
-        <p id="welcome-sub">You're previewing the KEMPY workspace. Sign up to connect a store, save products, and start tracking real profit.</p>
+        <h2 id="welcome-title">Welcome<span class="accent">.</span></h2>
+        <p id="welcome-sub">Loading your workspace…</p>
       </section>
 
-      <!-- Preview banner (only shown in preview / unauthed) -->
-      <div class="banner" id="preview-banner">
-        <span class="badge">Preview</span>
+      <!-- Slim sign-in prompt (only when not signed in) -->
+      <div class="signin-banner" id="signin-banner" style="display:none;">
         <div class="body">
-          <h4>Backend running in mock mode</h4>
-          <p>Real eBay and Amazon data will appear here once you wire up your API keys. Until then, the research engine returns curated sample listings so you can see how everything works.</p>
+          <h4>You're not signed in</h4>
+          <p>Sign in to see your real numbers, saved products and connected store.</p>
         </div>
+        <a href="/auth/login.html?next=/app/dashboard.html" class="btn sm">Sign in</a>
       </div>
 
       <!-- Metrics -->
       <section class="metrics">
-        <div class="tile">
-          <div class="label"><span class="dot"></span> Profit this month</div>
-          <div class="value muted">$0.00</div>
-          <div class="delta">No connected store</div>
-        </div>
-        <div class="tile">
-          <div class="label"><span class="dot"></span> Active listings</div>
-          <div class="value muted">0</div>
-          <div class="delta">Connect a store to begin</div>
-        </div>
-        <div class="tile">
-          <div class="label"><span class="dot"></span> Orders to fulfill</div>
-          <div class="value muted">0</div>
-          <div class="delta">Nothing pending</div>
-        </div>
-        <div class="tile">
-          <div class="label"><span class="dot"></span> Watchlist</div>
-          <div class="value cyan" id="watchlist-count">0</div>
-          <div class="delta">Saved opportunities</div>
-        </div>
+        <a class="tile" href="/app/profit.html">
+          <span class="ico-badge" data-ico="dollar"></span>
+          <div class="label">Profit · 30 days</div>
+          <div class="value muted" id="m-profit">—</div>
+          <div class="delta" id="m-profit-sub">—</div>
+        </a>
+        <a class="tile" href="/app/watchlist.html">
+          <span class="ico-badge" data-ico="watchlist"></span>
+          <div class="label">Watchlist</div>
+          <div class="value cyan" id="m-watchlist">0</div>
+          <div class="delta" id="m-watchlist-sub">Saved opportunities</div>
+        </a>
+        <a class="tile" href="/app/research.html">
+          <span class="ico-badge" data-ico="research"></span>
+          <div class="label">Searches · 7 days</div>
+          <div class="value" id="m-searches">0</div>
+          <div class="delta" id="m-searches-sub">Keep researching</div>
+        </a>
+        <a class="tile" href="/app/settings.html?panel=stores">
+          <span class="ico-badge" data-ico="store"></span>
+          <div class="label">Connected stores</div>
+          <div class="value" id="m-stores">0</div>
+          <div class="delta" id="m-stores-sub">Connect your eBay store</div>
+        </a>
+        <a class="tile" href="/app/listings.html">
+          <span class="ico-badge" data-ico="listings"></span>
+          <div class="label">Active listings</div>
+          <div class="value muted" id="m-listings">—</div>
+          <div class="delta" id="m-listings-sub">—</div>
+        </a>
+        <a class="tile" href="/app/orders.html">
+          <span class="ico-badge" data-ico="orders"></span>
+          <div class="label">Orders · 30 days</div>
+          <div class="value muted" id="m-orders">—</div>
+          <div class="delta" id="m-orders-sub">—</div>
+        </a>
       </section>
 
       <!-- Quick actions -->
       <section class="quick-row">
         <a href="/app/research.html" class="quick">
           <div class="icon" data-ico="research"></div>
-          <div>
-            <div class="text">Research products</div>
-            <div class="sub">FIND OPPORTUNITIES</div>
-          </div>
+          <div><div class="text">New research</div><div class="sub">FIND OPPORTUNITIES</div></div>
         </a>
         <a href="/app/watchlist.html" class="quick">
-          <div class="icon">⭐</div>
-          <div>
-            <div class="text">View watchlist</div>
-            <div class="sub">SAVED ITEMS</div>
-          </div>
+          <div class="icon" data-ico="watchlist"></div>
+          <div><div class="text">Watchlist</div><div class="sub">SAVED ITEMS</div></div>
         </a>
-        <a href="/#calculator" class="quick">
-          <div class="icon" data-ico="calculator"></div>
-          <div>
-            <div class="text">Profit calculator</div>
-            <div class="sub">MARGIN MATH</div>
-          </div>
+        <a href="/app/listings.html" class="quick">
+          <div class="icon" data-ico="listings"></div>
+          <div><div class="text">Listings</div><div class="sub">YOUR EBAY ITEMS</div></div>
         </a>
-        <a href="#" class="quick" style="opacity:0.6;">
+        <a href="/app/profit.html" class="quick">
+          <div class="icon" data-ico="profit"></div>
+          <div><div class="text">Profit</div><div class="sub">REVENUE &amp; MARGIN</div></div>
+        </a>
+        <a href="/app/settings.html?panel=stores" class="quick">
           <div class="icon" data-ico="store"></div>
-          <div>
-            <div class="text">Connect eBay store</div>
-            <div class="sub">COMING SOON</div>
-          </div>
+          <div><div class="text">Manage stores</div><div class="sub">CONNECT EBAY</div></div>
+        </a>
+        <a href="/app/settings.html?panel=billing" class="quick">
+          <div class="icon" data-ico="billing"></div>
+          <div><div class="text">Plan &amp; billing</div><div class="sub">YOUR SUBSCRIPTION</div></div>
         </a>
       </section>
 
-      <!-- Two-column section: getting started + activity -->
-      <section class="section-grid">
-        <!-- Onboarding -->
-        <div class="card">
-          <div class="card-header">
-            <h3><span class="icon" data-ico="rocket"></span> Get set up</h3>
-            <a href="#" class="more">View guide →</a>
-          </div>
-          <div class="checklist">
-            <a href="/app/research.html" class="checklist-item">
-              <div class="check">1</div>
-              <div class="text">
-                Run your first product search
-                <div class="sub">Find what's selling well on eBay right now</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-            <a href="/app/watchlist.html" class="checklist-item">
-              <div class="check">2</div>
-              <div class="text">
-                Save a product to your watchlist
-                <div class="sub">Track price changes over time</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-            <a href="#" class="checklist-item">
-              <div class="check">3</div>
-              <div class="text">
-                Create an account
-                <div class="sub">So your saved items persist across sessions</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-            <a href="#" class="checklist-item">
-              <div class="check">4</div>
-              <div class="text">
-                Connect an eBay store
-                <div class="sub">Required to create listings (coming soon)</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-            <a href="#" class="checklist-item">
-              <div class="check">5</div>
-              <div class="text">
-                List your first product
-                <div class="sub">Auto-priced from your markup rules (coming soon)</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-          </div>
+      <!-- Onboarding (auto-checks; hidden once all done) -->
+      <section class="card" id="onboarding-card" style="margin-bottom:32px;display:none;">
+        <div class="card-header">
+          <h3><span class="icon" data-ico="rocket"></span> Get set up</h3>
+          <span class="more" id="ob-progress" style="cursor:default;"></span>
         </div>
-
-        <!-- Recent activity -->
-        <div class="card">
-          <div class="card-header">
-            <h3><span class="icon">⟳</span> Recent activity</h3>
-            <a href="#" class="more">All →</a>
-          </div>
-          <div class="feed" id="activity-feed">
-            <div class="feed-item">
-              <div class="dot green"></div>
-              <div class="body">
-                <div class="title">Workspace ready</div>
-                <div class="meta">JUST NOW · System</div>
-              </div>
-            </div>
-            <div class="feed-item">
-              <div class="dot"></div>
-              <div class="body">
-                <div class="title">Backend running in mock mode</div>
-                <div class="meta">EBAY · AMAZON · MATCHER → MOCK</div>
-              </div>
-            </div>
-            <div class="feed-item">
-              <div class="dot muted"></div>
-              <div class="body">
-                <div class="title">No searches yet — try one</div>
-                <div class="meta">TIP · Head to Research</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="checklist" id="onboarding-list"></div>
       </section>
 
-      <!-- System status card -->
-      <section class="card" style="margin-bottom: 32px;">
+      <!-- Recent searches -->
+      <section class="card" style="margin-bottom:32px;">
         <div class="card-header">
-          <h3><span class="icon">◉</span> System status</h3>
-          <a href="/api/health" target="_blank" class="more">/api/health →</a>
+          <h3><span class="icon" data-ico="search"></span> Recent searches</h3>
+          <a href="/app/research.html" class="more">Research →</a>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
-          <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);">
-            <span style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">eBay</span>
-            <span id="st-ebay" style="font-family:var(--font-mono);font-size:11px;color:var(--amber);">○ MOCK</span>
+        <div id="recent-searches"></div>
+      </section>
+
+      <!-- Two-column: activity + (stores) -->
+      <section class="section-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3><span class="icon" data-ico="refresh"></span> Recent activity</h3>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);">
-            <span style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Amazon</span>
-            <span id="st-amazon" style="font-family:var(--font-mono);font-size:11px;color:var(--amber);">○ MOCK</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);">
-            <span style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Matcher</span>
-            <span id="st-matcher" style="font-family:var(--font-mono);font-size:11px;color:var(--amber);">○ FIRST-RESULT</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);">
-            <span style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Cache</span>
-            <span id="st-cache" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">○ OFF</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);">
-            <span style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Database</span>
-            <span id="st-db" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">○ OFF</span>
+          <div class="feed" id="activity-feed"></div>
+        </div>
+
+        <div class="right-stack">
+          <div class="card">
+            <div class="card-header">
+              <h3><span class="icon" data-ico="store"></span> Connected stores</h3>
+              <a href="/app/settings.html?panel=stores" class="more">Manage →</a>
+            </div>
+            <div id="stores-box"></div>
           </div>
         </div>
       </section>
@@ -945,28 +943,74 @@ window.addEventListener('resize', () => {
   }
 });
 
-// ---------- Auth detection (silently fails when /api/auth/me doesn't exist yet) ----------
+// ====================================================================
+// Helpers
+// ====================================================================
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ic = (n, sz) => (window.KEMPY && window.KEMPY.icon) ? window.KEMPY.icon(n, sz || '1em') : '';
+const fmtMoney = (usd) => (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(usd) : ('$' + Number(usd || 0).toFixed(2));
+const EBAY_LOGO = '<svg viewBox="0 0 96 36" role="img" aria-label="eBay"><text x="0" y="28" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-style="italic" font-size="30"><tspan fill="#e53238">e</tspan><tspan fill="#0064d2">b</tspan><tspan fill="#f5af02">a</tspan><tspan fill="#86b817">y</tspan></text></svg>';
+
+async function fetchJSON(url) {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    let data = null;
+    try { data = await r.json(); } catch (_) {}
+    return { status: r.status, ok: r.ok, data };
+  } catch (_) { return { status: 0, ok: false, data: null }; }
+}
+function recentSearches() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem('kempy_recent_searches') || '[]'); } catch (_) {}
+  const now = Date.now(), TTL = 7 * 24 * 60 * 60 * 1000;
+  arr = (arr || []).filter(r => r && r.q && (now - (r.ts || 0)) < TTL);
+  arr.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return arr;
+}
+function relTime(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts, m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'yesterday';
+  if (d < 7) return d + 'd ago';
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function setVal(id, text, cls) { const el = $(id); if (el) { el.textContent = text; el.className = 'value' + (cls ? ' ' + cls : ''); } }
+function setSub(id, text, cls) { const el = $(id); if (el) { el.textContent = text; el.className = 'delta' + (cls ? ' ' + cls : ''); } }
+
+let signedIn = false;
+
+// ====================================================================
+// Auth + welcome + sign out
+// ====================================================================
 async function loadMe() {
   let user = null;
-  // 1. Try real API
   try {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
-    if (r.ok) {
-      const data = await r.json();
-      if (data.user) user = data.user;
-    }
+    if (r.ok) { const data = await r.json(); if (data.user) user = data.user; }
   } catch (_) {}
+  signedIn = !!user;
+
+  const greet = (() => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; })();
   if (user) {
-    const label = user.name || user.email || 'You';
-    document.getElementById('user-name').textContent = label;
-    document.getElementById('user-role').textContent = (user.role || 'MEMBER').toUpperCase();
-    document.getElementById('user-avatar').textContent = label[0].toUpperCase();
-    document.getElementById('preview-banner').style.display = 'none';
-    document.getElementById('welcome-sub').textContent =
-      "Here's what's happening with your stores today.";
+    const label = user.name || (user.email ? user.email.split('@')[0] : 'there');
+    $('user-name').textContent = user.name || user.email || 'You';
+    $('user-role').textContent = (user.role || 'MEMBER').toUpperCase();
+    $('user-avatar').textContent = (label[0] || 'Y').toUpperCase();
+    $('welcome-title').innerHTML = greet + ', <span class="accent">' + esc(label) + '</span>';
+    $('signin-banner').style.display = 'none';
+  } else {
+    $('welcome-title').innerHTML = 'Welcome to KEMPY<span class="accent">.</span>';
+    $('welcome-sub').textContent = 'Sign in to track real profit, save products and connect your store.';
+    $('signin-banner').style.display = 'flex';
   }
-  // User menu button: sign out if signed in, otherwise go to login
-  const menuBtnEl = document.getElementById('user-menu-btn');
+
+  const menuBtnEl = $('user-menu-btn');
   if (menuBtnEl) {
     menuBtnEl.title = user ? 'Sign out' : 'Sign in';
     menuBtnEl.textContent = user ? '⎋' : '→';
@@ -980,52 +1024,214 @@ async function loadMe() {
       }
     });
   }
+  return user;
 }
 
-// ---------- Health check (drives the System Status card) ----------
-async function loadHealth() {
-  try {
-    const r = await fetch('/api/health');
-    if (!r.ok) return;
-    const h = await r.json();
-    const set = (id, val, ok) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = ok ? '● ' + val.toUpperCase() : '○ ' + val.toUpperCase();
-      el.style.color = ok ? 'var(--green)' : 'var(--amber)';
-    };
-    set('st-ebay', h.sources?.ebay || 'mock', h.sources?.ebay === 'live');
-    set('st-amazon', h.sources?.amazon || 'mock', /live/i.test(h.sources?.amazon || ''));
-    set('st-matcher', h.sources?.matcher || 'first-result', h.sources?.matcher === 'claude');
-    const cacheOn = !!h.cache?.enabled;
-    const dbOn = !!h.db?.ok;
-    const cacheEl = document.getElementById('st-cache');
-    const dbEl = document.getElementById('st-db');
-    if (cacheEl) {
-      cacheEl.textContent = cacheOn ? '● REDIS' : '○ OFF';
-      cacheEl.style.color = cacheOn ? 'var(--green)' : 'var(--text-muted)';
+// ====================================================================
+// Live dashboard data
+// ====================================================================
+let profitUsd = null; // kept so we can re-format on currency change
+
+function profitDelta(series) {
+  if (!Array.isArray(series) || series.length < 14) return null;
+  const sum = (a) => a.reduce((s, d) => s + (d.profit || 0), 0);
+  const last7 = sum(series.slice(-7)), prev7 = sum(series.slice(-14, -7));
+  if (prev7 <= 0) return null;
+  return ((last7 - prev7) / prev7) * 100;
+}
+
+async function loadDashboard(user) {
+  const [wl, eb, bill, profit, listings, orders] = await Promise.all([
+    fetchJSON('/api/watchlist'),
+    fetchJSON('/api/ebay/status'),
+    fetchJSON('/api/billing/status'),
+    fetchJSON('/api/profit?period=30'),
+    fetchJSON('/api/listings'),
+    fetchJSON('/api/orders'),
+  ]);
+
+  const wlItems = (wl.data && wl.data.items) || [];
+  const wlCount = (wl.data && (wl.data.count ?? wlItems.length)) || 0;
+  const storeConnected = !!(eb.data && eb.data.connected);
+  const subscribed = !!(bill.data && bill.data.subscribed);
+  const billingOn = !!(bill.data && bill.data.enabled);
+  const searches = recentSearches();
+
+  // ---- Metric: Watchlist ----
+  setVal('m-watchlist', wlCount, 'cyan');
+  setSub('m-watchlist-sub', wlCount ? 'Saved opportunities' : 'Nothing saved yet');
+
+  // ---- Metric: Searches (7d) ----
+  setVal('m-searches', searches.length, searches.length ? '' : 'muted');
+  setSub('m-searches-sub', 'In the last 7 days');
+
+  // ---- Metric: Stores ----
+  setVal('m-stores', storeConnected ? 1 : 0, storeConnected ? 'green' : 'muted');
+  setSub('m-stores-sub', storeConnected
+    ? (eb.data.ebayUser ? 'eBay · ' + esc(eb.data.ebayUser) : 'eBay connected')
+    : 'Connect your eBay store');
+
+  // Helper for the eBay-gated tiles (profit/listings/orders).
+  function gatedSub(resp, connectedSub, value) {
+    if (!signedIn) return ['Sign in to view', 'muted', null];
+    if (resp.status === 402) return ['Subscribe to unlock', 'muted', null];
+    if (resp.data && resp.data.connected === false) return ['Connect a store', 'muted', null];
+    return [connectedSub, '', value];
+  }
+
+  // ---- Metric: Profit (30d), currency-aware ----
+  {
+    const connected = profit.data && profit.data.connected;
+    if (signedIn && connected) {
+      profitUsd = Number(profit.data.profit || 0);
+      setVal('m-profit', fmtMoney(profitUsd), profitUsd > 0 ? 'green' : '');
+      const d = profitDelta(profit.data.series);
+      if (d == null) setSub('m-profit-sub', 'Net, last 30 days');
+      else setSub('m-profit-sub', (d >= 0 ? '↑ ' : '↓ ') + Math.abs(d).toFixed(0) + '% vs last week', d >= 0 ? 'up' : 'down');
+    } else {
+      profitUsd = null;
+      setVal('m-profit', fmtMoney(0), 'muted');
+      const [sub] = gatedSub(profit, '', 0);
+      setSub('m-profit-sub', sub);
     }
-    if (dbEl) {
-      dbEl.textContent = dbOn ? '● POSTGRES' : '○ OFF';
-      dbEl.style.color = dbOn ? 'var(--green)' : 'var(--text-muted)';
+  }
+
+  // ---- Metric: Listings ----
+  {
+    const arr = (listings.data && listings.data.listings) || [];
+    const connected = listings.data && listings.data.connected;
+    if (signedIn && connected) {
+      setVal('m-listings', arr.length, arr.length ? '' : 'muted');
+      setSub('m-listings-sub', arr.length ? 'Active on eBay' : 'No active listings');
+    } else {
+      setVal('m-listings', '0', 'muted');
+      const [sub] = gatedSub(listings, '', 0);
+      setSub('m-listings-sub', sub);
     }
-  } catch (_) { /* backend not running — leave defaults */ }
+  }
+
+  // ---- Metric: Orders (30d) ----
+  {
+    const arr = (orders.data && orders.data.orders) || [];
+    const connected = orders.data && orders.data.connected;
+    if (signedIn && connected) {
+      setVal('m-orders', arr.length, arr.length ? '' : 'muted');
+      setSub('m-orders-sub', arr.length ? 'Last 30 days' : 'No recent orders');
+    } else {
+      setVal('m-orders', '0', 'muted');
+      const [sub] = gatedSub(orders, '', 0);
+      setSub('m-orders-sub', sub);
+    }
+  }
+
+  // ---- Welcome sub-line (state-aware) ----
+  if (user) {
+    let sub;
+    if (storeConnected) sub = "Your eBay store is connected — here's today at a glance.";
+    else if (wlCount > 0) sub = 'You have ' + wlCount + ' saved ' + (wlCount === 1 ? 'opportunity' : 'opportunities') + '. Connect a store when you\'re ready to list.';
+    else if (searches.length > 0) sub = 'Nice start — save your best finds to the watchlist to track them.';
+    else sub = "Let's find your first winning product. Start with a quick search.";
+    $('welcome-sub').textContent = sub;
+  }
+
+  renderOnboarding({ searches: searches.length, wlCount, storeConnected });
+  renderRecentSearches(searches);
+  renderActivity(searches, wlItems);
+  renderStores(eb.data);
 }
 
-// ---------- Watchlist count (from /api/watchlist) ----------
-async function loadWatchlistCount() {
-  try {
-    const r = await fetch('/api/watchlist', { credentials: 'include' });
-    if (!r.ok) return;
-    const data = await r.json();
-    const n = data.count ?? (data.items?.length ?? 0);
-    document.getElementById('watchlist-count').textContent = n;
-  } catch (_) {}
+// ---- Onboarding (auto-checks, hides when complete) ----
+function renderOnboarding(state) {
+  const steps = [
+    { text: 'Run your first product search', sub: 'See what sells on eBay right now', href: '/app/research.html', done: state.searches > 0 || state.wlCount > 0 },
+    { text: 'Save a product to your watchlist', sub: 'Track the best opportunities', href: '/app/research.html', done: state.wlCount > 0 },
+    { text: 'Connect your eBay store', sub: 'Unlocks listings, orders & profit', href: '/app/settings.html?panel=stores', done: state.storeConnected },
+  ];
+  const doneCount = steps.filter(s => s.done).length;
+  const card = $('onboarding-card');
+  if (doneCount === steps.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  $('ob-progress').textContent = doneCount + ' / ' + steps.length + ' done';
+  $('onboarding-list').innerHTML = steps.map((s, i) => `
+    <a href="${s.href}" class="checklist-item ${s.done ? 'done' : ''}">
+      <div class="check">${s.done ? '✓' : (i + 1)}</div>
+      <div class="text">${esc(s.text)}<div class="sub">${esc(s.sub)}</div></div>
+      <div class="arrow">→</div>
+    </a>`).join('');
 }
 
-loadMe();
-loadHealth();
-loadWatchlistCount();
+// ---- Recent searches (chips → Research with ?q=) ----
+function renderRecentSearches(searches) {
+  const box = $('recent-searches');
+  if (!searches.length) {
+    box.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No recent searches yet. <a href="/app/research.html" style="color:var(--cyan);text-decoration:none;">Start researching →</a></p>';
+    return;
+  }
+  box.innerHTML = '<div class="chips">' + searches.slice(0, 12).map(r =>
+    `<a class="chip" href="/app/research.html?q=${encodeURIComponent(r.q)}"><span class="ic">${ic('search', '12px')}</span>${esc(r.q)}</a>`
+  ).join('') + '</div>';
+}
+
+// ---- Recent activity (real: merged searches + saves) ----
+function renderActivity(searches, wlItems) {
+  const acts = [];
+  searches.forEach(r => acts.push({
+    ts: r.ts, icon: 'search', green: false,
+    html: 'Searched for <a href="/app/research.html?q=' + encodeURIComponent(r.q) + '">&ldquo;' + esc(r.q) + '&rdquo;</a>',
+  }));
+  (wlItems || []).forEach(it => acts.push({
+    ts: it.addedAt ? Date.parse(it.addedAt) : 0, icon: 'watchlist', green: true,
+    html: 'Saved <a href="/app/watchlist.html">' + esc(it.name || 'a product') + '</a>',
+  }));
+  acts.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const feed = $('activity-feed');
+  if (!acts.length) {
+    feed.innerHTML = '<div class="empty"><span class="icon">' + ic('refresh', '32px') + '</span><p>No activity yet. Your searches and saved products will show up here.</p><a class="btn sm" href="/app/research.html">Start researching</a></div>';
+    return;
+  }
+  feed.innerHTML = acts.slice(0, 6).map(a => `
+    <div class="feed-item">
+      <div class="ic ${a.green ? 'green' : ''}">${ic(a.icon, '15px')}</div>
+      <div class="body">
+        <div class="title">${a.html}</div>
+        <div class="meta">${esc(relTime(a.ts).toUpperCase())}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ---- Connected stores ----
+function renderStores(ebData) {
+  const box = $('stores-box');
+  if (ebData && ebData.connected) {
+    box.innerHTML = `
+      <div class="store-card">
+        <div class="logo">${EBAY_LOGO}</div>
+        <div class="info">
+          <div class="nm">eBay</div>
+          <div class="meta">${ebData.ebayUser ? 'Connected as ' + esc(ebData.ebayUser) : 'Connected'} · ${esc(ebData.marketplace || 'EBAY_US')}</div>
+        </div>
+        <span class="live" title="Syncing"></span>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="empty">
+        <span class="icon">${ic('store', '32px')}</span>
+        <p>No store connected yet. Connect eBay to sync listings, orders and profit.</p>
+        <a class="btn sm" href="/app/settings.html?panel=stores">Connect eBay</a>
+      </div>`;
+  }
+}
+
+// Re-format the currency-sensitive profit tile when the user changes currency.
+window.addEventListener('kempy:currency', () => {
+  if (profitUsd != null) setVal('m-profit', fmtMoney(profitUsd), profitUsd > 0 ? 'green' : '');
+});
+
+// ---- Boot ----
+(async function init() {
+  const user = await loadMe();
+  await loadDashboard(user);
+})();
 </script>
 
 <script src="/assets/js/theme.js"></script>
