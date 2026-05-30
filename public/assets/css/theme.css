@@ -34,6 +34,13 @@ html[data-theme="light"] {
 /* ---- Light-mode chrome (these classes are shared by all pages) ---- */
 html[data-theme="light"] .sidebar { background: rgba(255,255,255,0.80); }
 html[data-theme="light"] .topbar  { background: rgba(255,255,255,0.72); }
+/* Landing-page header: a bare <nav> (the app sidebar is <nav class="nav">, excluded). */
+html[data-theme="light"] nav:not(.nav) {
+  background: rgba(255,255,255,0.72);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+html[data-theme="light"] .nav-links a { color: var(--text-dim); }
+html[data-theme="light"] .nav-links a:hover { color: var(--cyan); }
 html[data-theme="light"] body::before {
   background:
     radial-gradient(ellipse 70% 50% at 0% 0%, rgba(5,148,167,0.07), transparent 60%),
