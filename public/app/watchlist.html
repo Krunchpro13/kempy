@@ -615,7 +615,7 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
         <div class="toolbar">
           <button class="btn ghost sm" id="refresh-btn" title="Re-fetch latest prices">↻ Refresh prices</button>
-          <button class="btn danger sm" id="clear-btn">🗑 Clear all</button>
+          <button class="btn danger sm" id="clear-btn"><span data-ico="trash"></span> Clear all</button>
         </div>
       </div>
 
@@ -866,7 +866,7 @@ function roiClass(roi) {
 function renderEmpty() {
   listEl.innerHTML = `
     <div class="empty-state">
-      <span class="icon">⭐</span>
+      <span class="icon">${window.KEMPY ? window.KEMPY.icon('watchlist','42px') : ''}</span>
       <h3>No saved items yet</h3>
       <p>Find products on the Research page and tap Save to track them here.</p>
       <a href="/app/research.html" class="btn">Go to Research →</a>
@@ -919,7 +919,7 @@ function renderCard(item) {
     <div class="wl-card ${cardCls}" data-id="${escapeHtml(String(item.id))}">
       <div>
         <div class="head">
-          <div class="wl-thumb">${item.emoji || '📦'}${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
+          <div class="wl-thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
           <div style="min-width:0;">
             <div class="wl-name">${escapeHtml(item.name)}</div>
             <div class="wl-meta">
@@ -953,7 +953,7 @@ function renderCard(item) {
       <div class="wl-side">
         <div class="wl-roi ${v}">${item.roi != null ? Number(item.roi).toFixed(1) + '%' : '—'}</div>
         ${item.ebayUrl ? `<a href="${escapeHtml(item.ebayUrl)}" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;letter-spacing:0.5px;">↗ View on eBay</a>` : ''}
-        <button class="wl-remove" data-action="remove">🗑 Remove</button>
+        <button class="wl-remove" data-action="remove">${window.KEMPY ? window.KEMPY.icon('trash','13px') : ''} Remove</button>
       </div>
     </div>`;
 }

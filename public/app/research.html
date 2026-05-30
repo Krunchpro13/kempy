@@ -701,7 +701,7 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
       </div>
       <div class="actions">
-        <a href="/app/watchlist.html" class="btn ghost sm">⭐ Watchlist (<span id="topbar-wl-count">0</span>)</a>
+        <a href="/app/watchlist.html" class="btn ghost sm"><span data-ico="watchlist"></span> Watchlist (<span id="topbar-wl-count">0</span>)</a>
       </div>
     </header>
 
@@ -760,7 +760,7 @@ html.sb-collapsed .nav-item:hover::after {
       <div class="results" id="results">
         <!-- Empty state by default -->
         <div class="empty-state">
-          <span class="icon">🔭</span>
+          <span class="icon" data-ico="search"></span>
           <h3>Start your search</h3>
           <p>Type a keyword above or tap a suggestion to see profit opportunities. Results are ranked by ROI by default.</p>
         </div>
@@ -1006,7 +1006,7 @@ function applyFiltersAndRender() {
   if (!products.length) {
     resultsEl.innerHTML = `
       <div class="empty-state">
-        <span class="icon">🤷</span>
+        <span class="icon">${window.KEMPY ? window.KEMPY.icon('inbox','42px') : ''}</span>
         <h3>No matches with these filters</h3>
         <p>Try widening your filter range, or run a different search.</p>
       </div>`;
@@ -1020,7 +1020,7 @@ function applyFiltersAndRender() {
     const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">↗</a>` : '';
     const amazonLink = p.amazonUrl ? `<a href="${escapeHtml(p.amazonUrl)}" target="_blank" rel="noopener">↗</a>` : '';
     const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
-      ? `<span class="match-badge" title="${escapeHtml(p.matchReasoning || '')}">🤖 ${Math.round(p.matchConfidence * 100)}%</span>`
+      ? `<span class="match-badge" title="${escapeHtml(p.matchReasoning || '')}">${window.KEMPY ? window.KEMPY.icon('bot','12px') : ''} ${Math.round(p.matchConfidence * 100)}%</span>`
       : '';
     const isSaved = p.asin && savedAsins.has(p.asin);
     const totalCost = (p.fees || 0) + (p.shipping || 0) + (p.packaging || 0);
@@ -1028,7 +1028,7 @@ function applyFiltersAndRender() {
       <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
         <div>
           <div class="head">
-            <div class="thumb">${p.emoji || '📦'}${p.image ? `<img src="${escapeAttr(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
+            <div class="thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}${p.image ? `<img src="${escapeAttr(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
             <div style="min-width:0;">
               <div class="rc-name">${escapeHtml(p.name)}${matchBadge}</div>
               <div class="rc-cat">${escapeHtml(p.cat || '')} · ${escapeHtml(p.vol || '?')}/mo · ${escapeHtml(p.comp || '?')} comp · ${escapeHtml(p.trend || '?')}</div>
@@ -1045,7 +1045,7 @@ function applyFiltersAndRender() {
           <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
           <div class="rc-tag ${v.cls}">${p.estimated ? 'Estimated ROI' : v.label}</div>
           <button class="rc-save ${isSaved ? 'saved' : ''}" data-action="save" ${isSaved ? 'disabled' : ''}>
-            ${isSaved ? 'Saved' : '⭐ Save'}
+            ${isSaved ? 'Saved' : (window.KEMPY ? window.KEMPY.icon('watchlist','14px') : '') + ' Save'}
           </button>
         </div>
       </div>
@@ -1077,8 +1077,8 @@ function renderMeta(meta) {
   const cls = (val, want = 'live') => val === want ? 'ok' : 'warn';
   metaEl.style.display = 'flex';
   metaEl.innerHTML = `
-    <span class="chip">⏱ ${meta.ms || 0}ms</span>
-    ${meta.cached ? '<span class="chip ok">⚡ cached</span>' : ''}
+    <span class="chip">${meta.ms || 0}ms</span>
+    ${meta.cached ? '<span class="chip ok">cached</span>' : ''}
     <span class="chip">eBay: <span class="${cls(s.ebay)}">${s.ebay || 'mock'}</span></span>
     <span class="chip">Amazon: <span class="${cls(s.amazon, 'live')}">${(s.amazon || 'mock')}</span></span>
     <span class="chip">Matcher: <span class="${cls(s.matcher, 'claude')}">${s.matcher || 'first-result'}</span></span>
@@ -1090,7 +1090,7 @@ async function search(q) {
   if (!q) {
     resultsEl.innerHTML = `
       <div class="empty-state">
-        <span class="icon">🔭</span>
+        <span class="icon">${window.KEMPY ? window.KEMPY.icon('search','42px') : ''}</span>
         <h3>Start your search</h3>
         <p>Type a keyword above or tap a suggestion to see profit opportunities.</p>
       </div>`;
@@ -1124,7 +1124,7 @@ async function search(q) {
   } catch (err) {
     resultsEl.innerHTML = `
       <div class="empty-state">
-        <span class="icon">⚠</span>
+        <span class="icon">${window.KEMPY ? window.KEMPY.icon('danger','42px') : ''}</span>
         <h3>Search failed</h3>
         <p>${escapeHtml(err.message)}<br>Make sure the backend is running (<code style="font-family:var(--font-mono);color:var(--cyan);">npm start</code>).</p>
       </div>`;
@@ -1199,7 +1199,7 @@ resultsEl.addEventListener('click', async (e) => {
     showToast(`Saved “${(product.name || '').slice(0, 40)}…” to watchlist`, 'success');
   } catch (err) {
     btn.disabled = false;
-    btn.textContent = '⭐ Save';
+    btn.innerHTML = (window.KEMPY ? window.KEMPY.icon('watchlist','14px') : '') + ' Save';
     showToast(err.message, 'error');
   }
 });

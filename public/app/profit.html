@@ -355,7 +355,7 @@ html.sb-collapsed .nav-item:hover::after {
 
       <div class="card">
         <div class="card-header">
-          <h3><span class="icon">📊</span>Revenue & profit over time</h3>
+          <h3><span class="icon" data-ico="barchart"></span>Revenue &amp; profit over time</h3>
           <div class="legend">
             <span class="item"><span class="swatch revenue"></span> Revenue</span>
             <span class="item"><span class="swatch profit"></span> Profit</span>
@@ -374,7 +374,7 @@ html.sb-collapsed .nav-item:hover::after {
       <div class="two-col">
         <div class="card">
           <div class="card-header">
-            <h3><span class="icon">🏆</span>Top products by profit</h3>
+            <h3><span class="icon" data-ico="trophy"></span>Top products by profit</h3>
             <a href="/app/listings.html" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;text-transform:uppercase;letter-spacing:1px;">all →</a>
           </div>
           <div class="top-list" id="top-list"></div>
@@ -382,7 +382,7 @@ html.sb-collapsed .nav-item:hover::after {
 
         <div class="card channels-card">
           <div class="card-header">
-            <h3><span class="icon">🌐</span>Revenue by channel</h3>
+            <h3><span class="icon" data-ico="globe"></span>Revenue by channel</h3>
           </div>
           <div class="donut-wrap">
             <svg viewBox="0 0 36 36" id="donut">
@@ -659,7 +659,7 @@ function renderChart() {
 function renderTopProducts() {
   document.getElementById('top-list').innerHTML = TOP_PRODUCTS.map(p => `
     <div class="top-row">
-      <div class="thumb">${p.emoji}</div>
+      <div class="thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}</div>
       <div class="info">
         <div class="name">${escapeHtml(p.name)}</div>
         <div class="meta">${escapeHtml(p.cat)}</div>

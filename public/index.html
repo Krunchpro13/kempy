@@ -205,7 +205,7 @@ nav .container { display: flex; align-items: center; justify-content: space-betw
   margin-bottom: 40px;
   font-family: var(--font-mono);
 }
-.deal-badge::before { content: '🔥'; }
+.deal-badge::before { content: ''; }
 
 h1 {
   font-size: clamp(44px, 7vw, 84px);
@@ -1064,7 +1064,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
 <nav>
   <div class="container">
     <div class="logo">
-      <div class="logo-mark">🤖</div>
+      <div class="logo-mark" data-ico="bot" style="color:#04232a"></div>
       <span class="brand-wordmark">KEMPY</span>
     </div>
     <div class="nav-links">
@@ -1102,7 +1102,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
         <div class="workflow-card">
           <div class="wf-label">Amazon</div>
           <div class="wf-product" id="wf-amazon">
-            <div class="wf-thumb">🎧</div>
+            <div class="wf-thumb" data-ico="image"></div>
             <div class="wf-info">
               <div class="wf-title">Sony WH-1000XM5</div>
               <div class="wf-price amazon">$278.00 <span class="wf-tag">Prime</span></div>
@@ -1111,7 +1111,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
         </div>
         <div class="wf-arrow">→</div>
         <div class="workflow-card kempy">
-          <div class="wf-label" style="color: var(--cyan); font-family: 'Archivo Black', sans-serif; letter-spacing: 0.05em; font-size: 13px;">🤖 KEMPY</div>
+          <div class="wf-label" style="color: var(--cyan); font-family: 'Archivo Black', sans-serif; letter-spacing: 0.05em; font-size: 13px;"><span data-ico="bot" style="vertical-align:-3px"></span> KEMPY</div>
           <div class="kempy-fields">
             <div class="row"><span class="key">URL:</span><span class="val" id="wf-url">amazon.com/dp/B0CYDJQX</span></div>
             <div class="row"><span class="key">Title:</span><span class="val" id="wf-title-typed">Sony WH-1000XM5</span></div>
@@ -1125,7 +1125,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
         <div class="workflow-card">
           <div class="wf-label">eBay</div>
           <div class="wf-product">
-            <div class="wf-thumb">🎧</div>
+            <div class="wf-thumb" data-ico="image"></div>
             <div class="wf-info">
               <div class="wf-title" id="wf-ebay-title">Sony WH-1000XM5 — Black</div>
               <div class="wf-price ebay">$349.99<span class="wf-price ebay-old">$399.99</span></div>
@@ -1147,31 +1147,31 @@ footer .container { display: flex; justify-content: space-between; align-items: 
 
     <div class="steps">
       <div class="step-card reveal">
-        <div class="step-icon">⚙️</div>
+        <div class="step-icon" data-ico="settings"></div>
         <div class="step-num">01</div>
         <div class="step-title">Set Up Once</div>
         <div class="step-desc">Connect your eBay seller account in under 60 seconds. The robot handles the rest.</div>
       </div>
       <div class="step-card reveal">
-        <div class="step-icon">🔍</div>
+        <div class="step-icon" data-ico="research"></div>
         <div class="step-num">02</div>
         <div class="step-title">Find Products</div>
         <div class="step-desc">Robot finds Amazon products that are actually selling on eBay right now.</div>
       </div>
       <div class="step-card reveal">
-        <div class="step-icon">⚡</div>
+        <div class="step-icon" data-ico="bolt"></div>
         <div class="step-num">03</div>
         <div class="step-title">Click to List</div>
         <div class="step-desc">Robot fills title, photos, specifics, and description — listed at a higher price for profit.</div>
       </div>
       <div class="step-card reveal">
-        <div class="step-icon">💰</div>
+        <div class="step-icon" data-ico="dollar"></div>
         <div class="step-num">04</div>
         <div class="step-title">Make a Sale</div>
         <div class="step-desc">Robot buys it from Amazon and ships it straight to your eBay buyer — with one click.</div>
       </div>
       <div class="step-card reveal">
-        <div class="step-icon">🔁</div>
+        <div class="step-icon" data-ico="refresh"></div>
         <div class="step-num">05</div>
         <div class="step-title">Repeat ×1,000</div>
         <div class="step-desc">Post more listings fast to increase your chances of daily sales.</div>
@@ -1190,8 +1190,8 @@ footer .container { display: flex; justify-content: space-between; align-items: 
     <div class="research-tool reveal">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
         <div style="display:flex;gap:8px;align-items:center;">
-          <button id="view-research" class="view-toggle active">🔍 Research</button>
-          <button id="view-watchlist" class="view-toggle">⭐ Watchlist <span id="watchlist-count" style="opacity:0.6;"></span></button>
+          <button id="view-research" class="view-toggle active"><span data-ico="research"></span> Research</button>
+          <button id="view-watchlist" class="view-toggle"><span data-ico="watchlist"></span> Watchlist <span id="watchlist-count" style="opacity:0.6;"></span></button>
         </div>
         <button id="refresh-watchlist" style="display:none;padding:8px 14px;background:transparent;border:1px solid var(--border-cyan);color:var(--cyan);border-radius:8px;font-family:var(--font-mono);font-size:12px;cursor:pointer;">↻ Refresh prices</button>
       </div>
@@ -1452,7 +1452,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
 <footer>
   <div class="container">
     <div class="logo">
-      <div class="logo-mark">🤖</div>
+      <div class="logo-mark" data-ico="bot" style="color:#04232a"></div>
       <span class="brand-wordmark">KEMPY</span>
     </div>
     <div class="footer-links">
@@ -1479,10 +1479,10 @@ footer .container { display: flex; justify-content: space-between; align-items: 
 const FEE_RATE = 0.129; // kept client-side for the calculator below
 
 function verdictFor(roi) {
-  if (roi >= 50) return { label: "🚀 Premium opportunity", cls: "excellent" };
+  if (roi >= 50) return { label: "Premium opportunity", cls: "excellent" };
   if (roi >= 30) return { label: "✓ Excellent — list it", cls: "excellent" };
   if (roi >= 20) return { label: "✓ Good opportunity", cls: "good" };
-  if (roi >= 10) return { label: "⚠ Marginal — needs volume", cls: "medium" };
+  if (roi >= 10) return { label: "Marginal — needs volume", cls: "medium" };
   return { label: "✗ Skip — ROI too low", cls: "poor" };
 }
 
@@ -1515,7 +1515,7 @@ function renderResults(prods, meta) {
   }
   const sourceBadge = meta && meta.sources
     ? `<div style="text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">
-         ${meta.cached ? '<span style="color:var(--green);">⚡ cached</span> · ' : ''}
+         ${meta.cached ? '<span style="color:var(--green);">cached</span> · ' : ''}
          eBay: <span style="color:${meta.sources.ebay==='live'?'var(--green)':'var(--amber)'};">${meta.sources.ebay}</span>
          · Amazon: <span style="color:${meta.sources.amazon==='live'?'var(--green)':'var(--amber)'};">${meta.sources.amazon}</span>
          · Matcher: <span style="color:${meta.sources.matcher==='claude'?'var(--green)':'var(--amber)'};">${meta.sources.matcher||'first-result'}</span>
@@ -1529,13 +1529,13 @@ function renderResults(prods, meta) {
     const ebayLink = p.ebayUrl ? `<a href="${p.ebayUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
     const amazonLink = p.amazonUrl ? `<a href="${p.amazonUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
     const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
-      ? `<span title="${p.matchReasoning || ''}" style="font-size:10px;font-family:var(--font-mono);color:var(--cyan);margin-left:8px;border:1px solid var(--border-cyan);padding:1px 6px;border-radius:100px;">🤖 ${Math.round(p.matchConfidence * 100)}%</span>`
+      ? `<span title="${p.matchReasoning || ''}" style="font-size:10px;font-family:var(--font-mono);color:var(--cyan);margin-left:8px;border:1px solid var(--border-cyan);padding:1px 6px;border-radius:100px;">${Math.round(p.matchConfidence * 100)}% match</span>`
       : '';
     return `
       <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
         <div class="rc-product">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <div class="wf-thumb">${p.emoji || '📦'}</div>
+            <div class="wf-thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}</div>
             <div>
               <div class="rc-name">${p.name}${matchBadge}</div>
               <div class="rc-cat">${p.cat} · ${p.vol || '?'}/mo · ${p.comp || '?'} comp · ${p.trend || '?'}</div>
@@ -1568,14 +1568,14 @@ async function search(q) {
     results.innerHTML = '<div class="research-empty">Type a keyword above or pick a suggestion to see profit opportunities.</div>';
     return;
   }
-  results.innerHTML = '<div class="research-empty">🤖 Searching eBay and Amazon...</div>';
+  results.innerHTML = '<div class="research-empty">Searching eBay and Amazon…</div>';
   try {
     const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
     if (!r.ok) throw new Error(`API ${r.status}`);
     const data = await r.json();
     renderResults(data.products, data.meta);
   } catch (err) {
-    results.innerHTML = `<div class="research-empty">⚠ Search failed: ${err.message}<br><span style="font-size:11px;">Make sure the backend is running (npm start)</span></div>`;
+    results.innerHTML = `<div class="research-empty">Search failed: ${err.message}<br><span style="font-size:11px;">Make sure the backend is running (npm start)</span></div>`;
   }
 }
 
@@ -1633,7 +1633,7 @@ results.addEventListener('click', async (e) => {
   try {
     product = JSON.parse(card.dataset.product.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
   } catch (err) {
-    showToast('⚠ Could not save: bad product data');
+    showToast('Could not save: bad product data');
     return;
   }
 
@@ -1669,7 +1669,7 @@ results.addEventListener('click', async (e) => {
       return;
     }
     if (r.status === 503) {
-      showToast('⚠ Watchlist needs DATABASE_URL + npm run migrate');
+      showToast('Watchlist needs DATABASE_URL + npm run migrate');
       btn.textContent = '⭐ Save';
       btn.disabled = false;
       return;
@@ -1680,11 +1680,11 @@ results.addEventListener('click', async (e) => {
     btn.textContent = 'Saved';
     if (product.asin) savedAsins.add(product.asin);
     updateWatchlistCount();
-    showToast('⭐ Added to watchlist');
+    showToast('Added to watchlist');
   } catch (err) {
-    btn.textContent = '⭐ Save';
+    btn.textContent = 'Save';
     btn.disabled = false;
-    showToast('⚠ Save failed: ' + err.message);
+    showToast('Save failed: ' + err.message);
   }
 });
 
@@ -1707,7 +1707,6 @@ async function loadWatchlist() {
   if (!currentUser) {
     watchlistResults.innerHTML = `
       <div class="auth-required">
-        <div style="font-size:32px;margin-bottom:8px;">🔒</div>
         <div style="margin-bottom:4px;">Sign in to view your watchlist</div>
         <div style="font-size:12px;color:var(--text-muted);">Save products, track prices, see drift over time.</div>
         <button id="auth-required-cta">Sign in or create account</button>
@@ -1725,20 +1724,20 @@ async function loadWatchlist() {
       return loadWatchlist();
     }
     if (r.status === 503) {
-      watchlistResults.innerHTML = '<div class="research-empty">⚠ Watchlist requires a database.<br><span style="font-size:11px;">Set DATABASE_URL in .env and run <code>npm run migrate</code></span></div>';
+      watchlistResults.innerHTML = '<div class="research-empty">Watchlist requires a database.<br><span style="font-size:11px;">Set DATABASE_URL in .env and run <code>npm run migrate</code></span></div>';
       return;
     }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     renderWatchlist(data.items);
   } catch (err) {
-    watchlistResults.innerHTML = `<div class="research-empty">⚠ ${err.message}</div>`;
+    watchlistResults.innerHTML = `<div class="research-empty">${err.message}</div>`;
   }
 }
 
 function renderWatchlist(items) {
   if (!items.length) {
-    watchlistResults.innerHTML = '<div class="research-empty">No saved items yet. Click ⭐ Save on a research card to track it.</div>';
+    watchlistResults.innerHTML = '<div class="research-empty">No saved items yet. Click Save on a research card to track it.</div>';
     return;
   }
   watchlistResults.innerHTML = items.map(item => {
@@ -1756,7 +1755,7 @@ function renderWatchlist(items) {
       <div class="research-card ${cardCls}">
         <div class="rc-product">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-            <div class="wf-thumb">📦</div>
+            <div class="wf-thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}</div>
             <div>
               <div class="rc-name">${item.ebay_title}</div>
               <div class="rc-cat">${item.category || 'saved'} · refreshed ${refreshedAgo} · saved ${timeAgo(new Date(item.created_at))}</div>
@@ -1800,7 +1799,7 @@ watchlistResults.addEventListener('click', async (e) => {
     loadWatchlist();
     updateWatchlistCount();
   } catch (err) {
-    showToast('⚠ Remove failed: ' + err.message);
+    showToast('Remove failed: ' + err.message);
     e.target.disabled = false;
   }
 });
@@ -1815,7 +1814,7 @@ refreshBtn.addEventListener('click', async () => {
     showToast(`✓ Refreshed ${data.refreshed}/${data.total}`);
     loadWatchlist();
   } catch (err) {
-    showToast('⚠ Refresh failed: ' + err.message);
+    showToast('Refresh failed: ' + err.message);
   } finally {
     refreshBtn.disabled = false;
     refreshBtn.textContent = '↻ Refresh prices';
@@ -2193,7 +2192,7 @@ document.querySelectorAll('a.hero-cta, a.nav-cta').forEach(a => {
     if (a.getAttribute('href') === '#' || a.getAttribute('href') === '#pricing') {
       if (a.getAttribute('href') === '#') {
         e.preventDefault();
-        showToast('🤖 This is a demo — clone all yours to wire up Stripe');
+        showToast('This is a demo — clone yours to wire up Stripe');
       }
     }
   });
