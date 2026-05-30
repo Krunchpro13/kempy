@@ -45,25 +45,33 @@ router.get('/connect', requireDb, requireAuth, async (req, res, next) => {
 
 // GET /api/ebay/callback?code=&state= (browser redirect from eBay)
 router.get('/callback', requireDb, async (req, res) => {
-  const { code, state, error } = req.query;
+  const { code, state, error, error_description } = req.query;
   const back = (qs) => res.redirect('/app/settings.html?panel=stores&' + qs);
+  const detail = (d) => '&detail=' + encodeURIComponent(String(d || '').slice(0, 140));
 
-  if (error) return back('ebay=denied'); // user declined on eBay
+  if (error) {
+    console.error('[ebay] consent error:', error, '|', error_description);
+    // access_denied = the user actually declined; anything else is a config/scope problem.
+    if (error === 'access_denied') return back('ebay=denied');
+    return back('ebay=error' + detail(error_description || error));
+  }
   if (!req.user) return res.redirect('/auth/login.html?next=/app/settings.html');
-  if (!code) return back('ebay=error');
+  if (!code) return back('ebay=error' + detail('eBay returned no authorization code'));
 
   try {
     // CSRF: if we stored state (Redis up), it must map back to this user.
     const saved = await getOAuthState(state);
     if (saved && String(saved.userId) !== String(req.user.id)) {
-      return back('ebay=error');
+      return back('ebay=error' + detail('Session mismatch — try again'));
     }
     await oauth.exchangeCode(req.user.id, code);
     await clearCachedEbay(req.user.id);
     back('ebay=connected');
   } catch (err) {
-    console.error('[ebay] callback failed:', err.message);
-    back('ebay=error');
+    // Surface the eBay token-exchange error so we can diagnose (e.g. invalid_grant, scope).
+    const apiDetail = err.detail || err.response?.data?.error_description || err.message;
+    console.error('[ebay] callback failed:', apiDetail);
+    back('ebay=error' + detail(apiDetail));
   }
 });
 

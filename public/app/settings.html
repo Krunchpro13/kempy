@@ -890,14 +890,16 @@ function flashEbayResult() {
   const p = new URLSearchParams(window.location.search);
   const r = p.get('ebay');
   if (!r) return;
+  const detail = p.get('detail');
   const msg = {
     connected: ['eBay connected — your store is now syncing', 'success'],
     denied: ['eBay connection cancelled', 'error'],
-    error: ['eBay connection failed — please try again', 'error'],
+    error: ['eBay connection failed' + (detail ? ': ' + detail : ' — please try again'), 'error'],
   }[r];
   if (msg) showToast(msg[0], msg[1]);
+  if (r === 'error' && detail) console.warn('[ebay] connect error detail:', detail);
   // Clean the URL so a refresh doesn't re-toast.
-  p.delete('ebay'); p.delete('panel');
+  p.delete('ebay'); p.delete('panel'); p.delete('detail');
   const qs = p.toString();
   window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
 }
