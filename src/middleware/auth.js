@@ -21,8 +21,9 @@ function parseCookies(req) {
     const eq = part.indexOf('=');
     if (eq <= 0) continue;
     const k = part.slice(0, eq).trim();
-    const v = part.slice(eq + 1).trim();
-    if (k) out[k] = decodeURIComponent(v);
+    let v = part.slice(eq + 1).trim();
+    try { v = decodeURIComponent(v); } catch (_) { /* leave raw if malformed */ }
+    if (k) out[k] = v;
   }
   return out;
 }

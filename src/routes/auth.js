@@ -29,8 +29,9 @@ function parseCookies(req) {
     const eq = part.indexOf('=');
     if (eq <= 0) continue;
     const k = part.slice(0, eq).trim();
-    const v = part.slice(eq + 1).trim();
-    if (k) out[k] = decodeURIComponent(v);
+    let v = part.slice(eq + 1).trim();
+    try { v = decodeURIComponent(v); } catch (_) { /* leave raw if malformed */ }
+    if (k) out[k] = v;
   }
   return out;
 }
@@ -305,21 +306,16 @@ router.post('/login', dbRequired, async (req, res) => {
 // Returns the current user or { user: null }. Never requires auth itself —
 // it's the way the frontend asks "am I logged in?"
 // ====================================================================
-router.get('/me', async (req, res) => {
+router.get('/me', (req, res) => {
+  // Use the session already resolved by sessionMiddleware (server.js) — the same
+  // source every other route uses. This keeps /me consistent with the rest of the
+  // app and avoids a redundant cookie re-parse + DB query that could fail on its
+  // own (and previously 500'd while other routes succeeded with the same session).
   try {
-    if (!dbEnabled()) return res.json({ user: null });
-    const cookies = parseCookies(req);
-    const token = cookies[COOKIE_NAME];
-    if (!token) return res.json({ user: null });
-    const user = await findUserBySession(token);
-    if (!user) {
-      clearSessionCookie(res);
-      return res.json({ user: null });
-    }
-    res.json({ user: publicUser(user) });
+    res.json({ user: req.user ? publicUser(req.user) : null });
   } catch (err) {
     console.error('[auth/me]', err);
-    res.status(500).json({ error: 'Server error' });
+    res.json({ user: null });
   }
 });
 
