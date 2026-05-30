@@ -19,6 +19,7 @@ import listingsRouter from './src/routes/listings.js';
 import ordersRouter from './src/routes/orders.js';
 import profitRouter from './src/routes/profit.js';
 import ebayRouter from './src/routes/ebay.js';
+import ebayListingsRouter from './src/routes/ebay-listings.js';
 import { isConfigured as ebaySellerConfigured } from './src/services/ebay-oauth.js';
 
 dotenv.config();
@@ -112,6 +113,7 @@ app.use('/api/listings', listingsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/profit', profitRouter);
 app.use('/api/ebay', ebayRouter);
+app.use('/api/ebay', ebayListingsRouter);
 
 // ---- 404 (API) + error handler — must be last ----
 app.use(notFound);

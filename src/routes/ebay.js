@@ -82,6 +82,7 @@ router.get('/status', requireDb, requireAuth, async (req, res, next) => {
     res.json({
       connected: !!c,
       configured: oauth.isConfigured(),
+      canList: !!c && oauth.scopesCanList(c.scopes),
       ebayUser: c?.ebay_user_id || null,
       marketplace: c?.marketplace_id || null,
       scopes: c?.scopes || null,

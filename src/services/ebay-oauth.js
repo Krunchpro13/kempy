@@ -22,19 +22,28 @@ import { encrypt, decrypt } from './crypto.js';
 const TOKEN_URL   = 'https://api.ebay.com/identity/v1/oauth2/token';
 const CONSENT_URL = 'https://auth.ebay.com/oauth2/authorize';
 
-// Sell scopes: orders (fulfillment), listings (inventory), fees (finances).
-// NOTE: fulfillment/inventory have `.readonly` variants, but Finances does NOT —
-// its only scope is `sell.finances` (requesting `sell.finances.readonly` returns
-// invalid_scope and fails the whole consent). Override via EBAY_SCOPES (space-sep).
+// Sell scopes. We request WRITE inventory + account so KEMPY can create/publish
+// listings and auto-create business policies + a merchant location.
+// NOTE: Finances has NO `.readonly` variant — its only scope is `sell.finances`
+// (requesting `sell.finances.readonly` returns invalid_scope and fails the whole
+// consent). `sell.inventory` (write) also grants read. Override via EBAY_SCOPES.
 const DEFAULT_SCOPES = [
-  'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
-  'https://api.ebay.com/oauth/api_scope/sell.inventory.readonly',
-  'https://api.ebay.com/oauth/api_scope/sell.finances',
-  'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly', // to show "Connected as <username>"
+  'https://api.ebay.com/oauth/api_scope/sell.inventory',              // write (create/publish listings)
+  'https://api.ebay.com/oauth/api_scope/sell.account',               // business policies + location
+  'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',  // read orders
+  'https://api.ebay.com/oauth/api_scope/sell.finances',              // real fees
+  'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly', // "Connected as <username>"
 ];
 const SCOPES = process.env.EBAY_SCOPES
   ? process.env.EBAY_SCOPES.split(/\s+/).filter(Boolean)
   : DEFAULT_SCOPES;
+
+// Whether a granted scope string allows listing creation (write inventory + account).
+// The write scope is the exact `.../sell.inventory` (not `.../sell.inventory.readonly`).
+export function scopesCanList(scopeStr) {
+  const s = ' ' + String(scopeStr || '') + ' ';
+  return s.includes('/sell.inventory ') && s.includes('/sell.account');
+}
 
 // eBay refresh tokens last ~18 months; default if the response omits the field.
 const DEFAULT_REFRESH_TTL = 47_304_000; // seconds (~547 days)

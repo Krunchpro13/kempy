@@ -149,3 +149,54 @@ CREATE TABLE IF NOT EXISTS ebay_connections (
   last_error TEXT                               -- last refresh/api failure (for status endpoint)
 );
 
+-- ====================================================================
+-- eBay seller listing prefs — one-time setup per user for publishing:
+-- merchant location + the 3 business-policy IDs + cached category tree.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS ebay_seller_prefs (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  merchant_location_key TEXT,
+  country TEXT,                                 -- ISO alpha-2, e.g. 'US'
+  postal_code TEXT,
+  address_line1 TEXT,
+  city TEXT,
+  state_or_province TEXT,
+  fulfillment_policy_id TEXT,
+  payment_policy_id TEXT,
+  return_policy_id TEXT,
+  category_tree_id TEXT,
+  programs_opted_in BOOLEAN NOT NULL DEFAULT FALSE,
+  marketplace_id TEXT NOT NULL DEFAULT 'EBAY_US',
+  setup_completed_at TIMESTAMPTZ,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ====================================================================
+-- eBay listings created by KEMPY. One row per SKU per user (idempotent retry).
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS ebay_listings (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sku TEXT NOT NULL,
+  offer_id TEXT,
+  listing_id TEXT,
+  title TEXT,
+  price NUMERIC(12,2),
+  quantity INT NOT NULL DEFAULT 1,
+  category_id TEXT,
+  condition TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',          -- draft | published | failed | ended
+  step TEXT,                                     -- last pipeline step reached
+  error TEXT,                                     -- eBay error_description passthrough
+  asin TEXT,
+  source_ebay_item_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT ebay_listings_user_sku_unique UNIQUE (user_id, sku)
+);
+
+CREATE INDEX IF NOT EXISTS ebay_listings_user_idx ON ebay_listings (user_id);
+CREATE INDEX IF NOT EXISTS ebay_listings_status_idx ON ebay_listings (user_id, status);
+

@@ -948,6 +948,7 @@ function renderCard(item) {
       <div class="wl-side">
         <div class="wl-roi ${v}">${item.roi != null ? Number(item.roi).toFixed(1) + '%' : '—'}</div>
         ${item.ebayUrl ? `<a href="${escapeHtml(item.ebayUrl)}" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;letter-spacing:0.5px;">↗ View on eBay</a>` : ''}
+        <button class="wl-remove" data-action="list" style="border-color:var(--border-cyan);color:var(--cyan);">${window.KEMPY ? window.KEMPY.icon('bolt','13px') : ''} List on eBay</button>
         <button class="wl-remove" data-action="remove">${window.KEMPY ? window.KEMPY.icon('trash','13px') : ''} Remove</button>
       </div>
     </div>`;
@@ -988,6 +989,17 @@ async function render() {
 // ====================================================================
 // Remove
 // ====================================================================
+// List on eBay → find the saved item by id and open the shared modal.
+listEl.addEventListener('click', (e) => {
+  const lb = e.target.closest('[data-action="list"]');
+  if (!lb) return;
+  const card = lb.closest('.wl-card');
+  if (!card) return;
+  const id = card.dataset.id;
+  const item = (isRealUser ? dbItems : loadLocal()).find(i => String(i.id) === String(id));
+  if (item && window.KempyListModal) window.KempyListModal.open(item, { showToast });
+});
+
 listEl.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="remove"]');
   if (!btn) return;
@@ -1097,6 +1109,7 @@ sortSelect.addEventListener('change', render);
 
 </script>
 
+<script src="/assets/js/ebay-list-modal.js"></script>
 <script src="/assets/js/theme.js"></script>
 </body>
 </html>

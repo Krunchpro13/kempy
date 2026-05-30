@@ -1040,6 +1040,7 @@ function applyFiltersAndRender() {
           <button class="rc-save ${isSaved ? 'saved' : ''}" data-action="save" ${isSaved ? 'disabled' : ''}>
             ${isSaved ? 'Saved' : (window.KEMPY ? window.KEMPY.icon('watchlist','14px') : '') + ' Save'}
           </button>
+          <button class="rc-save" data-action="list" style="margin-top:6px;background:transparent;border:1px solid var(--border-cyan);color:var(--cyan);">${window.KEMPY ? window.KEMPY.icon('bolt','14px') : ''} List on eBay</button>
         </div>
       </div>
     `;
@@ -1146,6 +1147,18 @@ function saveLocal(items) {
 // Seed savedAsins from localStorage too, so the Save button knows what's already saved
 loadLocal().forEach(i => i.asin && savedAsins.add(i.asin));
 
+// List on eBay → open the shared modal with the full product object.
+resultsEl.addEventListener('click', (e) => {
+  const lb = e.target.closest('[data-action="list"]');
+  if (!lb) return;
+  const card = lb.closest('.research-card');
+  if (!card) return;
+  try {
+    const product = JSON.parse(card.dataset.product.replace(/&#39;/g, "'").replace(/&quot;/g, '"'));
+    if (window.KempyListModal) window.KempyListModal.open(product, { showToast });
+  } catch (_) { showToast('Could not open the lister', 'error'); }
+});
+
 resultsEl.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="save"]');
   if (!btn) return;
@@ -1239,6 +1252,7 @@ document.getElementById('load-more-btn').addEventListener('click', () => {
 })();
 </script>
 
+<script src="/assets/js/ebay-list-modal.js"></script>
 <script src="/assets/js/theme.js"></script>
 </body>
 </html>
