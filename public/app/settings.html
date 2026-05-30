@@ -858,8 +858,21 @@ document.getElementById('stores-list').addEventListener('click', async (e) => {
   const action = btn.dataset.action;
 
   if (action === 'connect') {
-    if (!currentUser) { showToast('Sign in to connect eBay', 'error'); return; }
     if (!ebayStatus.configured) { showToast('eBay integration is not configured yet', 'error'); return; }
+    // Connecting eBay needs a REAL server session — a local-preview account
+    // (stored only in the browser) has no cookie, so /api/ebay/connect would 401.
+    let authed = false;
+    try {
+      const r = await fetch('/api/auth/me', { credentials: 'include' });
+      if (r.ok) { const d = await r.json(); authed = !!(d && d.user); }
+    } catch (_) {}
+    if (!authed) {
+      showToast('Please sign in to your account first', 'error');
+      setTimeout(() => {
+        window.location.href = '/auth/login.html?next=' + encodeURIComponent('/app/settings.html?panel=stores');
+      }, 900);
+      return;
+    }
     window.location.href = '/api/ebay/connect';
   } else if (action === 'disconnect') {
     if (!confirm('Disconnect eBay? Your existing orders are unaffected.')) return;
