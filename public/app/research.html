@@ -383,6 +383,13 @@ html.sb-collapsed .nav-item:hover::after {
   user-select: none;
 }
 .suggestion:hover { border-color: var(--cyan); color: var(--cyan); }
+.recent-searches { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.recent-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
+.recent-clear { background: none; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; font-family: var(--font-mono); text-decoration: underline; padding: 2px 4px; }
+.recent-clear:hover { color: var(--red); }
+.load-more-wrap { display: flex; justify-content: center; margin-top: 22px; }
+.load-more-btn { background: var(--surface); border: 1px solid var(--border-cyan); color: var(--cyan); padding: 10px 22px; border-radius: 10px; font-family: var(--font-sans); font-weight: 600; font-size: 13px; cursor: pointer; transition: background .15s, box-shadow .15s; }
+.load-more-btn:hover { background: rgba(0,229,255,0.08); box-shadow: 0 0 22px var(--cyan-glow); }
 
 /* Filter bar */
 .filter-bar {
@@ -710,14 +717,10 @@ html.sb-collapsed .nav-item:hover::after {
           <button id="search-btn" class="search-go">Search</button>
         </div>
 
-        <div class="suggestions" id="suggestions">
-          <span class="suggestion" data-q="headphones">headphones</span>
-          <span class="suggestion" data-q="cable">USB cable</span>
-          <span class="suggestion" data-q="watch">vintage watch</span>
-          <span class="suggestion" data-q="handbag">designer handbag</span>
-          <span class="suggestion" data-q="charger">phone charger</span>
-          <span class="suggestion" data-q="webcam">webcam</span>
-          <span class="suggestion" data-q="all">show all</span>
+        <div class="recent-searches" id="recent-searches" hidden>
+          <span class="recent-label">Recent</span>
+          <div class="suggestions" id="suggestions"></div>
+          <button type="button" class="recent-clear" id="recent-clear">Clear</button>
         </div>
       </section>
 
@@ -761,6 +764,10 @@ html.sb-collapsed .nav-item:hover::after {
           <h3>Start your search</h3>
           <p>Type a keyword above or tap a suggestion to see profit opportunities. Results are ranked by ROI by default.</p>
         </div>
+      </div>
+
+      <div class="load-more-wrap" id="load-more-wrap" hidden>
+        <button type="button" class="load-more-btn" id="load-more-btn"></button>
       </div>
 
     </div>
@@ -887,6 +894,41 @@ const metaEl = document.getElementById('results-meta');
 
 let lastProducts = [];   // raw response — filters operate on this
 let lastMeta = null;
+const PAGE_SIZE = 8;          // pagination: cards rendered per page
+let visibleCount = PAGE_SIZE; // how many of the filtered set are currently shown
+let filteredProducts = [];    // last filtered+sorted set (for load-more)
+
+// ---- Recent searches (stored locally, auto-expire after 7 days) ----
+const RECENT_KEY = 'kempy_recent_searches';
+const RECENT_TTL = 7 * 24 * 60 * 60 * 1000;
+const RECENT_MAX = 8;
+function loadRecent() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (_) {}
+  const now = Date.now();
+  arr = arr.filter(r => r && r.q && (now - (r.ts || 0)) < RECENT_TTL);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(arr)); } catch (_) {}
+  return arr;
+}
+function addRecent(q) {
+  q = (q || '').trim();
+  if (!q || q.toLowerCase() === 'all') return;
+  let arr = loadRecent().filter(r => r.q.toLowerCase() !== q.toLowerCase());
+  arr.unshift({ q, ts: Date.now() });
+  arr = arr.slice(0, RECENT_MAX);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(arr)); } catch (_) {}
+}
+function renderRecent() {
+  const wrap = document.getElementById('recent-searches');
+  const list = document.getElementById('suggestions');
+  if (!wrap || !list) return;
+  const arr = loadRecent();
+  if (!arr.length) { wrap.hidden = true; list.innerHTML = ''; return; }
+  wrap.hidden = false;
+  list.innerHTML = arr.map(r =>
+    `<span class="suggestion" data-q="${escapeAttr(r.q)}">${escapeHtml(r.q)}</span>`
+  ).join('');
+}
 
 const FEE_RATE = 0.129;
 function fmt$(n) {
@@ -968,10 +1010,11 @@ function applyFiltersAndRender() {
         <h3>No matches with these filters</h3>
         <p>Try widening your filter range, or run a different search.</p>
       </div>`;
+    document.getElementById('load-more-wrap').hidden = true;
     return;
   }
 
-  resultsEl.innerHTML = products.map(p => {
+  resultsEl.innerHTML = products.slice(0, visibleCount).map(p => {
     const v = verdictFor(p.roi || 0);
     const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
     const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">↗</a>` : '';
@@ -1008,6 +1051,17 @@ function applyFiltersAndRender() {
       </div>
     `;
   }).join('');
+
+  // Pagination control
+  const moreWrap = document.getElementById('load-more-wrap');
+  const moreBtn = document.getElementById('load-more-btn');
+  const remaining = products.length - visibleCount;
+  if (remaining > 0) {
+    moreWrap.hidden = false;
+    moreBtn.textContent = 'Load ' + Math.min(PAGE_SIZE, remaining) + ' more (' + remaining + ' left)';
+  } else {
+    moreWrap.hidden = true;
+  }
 }
 
 function populateCategoryFilter(products) {
@@ -1063,7 +1117,10 @@ async function search(q) {
     populateCategoryFilter(lastProducts);
     filterBar.classList.toggle('hidden', lastProducts.length === 0);
     renderMeta(lastMeta);
+    visibleCount = PAGE_SIZE;
     applyFiltersAndRender();
+    addRecent(q);
+    renderRecent();
   } catch (err) {
     resultsEl.innerHTML = `
       <div class="empty-state">
@@ -1152,19 +1209,33 @@ resultsEl.addEventListener('click', async (e) => {
 // ====================================================================
 searchBtn.addEventListener('click', () => search(searchInput.value));
 searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(searchInput.value); });
-document.querySelectorAll('.suggestion').forEach(s => {
-  s.addEventListener('click', () => {
-    const q = s.dataset.q;
-    searchInput.value = q === 'all' ? '' : q;
-    search(q);
-  });
+// Recent-search chips are rendered dynamically — use a delegated handler.
+document.getElementById('suggestions').addEventListener('click', (e) => {
+  const chip = e.target.closest('.suggestion');
+  if (!chip) return;
+  searchInput.value = chip.dataset.q;
+  search(chip.dataset.q);
 });
-[filterCat, filterRoi, filterSort].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+document.getElementById('recent-clear').addEventListener('click', () => {
+  try { localStorage.removeItem(RECENT_KEY); } catch (_) {}
+  renderRecent();
+});
+document.getElementById('load-more-btn').addEventListener('click', () => {
+  visibleCount += PAGE_SIZE;
+  applyFiltersAndRender();
+});
+
+// Changing a filter resets pagination to the first page.
+[filterCat, filterRoi, filterSort].forEach(el => el.addEventListener('change', () => {
+  visibleCount = PAGE_SIZE;
+  applyFiltersAndRender();
+}));
 
 // ====================================================================
 // On load: read ?q= from URL and search automatically
 // ====================================================================
 (async function init() {
+  renderRecent();
   await loadMe();
   await loadWatchlist();
   const urlQ = new URL(window.location).searchParams.get('q');
