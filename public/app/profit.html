@@ -494,12 +494,21 @@ function showPaywall() {
   renderAll();
 }
 
-// Helpers
-function fmt$(n) {
-  if (n >= 10000) return '$' + (n / 1000).toFixed(1) + 'k';
-  return '$' + Number(n).toFixed(0);
+// Helpers — currency-aware (amounts from the API are USD; convert + format via theme.js)
+function curMeta() {
+  try { return (window.KEMPY && window.KEMPY.currencies[window.KEMPY.currencyCode()]) || null; }
+  catch (e) { return null; }
 }
-function fmtCents(n) { return '$' + Number(n).toFixed(2); }
+function fmt$(n) { // compact (hero figure, chart axis)
+  const c = curMeta();
+  const v = Number(n || 0) * (c ? c.rate : 1);
+  const sym = c ? c.symbol : '$';
+  if (Math.abs(v) >= 10000) return sym + (v / 1000).toFixed(1) + 'k';
+  return sym + Math.round(v).toLocaleString(c ? c.locale : 'en-US');
+}
+function fmtCents(n) { // precise
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n || 0).toFixed(2));
+}
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -571,7 +580,7 @@ function renderChart() {
     const v = (maxRev * t) / ticks;
     const y = yOf(v);
     grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#1a2329" stroke-dasharray="2,4" stroke-width="0.5" opacity="0.5"></line>`;
-    axisLabels += `<text x="${padL - 6}" y="${y + 3}" fill="#5a6970" text-anchor="end" font-family="JetBrains Mono" font-size="9">$${Math.round(v)}</text>`;
+    axisLabels += `<text x="${padL - 6}" y="${y + 3}" fill="#5a6970" text-anchor="end" font-family="JetBrains Mono" font-size="9">${fmt$(v)}</text>`;
   }
 
   // X-axis labels
@@ -734,9 +743,14 @@ async function loadPeriod(period) {
   const banner = document.getElementById('preview-banner');
   if (banner) banner.hidden = true;
   PROFIT = d;
+  dataLoaded = true;
   renderAll();
   return true;
 }
+
+// Live currency change (from Settings) — re-render the loaded data in the new currency.
+let dataLoaded = false;
+window.addEventListener('kempy:currency', () => { if (dataLoaded) renderAll(); });
 
 // Period switching
 document.getElementById('period-tabs').addEventListener('click', (e) => {

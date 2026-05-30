@@ -1107,6 +1107,14 @@ sortSelect.addEventListener('change', render);
   await render();
 })();
 
+// Live currency change (from Settings) — re-render cached items in the new currency (no refetch).
+window.addEventListener('kempy:currency', () => {
+  const items = isRealUser ? dbItems : loadLocal();
+  if (!items.length) return;
+  renderStats(items);
+  listEl.innerHTML = sortItems(items).map(renderCard).join('');
+});
+
 </script>
 
 <script src="/assets/js/ebay-list-modal.js"></script>

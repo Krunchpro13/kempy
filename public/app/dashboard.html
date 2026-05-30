@@ -382,9 +382,15 @@ html.sb-collapsed .nav-item:hover::after {
 /* Metrics grid */
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 14px;
   margin-bottom: 32px;
+}
+@media (max-width: 1280px) {
+  .metrics { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+  .metrics { grid-template-columns: repeat(2, 1fr); }
 }
 .tile {
   background: var(--surface);
@@ -609,9 +615,15 @@ html.sb-collapsed .nav-item:hover::after {
 /* Quick actions row */
 .quick-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   margin-bottom: 32px;
+}
+@media (max-width: 1280px) {
+  .quick-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+  .quick-row { grid-template-columns: repeat(2, 1fr); }
 }
 .quick {
   background: var(--surface);

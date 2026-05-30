@@ -1250,6 +1250,9 @@ document.getElementById('load-more-btn').addEventListener('click', () => {
     search(urlQ);
   }
 })();
+
+// Live currency change (from Settings) — re-render results in the new currency.
+window.addEventListener('kempy:currency', () => { if (lastProducts.length) applyFiltersAndRender(); });
 </script>
 
 <script src="/assets/js/ebay-list-modal.js"></script>

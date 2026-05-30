@@ -804,7 +804,9 @@ const statusTabs = document.getElementById('status-tabs');
 let activeStatus = 'all';
 let searchQuery = '';
 
-function fmt$(n) { return '$' + Number(n).toFixed(2); }
+function fmt$(n) {
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+}
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -904,8 +906,8 @@ function updateKpis() {
   const profit = ORDERS.reduce((s, o) => s + o.profit, 0);
   document.getElementById('kpi-new').textContent = newCount;
   document.getElementById('kpi-transit').textContent = transit;
-  document.getElementById('kpi-revenue').textContent = '$' + revenue.toFixed(0);
-  document.getElementById('kpi-profit').textContent = '$' + profit.toFixed(0);
+  document.getElementById('kpi-revenue').textContent = fmt$(revenue);
+  document.getElementById('kpi-profit').textContent = fmt$(profit);
 }
 
 // ====================================================================
@@ -958,7 +960,16 @@ document.getElementById('export-btn').addEventListener('click', () => {
   updateCounts();
   updateKpis();
   filterAndRender();   // empty array -> existing "No orders match" empty state
+  dataLoaded = true;
 })();
+
+// Live currency change (from Settings) — re-render amounts in the new currency.
+let dataLoaded = false;
+window.addEventListener('kempy:currency', () => {
+  if (!dataLoaded) return;
+  updateKpis();
+  filterAndRender();
+});
 </script>
 
 <script src="/assets/js/theme.js"></script>

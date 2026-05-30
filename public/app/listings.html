@@ -887,6 +887,9 @@ document.getElementById('create-btn').addEventListener('click', () => {
   updateKpis();
   filterAndRender();   // empty array -> existing "No listings match" empty state
 })();
+
+// Live currency change (from Settings) — re-render listing amounts in the new currency.
+window.addEventListener('kempy:currency', () => { if (LISTINGS.length) filterAndRender(); });
 </script>
 
 <script src="/assets/js/theme.js"></script>
