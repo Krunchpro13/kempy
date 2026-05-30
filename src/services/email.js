@@ -5,6 +5,8 @@
 // Docs: https://resend.com/docs/api-reference/emails/send-email
 
 const RESEND_URL = 'https://api.resend.com/emails';
+// Public app URL for links in emails (override via APP_URL env; defaults to prod).
+const APP_URL = process.env.APP_URL || 'https://kempzonline.com';
 
 export function isEmailEnabled() {
   return !!process.env.RESEND_API_KEY;
@@ -68,8 +70,8 @@ export async function sendWelcomeEmail(to, name) {
     <li>Connect an eBay store to start selling</li>
   </ol>
   <p style="margin:24px 0 0;">
-    <a href="http://localhost:3000/app/dashboard.html" style="display:inline-block;background:#00e5ff;color:#050708;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;">Open dashboard →</a>
+    <a href="${APP_URL}/app/dashboard.html" style="display:inline-block;background:#00e5ff;color:#050708;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;">Open dashboard →</a>
   </p>
 </div>`.trim();
-  return send({ to, subject, html, text: `Welcome to KEMPY. Open your dashboard: http://localhost:3000/app/dashboard.html` });
+  return send({ to, subject, html, text: `Welcome to KEMPY. Open your dashboard: ${APP_URL}/app/dashboard.html` });
 }
