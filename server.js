@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { RedisRateStore } from './src/middleware/rate-store.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -34,10 +35,47 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ---- Security & parsing ----
-// CSP is disabled because pages use inline styles/scripts; the other helmet
-// headers (HSTS, nosniff, frameguard, etc.) still apply.
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-app.use(cors());
+// Content-Security-Policy tuned for this zero-build app: all scripts/styles are
+// same-origin or inline (no external JS), fonts come from Google Fonts, product
+// images come from arbitrary https CDNs, and every API call is same-origin.
+// 'unsafe-inline' is required because pages use inline <script>/<style>.
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      // Inline event-handler attributes (e.g. <img onerror="this.remove()">) are
+      // used for image fallbacks — allow them so CSP doesn't silently break those.
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS: the frontend is served same-origin, so cross-origin access is only ever
+// our own domain (+ localhost for dev). Lock it down instead of reflecting any origin.
+const ALLOWED_ORIGINS = [
+  process.env.APP_URL || 'https://kempzonline.com',
+  'http://localhost:3000',
+];
+app.use(cors({
+  origin(origin, cb) {
+    // Same-origin / curl / server-to-server requests send no Origin header → allow.
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    return cb(null, false);
+  },
+  credentials: true,
+}));
 
 // ---- Stripe webhook (MUST be before express.json so the raw body survives for
 // signature verification). The webhook is unauthenticated (verified by signature). ----
@@ -73,13 +111,17 @@ app.use(express.static(join(__dirname, 'public'), {
   },
 }));
 
-// ---- Rate limiting (per IP, in-memory) ----
+// ---- Rate limiting (per IP) ----
+// When Redis is configured, counts are shared across instances via a fail-open
+// Redis store; otherwise express-rate-limit's default in-memory store is used.
+const useRedisStore = !!process.env.REDIS_URL;
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down.' },
+  ...(useRedisStore ? { store: new RedisRateStore('rl:api:') } : {}),
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -87,6 +129,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many attempts. Please try again later.' },
+  ...(useRedisStore ? { store: new RedisRateStore('rl:auth:') } : {}),
 });
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);

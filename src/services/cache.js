@@ -69,6 +69,12 @@ export function isEnabled() {
   return client !== null;
 }
 
+// Raw client accessor for callers that need direct commands (e.g. the
+// rate-limiter store). Returns null when Redis isn't connected.
+export function getClient() {
+  return client;
+}
+
 export function getStats() {
   const totals = (kind) => stats.hits[kind] + stats.misses[kind];
   const rate = (kind) => {
