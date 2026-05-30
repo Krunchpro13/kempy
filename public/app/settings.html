@@ -777,7 +777,7 @@ async function loadMe() {
         if (!confirm('Sign out of KEMPY?')) return;
         try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
         localStorage.removeItem('kempy_user_local');
-        window.location.reload();
+        window.location.href = '/';
       } else {
         window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);
       }
