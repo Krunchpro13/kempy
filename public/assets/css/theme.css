@@ -41,6 +41,10 @@ html[data-theme="light"] nav:not(.nav) {
 }
 html[data-theme="light"] .nav-links a { color: var(--text-dim); }
 html[data-theme="light"] .nav-links a:hover { color: var(--cyan); }
+
+/* ---- Injected SVG icons (theme.js) align within their containers ---- */
+.nav-item .icon, .sub-link .icon { display: inline-flex; align-items: center; justify-content: center; }
+.nav-item .icon svg, .sub-link .icon svg, #menu-btn svg { display: block; width: 18px; height: 18px; }
 html[data-theme="light"] body::before {
   background:
     radial-gradient(ellipse 70% 50% at 0% 0%, rgba(5,148,167,0.07), transparent 60%),

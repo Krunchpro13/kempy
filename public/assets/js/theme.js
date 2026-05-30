@@ -98,9 +98,62 @@
   window.KEMPY.setCurrency = setCurrency;
   window.KEMPY.formatMoney = formatMoney;
 
+  // ---- Inline SVG icons (Lucide-style) — replace emoji nav/UI glyphs ----
+  function svgIcon(inner) {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+      'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+  }
+  var ICON = {
+    dashboard: svgIcon('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>'),
+    research:  svgIcon('<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+    watchlist: svgIcon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+    listings:  svgIcon('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/>'),
+    orders:    svgIcon('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22" x2="12" y2="12"/>'),
+    profit:    svgIcon('<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'),
+    settings:  svgIcon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    billing:   svgIcon('<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>'),
+    profile:   svgIcon('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+    stores:    svgIcon('<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 22V13h6v9"/>'),
+    notifications: svgIcon('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'),
+    danger:    svgIcon('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+    menu:      svgIcon('<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>')
+  };
+  function labelToKey(s) {
+    s = (s || '').toLowerCase();
+    if (s.indexOf('dashboard') >= 0) return 'dashboard';
+    if (s.indexOf('research') >= 0) return 'research';
+    if (s.indexOf('watchlist') >= 0) return 'watchlist';
+    if (s.indexOf('listing') >= 0) return 'listings';
+    if (s.indexOf('order') >= 0) return 'orders';
+    if (s.indexOf('profit') >= 0) return 'profit';
+    if (s.indexOf('setting') >= 0) return 'settings';
+    if (s.indexOf('billing') >= 0) return 'billing';
+    if (s.indexOf('profile') >= 0) return 'profile';
+    if (s.indexOf('store') >= 0) return 'stores';
+    if (s.indexOf('notification') >= 0) return 'notifications';
+    if (s.indexOf('danger') >= 0) return 'danger';
+    return null;
+  }
+  function injectIcons() {
+    document.querySelectorAll('.nav-item').forEach(function (item) {
+      var lbl = item.getAttribute('data-label') || (item.querySelector('.label') || {}).textContent || '';
+      var key = labelToKey(lbl);
+      var el = item.querySelector('.icon');
+      if (key && el && ICON[key]) el.innerHTML = ICON[key];
+    });
+    document.querySelectorAll('.sub-link').forEach(function (link) {
+      var key = labelToKey(link.textContent);
+      var el = link.querySelector('.icon');
+      if (key && el && ICON[key]) el.innerHTML = ICON[key];
+    });
+    var mb = document.getElementById('menu-btn');
+    if (mb && mb.textContent.indexOf('☰') >= 0) mb.innerHTML = ICON.menu;
+  }
+
   function init() {
     injectFavicon();
     pointLogo();
+    injectIcons();
     injectButton();
     requestAnimationFrame(function () { root.classList.add('theme-ready'); });
     try {
