@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { RedisRateStore } from './src/middleware/rate-store.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFileSync } from 'fs';
 
 import { sessionMiddleware } from './src/middleware/auth.js';
 import { notFound, errorHandler } from './src/middleware/error.js';
@@ -25,6 +26,7 @@ import billingRouter from './src/routes/billing.js';
 import * as billing from './src/services/billing.js';
 import { requireSubscription } from './src/middleware/subscription.js';
 import { isConfigured as ebaySellerConfigured } from './src/services/ebay-oauth.js';
+import { renderSidebar } from './src/views/sidebar.js';
 
 dotenv.config();
 
@@ -99,6 +101,23 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), asyn
 
 app.use(express.json({ limit: '1mb' }));
 app.use(sessionMiddleware);
+
+// ---- App pages: inject the shared sidebar partial ----
+// /app/<page>.html is served with its `<!--SIDEBAR-->` marker replaced by the
+// single shared sidebar (src/views/sidebar.js). Falls through to static serving
+// if the file is missing or hasn't been migrated to use the marker.
+app.get(/^\/app\/([a-z0-9-]+)\.html$/, (req, res, next) => {
+  const page = req.params[0];
+  let html;
+  try {
+    html = readFileSync(join(__dirname, 'public', 'app', `${page}.html`), 'utf8');
+  } catch (_) {
+    return next(); // unknown page → let static/404 handle it
+  }
+  if (!html.includes('<!--SIDEBAR-->')) return next(); // not migrated → serve as-is
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.type('html').send(html.replace('<!--SIDEBAR-->', renderSidebar(page)));
+});
 
 // ---- Static frontend ----
 // HTML must always be revalidated so users pick up the latest app JS immediately
