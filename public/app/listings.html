@@ -718,11 +718,15 @@ async function loadEbay(url) {
 function showConnectState(msg) {
   const banner = document.getElementById('preview-banner');
   if (banner) banner.hidden = false;
+  const who = currentUser && currentUser.email
+    ? `<p style="margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">Signed in as ${escapeHtml(currentUser.email)} — this account has no eBay store connected.</p>`
+    : '';
   listingsEl.innerHTML = `
     <div class="empty-state">
       <span class="icon">${window.KEMPY ? window.KEMPY.icon('listings','42px') : ''}</span>
       <h3>${escapeHtml(msg || 'Connect your eBay store')}</h3>
       <p>Link your eBay seller account to sync your real listings, stock and performance.</p>
+      ${who}
       <a class="btn" href="/api/ebay/connect" style="margin-top:14px;display:inline-block">Connect eBay</a>
     </div>`;
 }
@@ -879,8 +883,9 @@ document.getElementById('create-btn').addEventListener('click', () => {
   const d = await loadEbay('/api/listings');
   if (d.auth === false) { showConnectState('Sign in to view your listings'); return; }
   if (d.paywall)        { showPaywall(); return; }
-  if (!d.connected)     { showConnectState(); return; }
+  if (d.error)          { showConnectState('Couldn’t reach eBay — refresh to try again'); return; }
   if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return; }
+  if (!d.connected)     { showConnectState(); return; }
   LISTINGS = d.listings || [];
   document.getElementById('preview-banner').hidden = true;
   updateCounts();
