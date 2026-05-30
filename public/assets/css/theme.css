@@ -87,6 +87,12 @@ html.theme-ready #theme-toggle {
   html.theme-ready * { transition: none !important; }
 }
 
+/* The HTML hidden attribute must always win over component display rules.
+   Without this, e.g. `.preview-banner { display:flex }` overrides the UA
+   `[hidden]{display:none}`, leaving "Connect your eBay store" banners visible
+   even when JS has set hidden=true on a connected account. */
+[hidden] { display: none !important; }
+
 /* ---- Brand mark: KEMPY robot head (replaces the legacy pulsing status dot) ----
    Centralized here so every page picks it up — this stylesheet loads after each
    page's inline <style>, so it overrides the old `.brand::before` dot by source order. */
