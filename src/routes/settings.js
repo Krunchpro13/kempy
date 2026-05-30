@@ -9,11 +9,9 @@
 
 import { Router } from 'express';
 import { isEnabled as dbEnabled, query } from '../services/db.js';
+import { SUPPORTED_CURRENCIES as ALLOWED_CURRENCIES } from '../config.js';
 
 const router = Router();
-
-// Supported display currencies (mirrors the client config in theme.js).
-const ALLOWED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 
 router.use((req, res, next) => {
   if (!dbEnabled()) {

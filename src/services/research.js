@@ -5,9 +5,10 @@ import { bestMatch } from './match-local.js';
 import { matchAmazonBatch } from './claude.js';
 import { getCachedSearch, setCachedSearch } from './cache.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
+import { ECONOMICS, SEARCH } from '../config.js';
 
-const FEE_RATE = 0.129;
-const PACKAGING = 1.50;
+const FEE_RATE = ECONOMICS.EBAY_FEE_RATE;
+const PACKAGING = ECONOMICS.PACKAGING_COST;
 
 function emojiFor(name = '') {
   const n = name.toLowerCase();
@@ -47,7 +48,7 @@ async function matchAll(items, candidates) {
       if (cm && cm.match_index != null && candidates[cm.match_index]) {
         return {
           candidate: candidates[cm.match_index],
-          confident: (cm.confidence ?? 0) >= 0.6,
+          confident: (cm.confidence ?? 0) >= SEARCH.MATCH_CONFIDENCE_MIN,
           via: 'claude',
         };
       }
@@ -64,10 +65,10 @@ async function matchAll(items, candidates) {
 // rather than presenting a fabricated price as if it were real.
 function buildProduct(item, match = null) {
   const ebayPrice = item.ebayPrice;
-  const shipping = item.ebayShipping != null ? item.ebayShipping : 6;
+  const shipping = item.ebayShipping != null ? item.ebayShipping : ECONOMICS.DEFAULT_SHIPPING;
 
   const hasReal = !!(match && match.confident && match.candidate?.amazonPrice > 0);
-  const amazonPrice = hasReal ? match.candidate.amazonPrice : round2(ebayPrice * 0.72);
+  const amazonPrice = hasReal ? match.candidate.amazonPrice : round2(ebayPrice * ECONOMICS.ESTIMATE_RATIO);
 
   const fees = round2(ebayPrice * FEE_RATE);
   const packaging = PACKAGING;
@@ -110,13 +111,13 @@ export async function searchProducts(query) {
     if (hit) return { ...hit, cached: true };
 
     try {
-      const items = await searchEbay(query, { limit: 24 });
+      const items = await searchEbay(query, { limit: SEARCH.EBAY_LIMIT });
       if (items.length) {
         // One Keepa search for the query → shared pool of real Amazon candidates
         // (titles + prices). ~10 tokens regardless of how many eBay items we map.
         let candidates = [];
         try {
-          candidates = (await findAmazonCandidates(query, 20)) || [];
+          candidates = (await findAmazonCandidates(query, SEARCH.CANDIDATE_POOL)) || [];
         } catch (err) {
           console.error('[research] Keepa candidate search failed:', err.message);
         }
