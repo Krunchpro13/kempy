@@ -116,7 +116,7 @@ app.get(/^\/app\/([a-z0-9-]+)\.html$/, (req, res, next) => {
   }
   if (!html.includes('<!--SIDEBAR-->')) return next(); // not migrated → serve as-is
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.type('html').send(html.replace('<!--SIDEBAR-->', renderSidebar(page)));
+  res.type('html').send(html.replace('<!--SIDEBAR-->', renderSidebar(page, req.user)));
 });
 
 // ---- Static frontend ----

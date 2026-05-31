@@ -21,7 +21,15 @@ const NAV = [
 // Pages that opt into server-side sidebar injection.
 export const SIDEBAR_PAGES = NAV.filter(n => n.key).map(n => n.key);
 
-export function renderSidebar(activeKey = '') {
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// `user` is req.user (set by sessionMiddleware) when signed in, else null/undefined.
+// Rendering the real identity server-side avoids the "Guest / PREVIEW MODE" flash
+// that happened while the client waited for /api/auth/me.
+export function renderSidebar(activeKey = '', user = null) {
   const items = NAV.map(n => {
     if (n.section) return `<div class="nav-label">${n.section}</div>`;
     const isActive = n.key === activeKey;
@@ -31,16 +39,20 @@ export function renderSidebar(activeKey = '') {
       `<span class="icon">${n.icon}</span> <span class="label">${n.label}</span></a>`;
   }).join('\n      ');
 
+  const label = user ? (user.name || user.email || 'You') : 'Guest';
+  const avatar = (label[0] || 'G').toUpperCase();
+  const role = user ? 'OWNER' : 'PREVIEW MODE';
+
   return `<aside class="sidebar" id="sidebar">
     <a href="/" class="brand"><span class="brand-text">KEMPY</span></a>
     <nav class="nav" aria-label="Primary">
       ${items}
     </nav>
     <div class="sidebar-footer">
-      <div class="avatar" id="user-avatar">G</div>
+      <div class="avatar" id="user-avatar">${esc(avatar)}</div>
       <div class="user-info">
-        <div class="name" id="user-name">Guest</div>
-        <div class="role" id="user-role">PREVIEW MODE</div>
+        <div class="name" id="user-name">${esc(label)}</div>
+        <div class="role" id="user-role">${role}</div>
       </div>
       <button class="user-menu" id="user-menu-btn" title="Account">⋯</button>
     </div>
