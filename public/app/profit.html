@@ -740,8 +740,37 @@ document.getElementById('period-tabs').addEventListener('click', (e) => {
   loadPeriod(currentPeriod);
 });
 
+// ---- CSV export (client-side, from the loaded profit data) ----
+function csvCell(v) {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function downloadCsv(rows, filename) {
+  const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 document.getElementById('export-btn').addEventListener('click', () => {
-  alert('CSV export coming soon — connect a store first');
+  const txs = PROFIT.transactions || [];
+  const series = PROFIT.series || [];
+  let rows, name;
+  if (txs.length) {
+    rows = [['Date', 'Transaction', 'Item', 'Gross', 'Net']];
+    txs.forEach(t => rows.push([t.date, t.id, t.item, t.gross, t.net]));
+    name = 'kempy-transactions.csv';
+  } else if (series.length) {
+    rows = [['Date', 'Revenue', 'Profit']];
+    series.forEach(d => rows.push([d.label, d.revenue, d.profit]));
+    name = 'kempy-profit-' + currentPeriod + 'd.csv';
+  } else {
+    (typeof showToast === 'function') ? showToast('Nothing to export yet', 'error') : alert('Nothing to export yet');
+    return;
+  }
+  downloadCsv(rows, name);
 });
 
 // Re-render chart on resize so SVG fits new width

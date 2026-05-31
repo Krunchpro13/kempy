@@ -209,3 +209,10 @@ export async function updateName(userId, name) {
     [userId, name || null]
   );
 }
+
+// Permanently delete a user. All related rows (sessions, watchlist, team_members,
+// ebay_connections, ebay_seller_prefs, ebay_listings) are removed via the
+// ON DELETE CASCADE foreign keys defined in schema.sql.
+export async function deleteUser(userId) {
+  await query(`DELETE FROM users WHERE id = $1`, [userId]);
+}

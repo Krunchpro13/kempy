@@ -608,12 +608,12 @@ html.sb-collapsed .nav-item:hover::after {
         <div class="kpi">
           <div class="label">Revenue (7d)</div>
           <div class="value" id="kpi-revenue">$0</div>
-          <div class="delta up">↑ 18% vs prior week</div>
+          <div class="delta" id="kpi-revenue-delta">—</div>
         </div>
         <div class="kpi">
           <div class="label">Profit (7d)</div>
           <div class="value green" id="kpi-profit">$0</div>
-          <div class="delta up">↑ 22% vs prior week</div>
+          <div class="delta" id="kpi-profit-delta">—</div>
         </div>
       </section>
 
@@ -881,14 +881,31 @@ function updateCounts() {
 }
 
 function updateKpis() {
-  const newCount = ORDERS.filter(o => o.status === 'new').length;
-  const transit = ORDERS.filter(o => o.status === 'ordered' || o.status === 'shipped').length;
-  const revenue = ORDERS.reduce((s, o) => s + o.salePrice, 0);
-  const profit = ORDERS.reduce((s, o) => s + o.profit, 0);
-  document.getElementById('kpi-new').textContent = newCount;
-  document.getElementById('kpi-transit').textContent = transit;
-  document.getElementById('kpi-revenue').textContent = fmt$(revenue);
-  document.getElementById('kpi-profit').textContent = fmt$(profit);
+  document.getElementById('kpi-new').textContent = ORDERS.filter(o => o.status === 'new').length;
+  document.getElementById('kpi-transit').textContent = ORDERS.filter(o => o.status === 'ordered' || o.status === 'shipped').length;
+
+  // Revenue/profit over the last 7 days, with a real week-over-week delta.
+  const now = Date.now(), DAY = 86400000;
+  const win = (o, startAgo, endAgo) => {
+    const t = new Date(o.placedAt).getTime();
+    return !Number.isNaN(t) && t >= now - startAgo && t < now - endAgo;
+  };
+  const sum = (arr, k) => arr.reduce((s, o) => s + (o[k] || 0), 0);
+  const cur = ORDERS.filter(o => win(o, 7 * DAY, 0));
+  const prev = ORDERS.filter(o => win(o, 14 * DAY, 7 * DAY));
+  document.getElementById('kpi-revenue').textContent = fmt$(sum(cur, 'salePrice'));
+  document.getElementById('kpi-profit').textContent = fmt$(sum(cur, 'profit'));
+  setDelta('kpi-revenue-delta', sum(cur, 'salePrice'), sum(prev, 'salePrice'));
+  setDelta('kpi-profit-delta', sum(cur, 'profit'), sum(prev, 'profit'));
+}
+
+function setDelta(id, cur, prev) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!prev) { el.textContent = cur ? 'New this week' : '—'; el.className = 'delta'; return; }
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  el.textContent = (pct >= 0 ? '↑ ' : '↓ ') + Math.abs(pct) + '% vs prior week';
+  el.className = 'delta ' + (pct >= 0 ? 'up' : 'down');
 }
 
 // ====================================================================
@@ -918,13 +935,50 @@ ordersEl.addEventListener('click', (e) => {
   } else if (action === 'track' || action === 'track-view') {
     showToast('Tracking integration coming soon', 'error');
   } else if (action === 'receipt') {
-    showToast('Receipt view coming soon', 'error');
+    const o = ORDERS.find(x => String(x.id) === target.dataset.id);
+    if (o) openReceipt(o); else showToast('Order not found', 'error');
   }
 });
 
+// ---- CSV export (client-side, from the loaded orders) ----
+function csvCell(v) {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function downloadCsv(rows, filename) {
+  const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 document.getElementById('export-btn').addEventListener('click', () => {
-  showToast('CSV export coming soon — connect a store first', 'error');
+  if (!ORDERS.length) { showToast('No orders to export yet', 'error'); return; }
+  const rows = [['Order', 'Date', 'Item', 'Customer', 'Location', 'Status', 'Sale', 'Cost', 'Fees', 'Profit']];
+  ORDERS.forEach(o => rows.push([o.id, o.placedAt, o.item, o.customer, o.location, o.status, o.salePrice, o.costPrice, o.fees, o.profit]));
+  downloadCsv(rows, 'kempy-orders.csv');
+  showToast('Exported ' + ORDERS.length + ' orders', 'success');
 });
+
+// ---- Printable receipt (opens a self-contained print view) ----
+function openReceipt(o) {
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to view the receipt', 'error'); return; }
+  const row = (l, v) => `<tr><td>${escapeHtml(l)}</td><td style="text-align:right">${escapeHtml(v)}</td></tr>`;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${escapeHtml(o.id)}</title>
+    <style>body{font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:40px auto;color:#111;padding:0 16px}
+    h1{font-size:20px;margin:0 0 4px}.muted{color:#666;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:18px}
+    td{padding:8px 0;border-bottom:1px solid #eee;font-size:14px}.tot td{border-top:2px solid #111;border-bottom:none;font-weight:700}</style></head>
+    <body><h1>KEMPY — Order receipt</h1><div class="muted">${escapeHtml(o.id)} · ${escapeHtml(o.placedAt || '')}</div>
+    <table>${row('Item', o.item)}${row('Customer', o.customer)}${row('Ship to', o.location || '—')}${row('Status', o.status)}
+    ${row('Sale price', fmt$(o.salePrice))}${row('Supplier cost', fmt$(o.costPrice))}${row('eBay fees', fmt$(o.fees))}
+    <tr class="tot"><td>Profit</td><td style="text-align:right">${escapeHtml(fmt$(o.profit))}</td></tr></table>
+    <p class="muted">Generated by KEMPY</p></body></html>`);
+  w.document.close();
+  setTimeout(() => { try { w.print(); } catch (_) {} }, 250);
+}
 
 // ====================================================================
 // Init

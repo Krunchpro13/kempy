@@ -10,7 +10,7 @@ import {
   createOtp, verifyOtp,
   createSession, findUserBySession, deleteSession, deleteAllSessionsForUser,
   findUserByEmail, createOrUpdateUser, markEmailVerified,
-  setPassword, updateName,
+  setPassword, updateName, deleteUser,
 } from '../services/auth.js';
 import { sendOtpEmail, sendWelcomeEmail, sendPasswordResetEmail } from '../services/email.js';
 import { isEnabled as dbEnabled } from '../services/db.js';
@@ -402,6 +402,22 @@ router.post('/logout-all', dbRequired, requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[auth/logout-all]', err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ====================================================================
+// DELETE /api/auth/account
+// Permanently deletes the signed-in user and all their data (cascades), then
+// clears the session cookie.
+// ====================================================================
+router.delete('/account', dbRequired, requireAuth, async (req, res) => {
+  try {
+    await deleteUser(req.user.id);
+    clearSessionCookie(res);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth/delete-account]', err);
+    res.status(500).json({ error: 'Could not delete account. Please try again.' });
   }
 });
 

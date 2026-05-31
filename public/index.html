@@ -1465,11 +1465,11 @@ footer .container { display: flex; justify-content: space-between; align-items: 
       <a href="#how">How it works</a>
       <a href="#research">Research</a>
       <a href="#pricing">Pricing</a>
-      <a href="#">Discord</a>
-      <a href="#">Help Desk</a>
-      <a href="#">Terms</a>
+      <a href="mailto:support@kempzonline.com">Support</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
     </div>
-    <div class="footer-copy">// KEMPY · built for demo</div>
+    <div class="footer-copy">© KEMPY</div>
   </div>
 </footer>
 
@@ -2205,17 +2205,6 @@ async function autolistLoop() {
 }
 autolistLoop();
 
-// ============= CTA TOAST =============
-document.querySelectorAll('a.hero-cta, a.nav-cta').forEach(a => {
-  a.addEventListener('click', e => {
-    if (a.getAttribute('href') === '#' || a.getAttribute('href') === '#pricing') {
-      if (a.getAttribute('href') === '#') {
-        e.preventDefault();
-        showToast('This is a demo — clone yours to wire up Stripe');
-      }
-    }
-  });
-});
 </script>
 
 <script src="/assets/js/theme.js"></script>

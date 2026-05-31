@@ -1047,12 +1047,29 @@ document.getElementById('signout-all-btn').addEventListener('click', async () =>
     showToast('All other sessions signed out (preview)', 'success');
   }
 });
-document.getElementById('delete-btn').addEventListener('click', () => {
+document.getElementById('delete-btn').addEventListener('click', async () => {
   const a = prompt('Type DELETE to confirm permanent account deletion:');
   if (a !== 'DELETE') return;
-  localStorage.clear();
-  showToast('Account deleted. Redirecting…', 'success');
-  setTimeout(() => window.location.href = '/', 1400);
+  const btn = document.getElementById('delete-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'include' });
+    if (r.ok) {
+      localStorage.clear();
+      showToast('Account deleted. Redirecting…', 'success');
+      setTimeout(() => window.location.href = '/', 1400);
+    } else if (r.status === 401) {
+      showToast('Please sign in again to delete your account', 'error');
+      btn.disabled = false;
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.error || 'Could not delete account', 'error');
+      btn.disabled = false;
+    }
+  } catch (_) {
+    showToast('Network error — please try again', 'error');
+    btn.disabled = false;
+  }
 });
 
 // ====================================================================
