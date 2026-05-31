@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { RedisRateStore } from './src/middleware/rate-store.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
@@ -130,17 +129,16 @@ app.use(express.static(join(__dirname, 'public'), {
   },
 }));
 
-// ---- Rate limiting (per IP) ----
-// When Redis is configured, counts are shared across instances via a fail-open
-// Redis store; otherwise express-rate-limit's default in-memory store is used.
-const useRedisStore = !!process.env.REDIS_URL;
+// ---- Rate limiting (per IP, in-memory) ----
+// In-memory keeps every /api request fast (no per-request network hop). A shared
+// store across instances was tried but added ~3 Redis round-trips to each API
+// call; not worth the latency at this scale.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down.' },
-  ...(useRedisStore ? { store: new RedisRateStore('rl:api:') } : {}),
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -148,7 +146,6 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many attempts. Please try again later.' },
-  ...(useRedisStore ? { store: new RedisRateStore('rl:auth:') } : {}),
 });
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
