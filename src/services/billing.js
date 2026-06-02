@@ -42,7 +42,7 @@ export async function createCheckoutSession(user) {
     line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
     client_reference_id: String(user.id),
     success_url: `${APP_URL}/app/dashboard.html?sub=success`,
-    cancel_url: `${APP_URL}/app/settings.html?panel=billing&sub=cancel`,
+    cancel_url: `${APP_URL}/app/billing.html?sub=cancel`,
   };
   if (process.env.STRIPE_COUPON_ID) params.discounts = [{ coupon: process.env.STRIPE_COUPON_ID }];
   const session = await stripe.checkout.sessions.create(params);

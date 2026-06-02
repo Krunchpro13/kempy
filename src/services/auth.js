@@ -134,7 +134,9 @@ export async function findUserBySession(token) {
   if (!token || typeof token !== 'string') return null;
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const { rows } = await query(
-    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at
+    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at,
+            u.subscription_status, u.current_period_end, u.plan,
+            u.stripe_customer_id, u.stripe_subscription_id
        FROM sessions s
        JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1 AND s.expires_at > NOW()
