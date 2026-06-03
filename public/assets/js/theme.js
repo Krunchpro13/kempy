@@ -73,7 +73,7 @@
   };
   function currencyCode() {
     var c; try { c = localStorage.getItem(CUR_KEY); } catch (e) {}
-    return CURRENCIES[c] ? c : 'USD';
+    return CURRENCIES[c] ? c : 'GBP';
   }
   function setCurrency(code) {
     if (!CURRENCIES[code]) return;

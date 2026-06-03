@@ -607,12 +607,12 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
         <div class="kpi">
           <div class="label">Revenue (7d)</div>
-          <div class="value" id="kpi-revenue">$0</div>
+          <div class="value" id="kpi-revenue">£0</div>
           <div class="delta" id="kpi-revenue-delta">—</div>
         </div>
         <div class="kpi">
           <div class="label">Profit (7d)</div>
-          <div class="value green" id="kpi-profit">$0</div>
+          <div class="value green" id="kpi-profit">£0</div>
           <div class="delta" id="kpi-profit-delta">—</div>
         </div>
       </section>
@@ -754,7 +754,7 @@ function showPaywall() {
     <div class="empty-state">
       <span class="icon">${window.KEMPY ? window.KEMPY.icon('orders','42px') : ''}</span>
       <h3>Subscribe to unlock orders</h3>
-      <p>Your eBay orders dashboard is part of your KEMPY subscription — $50 your first month.</p>
+      <p>Your eBay orders dashboard is part of your KEMPY subscription — £50 your first month.</p>
       <a class="btn" href="/app/billing.html" style="margin-top:14px;display:inline-block">See plans</a>
     </div>`;
 }
@@ -786,7 +786,7 @@ let activeStatus = 'all';
 let searchQuery = '';
 
 function fmt$(n) {
-  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('£' + Number(n).toFixed(2));
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

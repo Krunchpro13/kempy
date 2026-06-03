@@ -716,7 +716,7 @@ function showPaywall() {
     <div class="empty-state">
       <span class="icon">${window.KEMPY ? window.KEMPY.icon('listings','42px') : ''}</span>
       <h3>Subscribe to unlock listings</h3>
-      <p>Creating and syncing eBay listings is part of your KEMPY subscription — $50 your first month.</p>
+      <p>Creating and syncing eBay listings is part of your KEMPY subscription — £50 your first month.</p>
       <a class="btn" href="/app/billing.html" style="margin-top:14px;display:inline-block">See plans</a>
     </div>`;
 }
@@ -731,7 +731,7 @@ let activeStatus = 'all';
 let searchQuery = '';
 
 function fmt$(n) {
-  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('£' + Number(n).toFixed(2));
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

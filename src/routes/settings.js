@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
   try {
     const { rows } = await query(`SELECT preferences FROM users WHERE id = $1`, [req.user.id]);
     const prefs = rows[0]?.preferences || {};
-    res.json({ notifications: prefs.notifications || {}, currency: prefs.currency || 'USD' });
+    res.json({ notifications: prefs.notifications || {}, currency: prefs.currency || 'GBP' });
   } catch (err) {
     console.error('[settings] GET', err.message);
     res.status(500).json({ error: 'Failed to load settings.' });

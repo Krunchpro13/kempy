@@ -604,9 +604,9 @@ async function loadBilling() {
   } else {
     box.innerHTML =
       '<div style="border:1px solid var(--border);border-radius:12px;padding:18px;max-width:420px;">' +
-      '<div style="font-family:var(--font-mono);font-size:13px;color:var(--text-dim);"><s>$100/mo</s> &nbsp;<span style="color:var(--cyan);font-size:22px;font-weight:700;">$50</span> first month</div>' +
-      '<div class="help" style="margin:6px 0 14px;">then $100/month · cancel anytime</div>' +
-      '<button class="btn" id="bill-sub">Subscribe — $50 today</button>' +
+      '<div style="font-family:var(--font-mono);font-size:13px;color:var(--text-dim);"><s>£100/mo</s> &nbsp;<span style="color:var(--cyan);font-size:22px;font-weight:700;">£50</span> first month</div>' +
+      '<div class="help" style="margin:6px 0 14px;">then £100/month · cancel anytime</div>' +
+      '<button class="btn" id="bill-sub">Subscribe — £50 today</button>' +
       '</div>';
     document.getElementById('bill-sub').addEventListener('click', () => postBilling('checkout'));
   }

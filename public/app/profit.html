@@ -295,14 +295,14 @@ html.sb-collapsed .nav-item:hover::after {
       <div class="profit-hero">
         <div>
           <div class="label">Net profit · <span id="hero-period-label">last 30 days</span></div>
-          <div class="value" id="hero-profit">$0</div>
+          <div class="value" id="hero-profit">£0</div>
           <div class="delta up" id="hero-delta">— vs prior</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:8px;max-width:260px;line-height:1.5;">Profit = sale − eBay fees. Supplier cost is not yet tracked.</div>
         </div>
         <div class="breakdown">
-          <div class="row"><span class="l">Revenue</span><span class="v" id="bd-rev">$0</span></div>
-          <div class="row"><span class="l">eBay fees</span><span class="v neg" id="bd-fees">−$0</span></div>
-          <div class="row"><span class="l">Net</span><span class="v pos" id="bd-net">$0</span></div>
+          <div class="row"><span class="l">Revenue</span><span class="v" id="bd-rev">£0</span></div>
+          <div class="row"><span class="l">eBay fees</span><span class="v neg" id="bd-fees">−£0</span></div>
+          <div class="row"><span class="l">Net</span><span class="v pos" id="bd-net">£0</span></div>
         </div>
       </div>
 
@@ -319,12 +319,12 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
         <div class="kpi">
           <div class="label">Avg order value</div>
-          <div class="value" id="kpi-aov">$0</div>
+          <div class="value" id="kpi-aov">£0</div>
           <div class="delta" id="kpi-aov-delta">—</div>
         </div>
         <div class="kpi">
           <div class="label">Avg profit / order</div>
-          <div class="value amber" id="kpi-aop">$0</div>
+          <div class="value amber" id="kpi-aop">£0</div>
           <div class="delta" id="kpi-aop-delta">—</div>
         </div>
       </section>
@@ -341,8 +341,8 @@ html.sb-collapsed .nav-item:hover::after {
           <svg id="chart" viewBox="0 0 800 260" preserveAspectRatio="none"></svg>
           <div class="chart-tooltip" id="tooltip">
             <div class="date" id="tt-date">—</div>
-            <div class="rev" id="tt-rev">Revenue: $0</div>
-            <div class="prof" id="tt-prof">Profit: $0</div>
+            <div class="rev" id="tt-rev">Revenue: £0</div>
+            <div class="prof" id="tt-prof">Profit: £0</div>
           </div>
         </div>
       </div>
@@ -463,7 +463,7 @@ function showPaywall() {
     banner.hidden = false;
     banner.querySelector('.badge').textContent = 'Locked';
     banner.querySelector('h4').textContent = 'Subscribe to unlock profit analytics';
-    banner.querySelector('p').textContent = 'Your profit dashboard is part of your KEMPY subscription — $50 your first month.';
+    banner.querySelector('p').textContent = 'Your profit dashboard is part of your KEMPY subscription — £50 your first month.';
     const a = banner.querySelector('a'); if (a) { a.textContent = 'See plans'; a.href = '/app/billing.html'; }
   }
   PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], channels: [], transactions: [] };
@@ -478,12 +478,12 @@ function curMeta() {
 function fmt$(n) { // compact (hero figure, chart axis)
   const c = curMeta();
   const v = Number(n || 0) * (c ? c.rate : 1);
-  const sym = c ? c.symbol : '$';
+  const sym = c ? c.symbol : '£';
   if (Math.abs(v) >= 10000) return sym + (v / 1000).toFixed(1) + 'k';
   return sym + Math.round(v).toLocaleString(c ? c.locale : 'en-US');
 }
 function fmtCents(n) { // precise
-  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n || 0).toFixed(2));
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('£' + Number(n || 0).toFixed(2));
 }
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>

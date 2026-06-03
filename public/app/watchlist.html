@@ -610,7 +610,7 @@ html.sb-collapsed .nav-item:hover::after {
         </div>
         <div class="stat">
           <div class="label">Total potential profit</div>
-          <div class="value green" id="stat-profit">$0.00</div>
+          <div class="value green" id="stat-profit">£0.00</div>
         </div>
         <div class="stat">
           <div class="label">Avg ROI</div>
@@ -807,7 +807,7 @@ const sortSelect = document.getElementById('sort-select');
 
 function fmt$(n) {
   if (n == null) return '—';
-  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('$' + Number(n).toFixed(2));
+  return (window.KEMPY && window.KEMPY.formatMoney) ? window.KEMPY.formatMoney(n) : ('£' + Number(n).toFixed(2));
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
