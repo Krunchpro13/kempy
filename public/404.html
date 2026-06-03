@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>404 — page not found · KEMPY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Archivo+Black&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050708;--surface:#0e1316;--border:#1a2329;--cyan:#00e5ff;--text:#e6f1f5;--text-dim:#8a9ba3;--text-muted:#5a6970;--font-sans:'Sora',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;--font-display:'Archivo Black',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.wrap{max-width:520px;margin:0 auto;padding:48px 22px;text-align:center;}
+.brand{font-family:var(--font-display);font-size:22px;letter-spacing:-1px;color:var(--cyan);text-decoration:none;display:inline-block;margin-bottom:32px;}
+.code{font-family:var(--font-display);font-size:84px;line-height:1;letter-spacing:-3px;color:var(--cyan);margin-bottom:10px;}
+h1{font-family:var(--font-display);font-size:24px;letter-spacing:-1px;margin-bottom:12px;}
+p{color:var(--text-dim);font-size:15px;margin-bottom:28px;}
+.links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn{display:inline-block;font-family:var(--font-mono);font-size:13px;text-decoration:none;padding:11px 18px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);transition:color .15s,border-color .15s;}
+.btn:hover{color:var(--cyan);border-color:var(--cyan);}
+.btn.primary{border-color:var(--cyan);color:var(--cyan);}
+.btn.primary:hover{background:var(--cyan);color:var(--bg);}
+</style>
+<link rel="stylesheet" href="/assets/css/theme.css" />
+<script>(function(){try{var t=localStorage.getItem('kempy-theme');if(t!=='light'&&t!=='dark'){t='dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="brand">KEMPY</a>
+  <div class="code">404</div>
+  <h1>Page not found</h1>
+  <p>The page you're looking for doesn't exist or has moved.</p>
+  <div class="links">
+    <a href="/" class="btn primary">← Back to home</a>
+    <a href="/app/dashboard.html" class="btn">Go to dashboard</a>
+  </div>
+</div>
+<script src="/assets/js/theme.js"></script>
+</body>
+</html>

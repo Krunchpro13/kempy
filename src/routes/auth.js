@@ -13,7 +13,7 @@ import {
   setPassword, updateName, deleteUser,
 } from '../services/auth.js';
 import { sendOtpEmail, sendWelcomeEmail, sendPasswordResetEmail } from '../services/email.js';
-import { isEnabled as dbEnabled } from '../services/db.js';
+import { isEnabled as dbEnabled, query } from '../services/db.js';
 
 const router = express.Router();
 const COOKIE_NAME = 'kempy_session';
@@ -418,6 +418,81 @@ router.delete('/account', dbRequired, requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[auth/delete-account]', err);
     res.status(500).json({ error: 'Could not delete account. Please try again.' });
+  }
+});
+
+// ====================================================================
+// GET /api/auth/account/export
+// Downloadable JSON snapshot of the signed-in user's data: profile,
+// preferences (currency + notifications) and saved watchlist rows.
+// NEVER includes password_hash, session tokens, Stripe secrets or eBay tokens.
+// ====================================================================
+router.get('/account/export', dbRequired, requireAuth, async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT email, name, created_at, subscription_status, plan, preferences
+         FROM users WHERE id = $1`,
+      [req.user.id],
+    );
+    const u = rows[0];
+    if (!u) return res.status(404).json({ error: 'Account not found.' });
+
+    // Mirror src/routes/watchlist.js GET — same SELECT columns and mapping.
+    const wl = await query(
+      `SELECT id, asin, ebay_item_id, name, emoji, cat,
+              ebay_price, amazon_price,
+              saved_ebay_price, saved_amazon_price,
+              fees, shipping, packaging, profit, roi,
+              ebay_url, amazon_url, image_url, added_at
+       FROM watchlist
+       WHERE user_id = $1
+       ORDER BY added_at DESC`,
+      [req.user.id],
+    );
+
+    const prefs = u.preferences || {};
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      profile: {
+        email: u.email,
+        name: u.name,
+        createdAt: u.created_at,
+        subscriptionStatus: u.subscription_status || null,
+        plan: u.plan || null,
+      },
+      preferences: {
+        currency: prefs.currency || 'GBP',
+        notifications: prefs.notifications || {},
+      },
+      watchlist: wl.rows.map(r => ({
+        id: r.id,
+        asin: r.asin,
+        ebayItemId: r.ebay_item_id,
+        name: r.name,
+        emoji: r.emoji,
+        cat: r.cat,
+        ebayPrice: Number(r.ebay_price),
+        amazonPrice: Number(r.amazon_price),
+        savedEbayPrice: Number(r.saved_ebay_price),
+        savedAmazonPrice: Number(r.saved_amazon_price),
+        fees: Number(r.fees),
+        shipping: Number(r.shipping),
+        packaging: Number(r.packaging),
+        profit: Number(r.profit),
+        roi: Number(r.roi),
+        ebayUrl: r.ebay_url,
+        amazonUrl: r.amazon_url,
+        image: r.image_url,
+        addedAt: r.added_at,
+      })),
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="kempy-account-export.json"');
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (err) {
+    console.error('[auth/account/export]', err);
+    res.status(500).json({ error: 'Could not export your data. Please try again.' });
   }
 });
 

@@ -15,7 +15,7 @@ import crypto from 'crypto';
 import { isEnabled as dbEnabled } from '../services/db.js';
 import { setOAuthState, getOAuthState, clearCachedEbay } from '../services/cache.js';
 import * as oauth from '../services/ebay-oauth.js';
-import { requireSubscription } from '../middleware/subscription.js';
+import * as billing from '../services/billing.js';
 
 const router = express.Router();
 
@@ -29,12 +29,21 @@ function requireDb(req, res, next) {
 }
 
 // GET /api/ebay/connect -> 302 to eBay consent (paid feature)
-router.get('/connect', requireDb, requireAuth, requireSubscription, async (req, res, next) => {
+//
+// Reached via top-level browser navigation, so gate failures redirect to a real
+// page instead of dumping JSON (the requireAuth/requireSubscription middlewares
+// stay JSON-only for the other API routes). Gates are inlined here as redirects.
+router.get('/connect', requireDb, async (req, res, next) => {
   try {
+    // Unauthenticated -> bounce to login, then back to settings.
+    if (!req.user) return res.redirect('/auth/login.html?next=/app/settings.html');
+    // Subscription required (mirrors requireSubscription's 402 case) -> billing.
+    if (billing.isEnabled() && !billing.isSubscribed(req.user)) {
+      return res.redirect('/app/billing.html');
+    }
+    // eBay OAuth not configured -> back to the stores panel with an error flag.
     if (!oauth.isConfigured()) {
-      return res
-        .status(503)
-        .json({ error: 'eBay seller integration is not configured yet (missing keys/RuName).' });
+      return res.redirect('/app/settings.html?panel=stores&ebay=error');
     }
     const state = crypto.randomBytes(16).toString('hex');
     await setOAuthState(state, req.user.id);

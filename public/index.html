@@ -1573,10 +1573,10 @@ function renderResults(prods, meta) {
   results.innerHTML = sourceBadge + prods.slice(0, 5).map(p => {
     const v = verdictFor(p.roi || 0);
     const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
-    const ebayLink = p.ebayUrl ? `<a href="${p.ebayUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
-    const amazonLink = p.amazonUrl ? `<a href="${p.amazonUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
+    const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
+    const amazonLink = p.amazonUrl ? `<a href="${escapeHtml(p.amazonUrl)}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
     const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
-      ? `<span title="${p.matchReasoning || ''}" style="font-size:10px;font-family:var(--font-mono);color:var(--cyan);margin-left:8px;border:1px solid var(--border-cyan);padding:1px 6px;border-radius:100px;">${Math.round(p.matchConfidence * 100)}% match</span>`
+      ? `<span title="${escapeHtml(p.matchReasoning || '')}" style="font-size:10px;font-family:var(--font-mono);color:var(--cyan);margin-left:8px;border:1px solid var(--border-cyan);padding:1px 6px;border-radius:100px;">${Math.round(p.matchConfidence * 100)}% match</span>`
       : '';
     return `
       <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
@@ -1584,15 +1584,15 @@ function renderResults(prods, meta) {
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
             <div class="wf-thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}</div>
             <div>
-              <div class="rc-name">${p.name}${matchBadge}</div>
-              <div class="rc-cat">${p.cat} · ${p.vol || '?'}/mo · ${p.comp || '?'} comp · ${p.trend || '?'}</div>
+              <div class="rc-name">${escapeHtml(p.name)}${matchBadge}</div>
+              <div class="rc-cat">${escapeHtml(p.cat)} · ${p.vol || '?'}/mo · ${p.comp || '?'} comp · ${p.trend || '?'}</div>
             </div>
           </div>
           <div class="rc-pricing">
             <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
             <div class="item"><div class="l">Amazon ${amazonLink}</div><div class="v">${fmt$(p.amazonPrice)}</div></div>
             <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${p.fees != null ? '−' + fmt$((p.fees||0) + (p.shipping||0) + (p.packaging||0)) : '—'}</div></div>
-            <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(p.profit)}</div></div>
+            <div class="item"><div class="l">Profit</div><div class="v ${(p.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(p.profit)}</div></div>
           </div>
         </div>
         <div class="rc-verdict">
@@ -1607,6 +1607,9 @@ function renderResults(prods, meta) {
 
 function escapeAttr(s) {
   return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 async function search(q) {
@@ -1699,7 +1702,7 @@ results.addEventListener('click', async (e) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(product),
+      body: JSON.stringify({ product }),
     });
     if (r.status === 401) {
       btn.textContent = '⭐ Save';
@@ -1721,7 +1724,10 @@ results.addEventListener('click', async (e) => {
       btn.disabled = false;
       return;
     }
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || `Couldn't save (HTTP ${r.status})`);
+    }
 
     btn.classList.add('saved');
     btn.textContent = 'Saved';
@@ -1776,9 +1782,9 @@ async function loadWatchlist() {
     }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    renderWatchlist(data.items);
+    renderWatchlist(data.items || []);
   } catch (err) {
-    watchlistResults.innerHTML = `<div class="research-empty">${err.message}</div>`;
+    watchlistResults.innerHTML = `<div class="research-empty">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -1788,36 +1794,37 @@ function renderWatchlist(items) {
     return;
   }
   watchlistResults.innerHTML = items.map(item => {
-    const initialRoi = Number(item.initial_roi || 0);
-    const latestRoi = Number(item.latest_roi || initialRoi);
-    const drift = latestRoi - initialRoi;
+    const roi = Number(item.roi || 0);
+    // Drift = how the ROI moved since the prices were saved, recomputed from
+    // the current vs saved spread (saved* fields are the snapshot at save time).
+    const savedSpread = Number(item.savedEbayPrice || 0) - Number(item.savedAmazonPrice || 0);
+    const latestSpread = Number(item.ebayPrice || 0) - Number(item.amazonPrice || 0);
+    const drift = latestSpread - savedSpread;
     const driftCls = drift > 0.5 ? 'up' : drift < -0.5 ? 'down' : 'flat';
     const driftSign = drift > 0 ? '+' : '';
-    const v = verdictFor(latestRoi);
-    const cardCls = latestRoi >= 30 ? 'excellent' : latestRoi < 10 ? 'poor' : '';
-    const refreshedAgo = item.last_refreshed_at
-      ? timeAgo(new Date(item.last_refreshed_at))
-      : 'never';
+    const v = verdictFor(roi);
+    const cardCls = roi >= 30 ? 'excellent' : roi < 10 ? 'poor' : '';
+    const savedAgo = item.addedAt ? timeAgo(new Date(item.addedAt)) : 'recently';
     return `
       <div class="research-card ${cardCls}">
         <div class="rc-product">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
             <div class="wf-thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}</div>
             <div>
-              <div class="rc-name">${item.ebay_title}</div>
-              <div class="rc-cat">${item.category || 'saved'} · refreshed ${refreshedAgo} · saved ${timeAgo(new Date(item.created_at))}</div>
+              <div class="rc-name">${escapeHtml(item.name)}</div>
+              <div class="rc-cat">${escapeHtml(item.cat || 'saved')} · saved ${savedAgo}</div>
             </div>
           </div>
           <div class="rc-pricing">
-            <div class="item"><div class="l">eBay</div><div class="v">${fmt$(item.latest_ebay_price || item.initial_ebay_price)}</div></div>
-            <div class="item"><div class="l">Amazon</div><div class="v">${fmt$(item.latest_amazon_price || item.initial_amazon_price)}</div></div>
-            <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(item.latest_profit || item.initial_profit)}</div></div>
-            <div class="item"><div class="l">Initial ROI</div><div class="v">${Number(item.initial_roi).toFixed(1)}%</div></div>
+            <div class="item"><div class="l">eBay</div><div class="v">${fmt$(item.ebayPrice)}</div></div>
+            <div class="item"><div class="l">Amazon</div><div class="v">${fmt$(item.amazonPrice)}</div></div>
+            <div class="item"><div class="l">Profit</div><div class="v ${(item.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(item.profit)}</div></div>
+            <div class="item"><div class="l">ROI</div><div class="v">${roi.toFixed(1)}%</div></div>
           </div>
         </div>
         <div class="rc-verdict">
-          <div class="rc-roi ${v.cls}">${latestRoi.toFixed(1)}%
-            <span class="wl-drift ${driftCls}">${driftSign}${drift.toFixed(1)}</span>
+          <div class="rc-roi ${v.cls}">${roi.toFixed(1)}%
+            <span class="wl-drift ${driftCls}">${driftSign}${fmt$(drift)}</span>
           </div>
           <div class="rc-tag ${v.cls}">${v.label}</div>
           <button class="wl-delete" data-id="${item.id}">Remove</button>
@@ -1930,7 +1937,7 @@ authForm.addEventListener('submit', async e => {
     password: authForm.password.value,
   };
   if (authMode === 'signup' && authForm.displayName.value) {
-    body.displayName = authForm.displayName.value;
+    body.name = authForm.displayName.value;
   }
 
   try {
@@ -1946,10 +1953,24 @@ authForm.addEventListener('submit', async e => {
       authError.style.display = '';
       return;
     }
+    // Signup doesn't sign you in — it emails an OTP. Stash the pending email
+    // (like signup.html) and send the user to verify.html to enter the code.
+    if (authMode === 'signup') {
+      try {
+        sessionStorage.setItem('kempy_pending_signup', JSON.stringify({
+          name: body.name || '',
+          email: body.email,
+          issuedAt: Date.now(),
+        }));
+      } catch (_) {}
+      window.location.href = '/auth/verify.html';
+      return;
+    }
     currentUser = data.user;
+    try { localStorage.setItem('kempy_signed_in', '1'); } catch (_) {}
     renderAccount();
     closeAuthModal();
-    showToast(authMode === 'signup' ? '✓ Account created' : '✓ Signed in');
+    showToast('✓ Signed in');
     updateWatchlistCount();
     // If user opened the modal from the watchlist tab, refresh it
     if (panelWatchlist.style.display !== 'none') loadWatchlist();
@@ -1977,8 +1998,8 @@ async function loadMe() {
 
 function renderAccount() {
   if (currentUser) {
-    const initial = (currentUser.display_name || currentUser.email).charAt(0).toUpperCase();
-    const label = currentUser.display_name || currentUser.email.split('@')[0];
+    const initial = (currentUser.name || currentUser.email).charAt(0).toUpperCase();
+    const label = currentUser.name || currentUser.email.split('@')[0];
     navAccount.innerHTML = `
       <a href="/app/dashboard.html" class="nav-user-chip" style="text-decoration:none;color:inherit;">
         <span class="avatar">${initial}</span>

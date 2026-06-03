@@ -652,9 +652,9 @@ html.sb-collapsed .nav-item:hover::after {
           <div class="panel" id="panel-danger">
             <div class="section danger">
               <h2>Export your data</h2>
-              <p class="help">Download a ZIP of your listings, orders, watchlist and settings. JSON + CSV formats.</p>
+              <p class="help">Download a JSON file containing your profile, settings and saved watchlist. Downloads straight to your device — no email required.</p>
               <div class="section-footer" style="border-top: none; padding-top: 0; margin-top: 0;">
-                <button class="btn ghost" id="export-btn">Request export</button>
+                <button class="btn ghost" id="export-btn">Download my data (JSON)</button>
               </div>
             </div>
 
@@ -1003,12 +1003,31 @@ function prefsFromUI() {
 }
 (async function initPrefs() {
   let prefs = null;
+  let apiEmpty = false;
   try {
     const r = await fetch('/api/settings', { credentials: 'include' });
-    if (r.ok) { const d = await r.json(); prefs = d.notifications || {}; prefsMode = 'api'; }
+    if (r.ok) {
+      const d = await r.json();
+      prefs = d.notifications || {};
+      prefsMode = 'api';
+      apiEmpty = Object.keys(prefs).length === 0;
+    }
   } catch (_) {}
   if (prefs === null) { prefs = loadLocalPrefs(); prefsMode = 'local'; }
   applyPrefs(prefs);
+
+  // First load for an authed user with nothing saved yet: the HTML hard-codes
+  // some toggles as 'on', but the API returned no notifications — persist the
+  // current UI defaults once so saved state matches what's displayed.
+  if (prefsMode === 'api' && apiEmpty) {
+    try {
+      await fetch('/api/settings/notifications', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifications: prefsFromUI() }),
+      });
+    } catch (_) {}
+  }
 
   document.querySelectorAll('[data-pref]').forEach(el => {
     el.addEventListener('change', async () => {
@@ -1033,8 +1052,31 @@ function prefsFromUI() {
 // ====================================================================
 // Danger zone
 // ====================================================================
-document.getElementById('export-btn').addEventListener('click', () => {
-  showToast("Export queued — we'll email when ready", 'success');
+document.getElementById('export-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('export-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/auth/account/export', { credentials: 'include' });
+    if (!r.ok) {
+      if (r.status === 401) showToast('Sign in to export your data', 'error');
+      else                  showToast('Could not export your data', 'error');
+      return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kempy-account-export.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Your data has been downloaded', 'success');
+  } catch (_) {
+    showToast('Network error — please try again', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 });
 document.getElementById('signout-all-btn').addEventListener('click', async () => {
   if (!confirm('Sign out of all other sessions?')) return;

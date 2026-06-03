@@ -751,8 +751,8 @@ function renderCard(l) {
   const channelLabel = l.channel === 'ebay' ? '<span class="channel-badge"><span class="dot">e</span> eBay</span>' : escapeHtml(l.channel);
   const margin = marginPct(l.profit, l.costPrice);
   return `
-    <div class="listing-card ${l.status}" data-id="${l.id}">
-      <div class="listing-thumb">${window.KEMPY ? window.KEMPY.icon('image','26px') : ''}${l.img ? `<img src="${l.img}" alt="${l.name}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
+    <div class="listing-card ${l.status}" data-id="${escapeHtml(String(l.id))}">
+      <div class="listing-thumb">${window.KEMPY ? window.KEMPY.icon('image','26px') : ''}${l.img ? `<img src="${escapeHtml(l.img)}" alt="${escapeHtml(l.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
       <div class="listing-body">
         <div class="listing-title">
           <span class="name">${escapeHtml(l.name)}</span>

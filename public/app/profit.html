@@ -714,6 +714,7 @@ async function loadPeriod(period) {
   const d = await loadEbay('/api/profit?period=' + period);
   if (d.auth === false) { showConnectState('Sign in to view profit'); return false; }
   if (d.paywall)        { showPaywall(); return false; }
+  if (d.error)          { showConnectState('Couldn’t reach eBay — refresh to try again'); return false; }
   if (!d.connected)     { showConnectState(); return false; }
   if (d.reconnect)      { showConnectState('Reconnect your eBay store'); return false; }
   const banner = document.getElementById('preview-banner');
@@ -757,14 +758,19 @@ function downloadCsv(rows, filename) {
 document.getElementById('export-btn').addEventListener('click', () => {
   const txs = PROFIT.transactions || [];
   const series = PROFIT.series || [];
+  // Convert USD-base money to the active display currency and label the headers.
+  const cur = (window.KEMPY && window.KEMPY.currencyCode && window.KEMPY.currencyCode()) || 'GBP';
+  const rate = (window.KEMPY && window.KEMPY.currencies[cur] && window.KEMPY.currencies[cur].rate) || 1;
+  const money = (v) => Number((v || 0) * rate).toFixed(2);
+  const csvDate = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? String(iso ?? '') : d.toISOString().slice(0, 10); };
   let rows, name;
   if (txs.length) {
-    rows = [['Date', 'Transaction', 'Item', 'Gross', 'Net']];
-    txs.forEach(t => rows.push([t.date, t.id, t.item, t.gross, t.net]));
+    rows = [['Date', 'Transaction', 'Item', 'Gross (' + cur + ')', 'Net (' + cur + ')']];
+    txs.forEach(t => rows.push([csvDate(t.date), t.id, t.item, money(t.gross), money(t.net)]));
     name = 'kempy-transactions.csv';
   } else if (series.length) {
-    rows = [['Date', 'Revenue', 'Profit']];
-    series.forEach(d => rows.push([d.label, d.revenue, d.profit]));
+    rows = [['Date', 'Revenue (' + cur + ')', 'Profit (' + cur + ')']];
+    series.forEach(d => rows.push([d.label, money(d.revenue), money(d.profit)]));
     name = 'kempy-profit-' + currentPeriod + 'd.csv';
   } else {
     (typeof showToast === 'function') ? showToast('Nothing to export yet', 'error') : alert('Nothing to export yet');

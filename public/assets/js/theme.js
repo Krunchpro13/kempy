@@ -98,6 +98,23 @@
   window.KEMPY.setCurrency = setCurrency;
   window.KEMPY.formatMoney = formatMoney;
 
+  // When signed in, adopt the account's saved currency (fire-and-forget; never blocks paint).
+  function syncAccountCurrency() {
+    var signedIn = false;
+    try { signedIn = localStorage.getItem('kempy_signed_in') === '1'; } catch (e) {}
+    if (!signedIn) return;
+    try {
+      fetch('/api/settings', { credentials: 'include' }).then(function (r) {
+        if (!r.ok) return; // ignore non-200 (e.g. 401)
+        return r.json();
+      }).then(function (data) {
+        if (!data) return;
+        var code = data.currency;
+        if (CURRENCIES[code] && code !== currencyCode()) setCurrency(code);
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
   // ---- Inline SVG icons (Lucide-style) — replace emoji glyphs everywhere ----
   var PATHS = {
     dashboard: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
@@ -182,6 +199,7 @@
     pointLogo();
     injectIcons();
     injectButton();
+    syncAccountCurrency();
     requestAnimationFrame(function () { root.classList.add('theme-ready'); });
     try {
       var mq = window.matchMedia('(prefers-color-scheme: dark)');

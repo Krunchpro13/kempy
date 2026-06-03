@@ -956,8 +956,12 @@ function downloadCsv(rows, filename) {
 }
 document.getElementById('export-btn').addEventListener('click', () => {
   if (!ORDERS.length) { showToast('No orders to export yet', 'error'); return; }
-  const rows = [['Order', 'Date', 'Item', 'Customer', 'Location', 'Status', 'Sale', 'Cost', 'Fees', 'Profit']];
-  ORDERS.forEach(o => rows.push([o.id, o.placedAt, o.item, o.customer, o.location, o.status, o.salePrice, o.costPrice, o.fees, o.profit]));
+  const cur = (window.KEMPY && window.KEMPY.currencyCode && window.KEMPY.currencyCode()) || 'GBP';
+  const rate = (window.KEMPY && window.KEMPY.currencies[cur] && window.KEMPY.currencies[cur].rate) || 1;
+  const money = (v) => Number((Number(v) || 0) * rate).toFixed(2);
+  const day = (v) => (v ? String(v).slice(0, 10) : '');
+  const rows = [['Order', 'Date', 'Item', 'Customer', 'Location', 'Status', 'Sale (' + cur + ')', 'Cost (' + cur + ')', 'Fees (' + cur + ')', 'Profit (' + cur + ')']];
+  ORDERS.forEach(o => rows.push([o.id, day(o.placedAt), o.item, o.customer, o.location, o.status, money(o.salePrice), money(o.costPrice), money(o.fees), money(o.profit)]));
   downloadCsv(rows, 'kempy-orders.csv');
   showToast('Exported ' + ORDERS.length + ' orders', 'success');
 });

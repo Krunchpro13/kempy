@@ -201,7 +201,13 @@ export async function getConnection(userId) {
 }
 
 export async function disconnect(userId) {
+  // Clear the OAuth tokens AND all per-store setup state so reconnecting a
+  // DIFFERENT eBay account starts clean. Leaving ebay_seller_prefs behind would
+  // make a fresh connection report 'ready' with the old account's stale
+  // merchant_location_key / policy IDs / setup_completed_at.
   await query(`DELETE FROM ebay_connections WHERE user_id = $1`, [userId]);
+  await query(`DELETE FROM ebay_seller_prefs WHERE user_id = $1`, [userId]);
+  await query(`DELETE FROM ebay_listings WHERE user_id = $1`, [userId]);
 }
 
 export { SCOPES };

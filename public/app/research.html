@@ -834,7 +834,7 @@ async function loadWatchlist() {
     if (r.ok) {
       const data = await r.json();
       serverCount = data.count ?? (data.items?.length ?? 0);
-      (data.items || []).forEach(i => i.asin && savedAsins.add(i.asin));
+      (data.items || []).forEach(i => { const k = i.asin || i.ebayItemId; if (k) savedAsins.add(k); });
     }
   } catch (_) {}
   // Local items (preview mode)
@@ -963,7 +963,7 @@ function applyFiltersAndRender() {
     filterStats.innerHTML = `
       <span class="v">${products.length}</span> results
       · avg ROI <span class="v">${avgRoi.toFixed(1)}%</span>
-      · best profit <span class="pos">${fmt$(bestProfit)}</span>
+      · best profit <span class="${bestProfit < 0 ? 'neg' : 'pos'}">${fmt$(bestProfit)}</span>
     `;
   } else {
     filterStats.innerHTML = '<span class="v">0</span> results';
@@ -989,7 +989,8 @@ function applyFiltersAndRender() {
     const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
       ? `<span class="match-badge" title="${escapeHtml(p.matchReasoning || '')}">${window.KEMPY ? window.KEMPY.icon('bot','12px') : ''} ${Math.round(p.matchConfidence * 100)}%</span>`
       : '';
-    const isSaved = p.asin && savedAsins.has(p.asin);
+    const savedKey = p.asin || p.ebayItemId;
+    const isSaved = savedKey && savedAsins.has(savedKey);
     const totalCost = (p.fees || 0) + (p.shipping || 0) + (p.packaging || 0);
     return `
       <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
@@ -1005,7 +1006,7 @@ function applyFiltersAndRender() {
             <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
             <div class="item"><div class="l">Amazon${p.estimated ? ' <span title="Estimated — no confident Amazon match was found for this listing. ROI is approximate." style="color:var(--amber);font-size:11px;">(est.)</span>' : ''} ${amazonLink}</div><div class="v">${p.estimated ? '~' : ''}${fmt$(p.amazonPrice)}</div></div>
             <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
-            <div class="item"><div class="l">Profit</div><div class="v pos">${fmt$(p.profit)}</div></div>
+            <div class="item"><div class="l">Profit</div><div class="v ${(p.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(p.profit)}</div></div>
           </div>
         </div>
         <div class="rc-verdict">
@@ -1119,7 +1120,7 @@ function saveLocal(items) {
 }
 
 // Seed savedAsins from localStorage too, so the Save button knows what's already saved
-loadLocal().forEach(i => i.asin && savedAsins.add(i.asin));
+loadLocal().forEach(i => { const k = i.asin || i.ebayItemId; if (k) savedAsins.add(k); });
 
 // List on eBay → open the shared modal with the full product object.
 resultsEl.addEventListener('click', (e) => {
@@ -1138,9 +1139,10 @@ resultsEl.addEventListener('click', async (e) => {
   if (!btn) return;
   const card = btn.closest('.research-card');
   const product = JSON.parse(card.dataset.product.replace(/&#39;/g, "'").replace(/&quot;/g, '"'));
+  const savedKey = product.asin || product.ebayItemId;
 
   // Already saved? (button is also disabled, but belt and braces)
-  if (product.asin && savedAsins.has(product.asin)) return;
+  if (savedKey && savedAsins.has(savedKey)) return;
 
   try {
     btn.disabled = true;
@@ -1159,23 +1161,33 @@ resultsEl.addEventListener('click', async (e) => {
         throw new Error(err.error || `Save failed (${r.status})`);
       }
     } else {
-      // Preview path — localStorage
+      // Preview path — localStorage (dedupe by asin/ebayItemId first)
       const items = loadLocal();
-      const id = product.asin || ('local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
-      items.push({
-        ...product,
-        id,
-        addedAt: new Date().toISOString(),
-        savedEbayPrice: product.ebayPrice,
-        savedAmazonPrice: product.amazonPrice,
-      });
-      saveLocal(items);
+      const already = savedKey && items.some(i => (i.asin || i.ebayItemId) === savedKey);
+      if (!already) {
+        const id = savedKey || ('local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+        items.push({
+          ...product,
+          id,
+          addedAt: new Date().toISOString(),
+          savedEbayPrice: product.ebayPrice,
+          savedAmazonPrice: product.amazonPrice,
+        });
+        saveLocal(items);
+      }
     }
 
     btn.classList.add('saved');
     btn.textContent = 'Saved';
-    if (product.asin) savedAsins.add(product.asin);
-    document.getElementById('topbar-wl-count').textContent = loadLocal().length;
+    if (savedKey) savedAsins.add(savedKey);
+    // Bump the topbar badge. Authed saves live in the DB (not localStorage), so
+    // increment the displayed count rather than overwriting with the local list.
+    const wlCountEl = document.getElementById('topbar-wl-count');
+    if (currentUser) {
+      wlCountEl.textContent = (parseInt(wlCountEl.textContent, 10) || 0) + 1;
+    } else {
+      wlCountEl.textContent = loadLocal().length;
+    }
     showToast(`Saved “${(product.name || '').slice(0, 40)}…” to watchlist`, 'success');
   } catch (err) {
     btn.disabled = false;

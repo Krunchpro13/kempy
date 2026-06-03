@@ -94,6 +94,8 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), asyn
     await billing.handleWebhookEvent(event);
   } catch (err) {
     console.error('[stripe] webhook handler error:', err.message);
+    // Don't ACK 200: a swallowed failure means Stripe never retries the DB sync.
+    return res.status(500).json({ error: 'handler failed' });
   }
   res.json({ received: true });
 });
@@ -146,6 +148,9 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many attempts. Please try again later.' },
+  // Read-only session endpoints are hit on every page load — a 429 there makes
+  // pages look logged-out. Exempt them (still covered by the broader apiLimiter).
+  skip: (req) => req.path === '/me' || req.path === '/logout',
 });
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
@@ -219,6 +224,12 @@ app.use('/api/profit', requireSubscription, profitRouter);
 app.use('/api/ebay', ebayRouter);
 app.use('/api/ebay', ebayListingsRouter);
 app.use('/api/billing', billingRouter);
+
+// ---- Branded 404 for unmatched non-API GETs (API 404s stay JSON via notFound) ----
+app.get(/.*/, (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.status(404).sendFile(join(__dirname, 'public', '404.html'));
+});
 
 // ---- 404 (API) + error handler — must be last ----
 app.use(notFound);
