@@ -21,7 +21,7 @@ const LOCATION_KEY = 'kempy-default';
 const POLICY_NAME = 'KEMPY Default';
 
 function marketplace() {
-  return process.env.EBAY_MARKETPLACE_ID || 'EBAY_US';
+  return process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB';
 }
 function currency() {
   const m = marketplace();

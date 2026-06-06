@@ -69,9 +69,9 @@ export async function searchEbay(query, { limit = 20 } = {}) {
   const res = await axios.get(SEARCH_URL, {
     headers: {
       Authorization: `Bearer ${token}`,
-      // EBAY_US — change to EBAY_GB / EBAY_DE / etc for other markets later
-      'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-      'X-EBAY-C-ENDUSERCTX': 'contextualLocation=country=US,zip=10001',
+      // UK-first: default to eBay.co.uk. Override with EBAY_MARKETPLACE_ID for other markets.
+      'X-EBAY-C-MARKETPLACE-ID': process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB',
+      'X-EBAY-C-ENDUSERCTX': 'contextualLocation=country=GB',
     },
     params: {
       q: query,

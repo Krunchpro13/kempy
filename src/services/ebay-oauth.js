@@ -58,7 +58,7 @@ export function isConfigured() {
 }
 
 function marketplace() {
-  return process.env.EBAY_MARKETPLACE_ID || 'EBAY_US';
+  return process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB';
 }
 
 function basicAuth() {

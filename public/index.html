@@ -1106,7 +1106,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
     <div class="workflow-demo">
       <div class="workflow-grid">
         <div class="workflow-card">
-          <div class="wf-label">Amazon</div>
+          <div class="wf-label">Amazon.co.uk</div>
           <div class="wf-product" id="wf-amazon">
             <div class="wf-thumb" data-ico="image"></div>
             <div class="wf-info">
@@ -1129,7 +1129,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
         </div>
         <div class="wf-arrow">→</div>
         <div class="workflow-card">
-          <div class="wf-label">eBay</div>
+          <div class="wf-label">eBay.co.uk</div>
           <div class="wf-product">
             <div class="wf-thumb" data-ico="image"></div>
             <div class="wf-info">
@@ -1149,7 +1149,7 @@ footer .container { display: flex; justify-content: space-between; align-items: 
   <div class="container">
     <div class="section-eyebrow">▸ How it works</div>
     <h2>Five clicks. One robot.<br>A real eBay business.</h2>
-    <p class="section-lead">Amazon is the supplier. eBay is your store. KEMPY is everything in between.</p>
+    <p class="section-lead">Amazon.co.uk is the supplier. eBay.co.uk is your store. KEMPY is everything in between.</p>
 
     <div class="steps">
       <div class="step-card reveal">
@@ -1589,8 +1589,8 @@ function renderResults(prods, meta) {
             </div>
           </div>
           <div class="rc-pricing">
-            <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
-            <div class="item"><div class="l">Amazon ${amazonLink}</div><div class="v">${fmt$(p.amazonPrice)}</div></div>
+            <div class="item"><div class="l">eBay.co.uk ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
+            <div class="item"><div class="l">Amazon.co.uk ${amazonLink}</div><div class="v">${fmt$(p.amazonPrice)}</div></div>
             <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${p.fees != null ? '−' + fmt$((p.fees||0) + (p.shipping||0) + (p.packaging||0)) : '—'}</div></div>
             <div class="item"><div class="l">Profit</div><div class="v ${(p.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(p.profit)}</div></div>
           </div>
@@ -1598,7 +1598,7 @@ function renderResults(prods, meta) {
         <div class="rc-verdict">
           <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
           <div class="rc-tag ${v.cls}">${v.label}</div>
-          <button class="rc-save" data-action="save">⭐ Save</button>
+          <button class="rc-save" data-action="save">${window.KEMPY ? window.KEMPY.icon('watchlist','13px') : ''} Save</button>
         </div>
       </div>
     `;
@@ -1705,7 +1705,7 @@ results.addEventListener('click', async (e) => {
       body: JSON.stringify({ product }),
     });
     if (r.status === 401) {
-      btn.textContent = '⭐ Save';
+      btn.innerHTML = (window.KEMPY ? window.KEMPY.icon('watchlist','13px') : '') + ' Save';
       btn.disabled = false;
       currentUser = null;
       renderAccount();
@@ -1720,7 +1720,7 @@ results.addEventListener('click', async (e) => {
     }
     if (r.status === 503) {
       showToast('Watchlist needs DATABASE_URL + npm run migrate');
-      btn.textContent = '⭐ Save';
+      btn.innerHTML = (window.KEMPY ? window.KEMPY.icon('watchlist','13px') : '') + ' Save';
       btn.disabled = false;
       return;
     }
@@ -1816,8 +1816,8 @@ function renderWatchlist(items) {
             </div>
           </div>
           <div class="rc-pricing">
-            <div class="item"><div class="l">eBay</div><div class="v">${fmt$(item.ebayPrice)}</div></div>
-            <div class="item"><div class="l">Amazon</div><div class="v">${fmt$(item.amazonPrice)}</div></div>
+            <div class="item"><div class="l">eBay.co.uk</div><div class="v">${fmt$(item.ebayPrice)}</div></div>
+            <div class="item"><div class="l">Amazon.co.uk</div><div class="v">${fmt$(item.amazonPrice)}</div></div>
             <div class="item"><div class="l">Profit</div><div class="v ${(item.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(item.profit)}</div></div>
             <div class="item"><div class="l">ROI</div><div class="v">${roi.toFixed(1)}%</div></div>
           </div>

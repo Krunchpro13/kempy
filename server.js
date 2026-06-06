@@ -197,14 +197,17 @@ app.get('/api/health', async (req, res, next) => {
 // ---- Search ----
 app.get('/api/search', async (req, res, next) => {
   const q = (req.query.q || '').trim();
-  if (!q) return res.json({ products: [], meta: { query: q, count: 0 } });
+  const source = ['aliexpress', 'tiktok'].includes(req.query.source) ? req.query.source : 'amazon';
+  // Amazon mode needs a keyword; AliExpress/TikTok surface trending UK picks with no query.
+  if (!q && source === 'amazon') return res.json({ products: [], meta: { query: q, source, count: 0 } });
   try {
     const start = Date.now();
-    const { products, cached } = await searchProducts(q);
+    const { products, cached } = await searchProducts(q, source);
     res.json({
       products,
       meta: {
         query: q,
+        source,
         count: products.length,
         ms: Date.now() - start,
         cached,

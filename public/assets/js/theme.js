@@ -61,15 +61,17 @@
     }
   }
 
-  // ---- Currency (config-driven; static USD-based conversion rates) ----
+  // ---- Currency (config-driven; static GBP-based conversion rates) ----
+  // KEMPY is UK-first: prices come from Amazon.co.uk / eBay.co.uk in GBP, so GBP is
+  // the base (rate 1) and every other currency converts FROM pounds.
   var CUR_KEY = 'kempy-currency';
   var CURRENCIES = {
-    USD: { code: 'USD', symbol: '$',   rate: 1,    locale: 'en-US', label: 'US Dollar' },
-    EUR: { code: 'EUR', symbol: '€',   rate: 0.92, locale: 'de-DE', label: 'Euro' },
-    GBP: { code: 'GBP', symbol: '£',   rate: 0.79, locale: 'en-GB', label: 'British Pound' },
-    CAD: { code: 'CAD', symbol: 'CA$', rate: 1.37, locale: 'en-CA', label: 'Canadian Dollar' },
-    AUD: { code: 'AUD', symbol: 'A$',  rate: 1.52, locale: 'en-AU', label: 'Australian Dollar' },
-    JPY: { code: 'JPY', symbol: '¥',   rate: 157,  locale: 'ja-JP', label: 'Japanese Yen' }
+    GBP: { code: 'GBP', symbol: '£',   rate: 1,    locale: 'en-GB', label: 'British Pound' },
+    USD: { code: 'USD', symbol: '$',   rate: 1.27, locale: 'en-US', label: 'US Dollar' },
+    EUR: { code: 'EUR', symbol: '€',   rate: 1.16, locale: 'de-DE', label: 'Euro' },
+    CAD: { code: 'CAD', symbol: 'CA$', rate: 1.73, locale: 'en-CA', label: 'Canadian Dollar' },
+    AUD: { code: 'AUD', symbol: 'A$',  rate: 1.92, locale: 'en-AU', label: 'Australian Dollar' },
+    JPY: { code: 'JPY', symbol: '¥',   rate: 199,  locale: 'ja-JP', label: 'Japanese Yen' }
   };
   function currencyCode() {
     var c; try { c = localStorage.getItem(CUR_KEY); } catch (e) {}
@@ -80,7 +82,7 @@
     try { localStorage.setItem(CUR_KEY, code); } catch (e) {}
     try { window.dispatchEvent(new CustomEvent('kempy:currency', { detail: code })); } catch (e) {}
   }
-  // Format a USD amount in the user's chosen currency (converted at a static rate).
+  // Format a GBP-base amount in the user's chosen currency (converted at a static rate).
   function formatMoney(usd) {
     var n = Number(usd); if (!isFinite(n)) n = 0;
     var c = CURRENCIES[currencyCode()];

@@ -22,7 +22,7 @@ const INVENTORY   = 'https://api.ebay.com/sell/inventory/v1/inventory_item';
 const FINANCES    = 'https://api.ebay.com/sell/finances/v1/transaction';
 
 function marketplace() {
-  return process.env.EBAY_MARKETPLACE_ID || 'EBAY_US';
+  return process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB';
 }
 
 function headers(token) {

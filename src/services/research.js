@@ -5,6 +5,7 @@ import { bestMatch } from './match-local.js';
 import { matchAmazonBatch } from './claude.js';
 import { getCachedSearch, setCachedSearch } from './cache.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
+import { finalizeMock, searchAliExpress, searchTikTok } from './mock-sources.js';
 import { ECONOMICS, SEARCH } from '../config.js';
 
 const FEE_RATE = ECONOMICS.EBAY_FEE_RATE;
@@ -97,14 +98,20 @@ function buildProduct(item, match = null) {
     matchSource: hasReal ? `ebay+keepa(${match.via})` : 'estimate',
     matchVia: hasReal ? match.via : null,                 // 'claude' | 'local' | null
     matchConfidence: hasReal && match.confidence != null ? match.confidence : null, // 0..1
+    sourceName: 'Amazon.co.uk',                           // supplier-column label
     image: item.image,
     condition: item.condition,
     ebayItemId: item.ebayItemId,
   };
 }
 
-export async function searchProducts(query) {
+export async function searchProducts(query, source = 'amazon') {
   const q = (query || '').toLowerCase().trim();
+
+  // Alternative discovery modes — mock UK/GBP data (Amazon.co.uk → eBay.co.uk is the
+  // live default; AliExpress/TikTok return sample opportunities until a live API lands).
+  if (source === 'aliexpress') return { products: searchAliExpress(query), source: 'aliexpress', realCount: 0, cached: false };
+  if (source === 'tiktok') return { products: searchTikTok(query), source: 'tiktok', realCount: 0, cached: false };
 
   const hasEbay = !!process.env.EBAY_CLIENT_ID;
   if (hasEbay && q && q !== 'all') {
@@ -148,15 +155,18 @@ export async function searchProducts(query) {
     }
   }
 
-  // Fallback to mock data
-  let products = FALLBACK_PRODUCTS.slice();
+  // Fallback to mock data (Amazon.co.uk → eBay.co.uk), finalized so every card
+  // gets real fees/profit/ROI instead of blanks.
+  let raw = FALLBACK_PRODUCTS.slice();
   if (q && q !== 'all') {
-    products = products.filter(p =>
+    raw = raw.filter(p =>
       p.name.toLowerCase().includes(q) ||
       p.cat.toLowerCase().includes(q) ||
       (p.keywords || []).some(k => k.toLowerCase().includes(q))
     );
   }
-  products.sort((a, b) => (b.roi || 0) - (a.roi || 0));
+  const products = raw
+    .map(p => finalizeMock(p, { sourceName: 'Amazon.co.uk', supplierUrlBase: 'https://www.amazon.co.uk/s?k=' }))
+    .sort((a, b) => (b.roi || 0) - (a.roi || 0));
   return { products, cached: false, source: 'mock' };
 }

@@ -33,7 +33,7 @@ export async function findAmazonCandidates(query, n = 5) {
   const cached = await getCachedKeepa(query);
   if (cached) return cached.slice(0, n);
 
-  const domain = process.env.KEEPA_DOMAIN || 1;
+  const domain = process.env.KEEPA_DOMAIN || 2; // 2 = Amazon.co.uk (UK-first); 1 = amazon.com
 
   // Single call — Keepa's /search returns full product objects (with stats when
   // stats:1 is passed), so we get titles + prices in one ~10-token request.
@@ -65,7 +65,7 @@ export async function findAmazonCandidates(query, n = 5) {
         image: firstImage
           ? `https://images-na.ssl-images-amazon.com/images/I/${firstImage}`
           : null,
-        url: `https://www.amazon.com/dp/${p.asin}`,
+        url: `https://www.amazon.co.uk/dp/${p.asin}`,
         avgRating: p.avgRating ? p.avgRating / 10 : null,
         reviewCount: p.reviewCount || 0,
       };

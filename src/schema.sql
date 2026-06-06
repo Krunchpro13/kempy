@@ -148,7 +148,7 @@ CREATE INDEX IF NOT EXISTS team_members_owner_idx ON team_members (owner_user_id
 CREATE TABLE IF NOT EXISTS ebay_connections (
   user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   ebay_user_id TEXT,                            -- eBay username, if fetched (nullable)
-  marketplace_id TEXT NOT NULL DEFAULT 'EBAY_US',
+  marketplace_id TEXT NOT NULL DEFAULT 'EBAY_GB',
   scopes TEXT,                                  -- space-delimited granted scopes (diagnostics)
   access_token TEXT,                            -- current short-lived token (refreshable)
   access_token_expires_at TIMESTAMPTZ,          -- when access_token dies
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS ebay_seller_prefs (
   return_policy_id TEXT,
   category_tree_id TEXT,
   programs_opted_in BOOLEAN NOT NULL DEFAULT FALSE,
-  marketplace_id TEXT NOT NULL DEFAULT 'EBAY_US',
+  marketplace_id TEXT NOT NULL DEFAULT 'EBAY_GB',
   setup_completed_at TIMESTAMPTZ,
   last_error TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

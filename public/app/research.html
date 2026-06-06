@@ -348,6 +348,10 @@ html.sb-collapsed .nav-item:hover::after {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .search-input::placeholder { color: var(--text-muted); }
+.mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.mode-btn { padding: 8px 14px; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.3px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.mode-btn:hover { border-color: var(--border-cyan); color: var(--text); }
+.mode-btn.active { background: rgba(0,229,255,0.08); border-color: var(--cyan); color: var(--cyan); }
 .search-input:focus {
   border-color: var(--cyan);
   box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
@@ -684,11 +688,17 @@ html.sb-collapsed .nav-item:hover::after {
       <!-- HERO SEARCH -->
       <section class="search-hero">
         <h1>Find <span class="accent">profitable</span> products.</h1>
-        <p>Search any keyword. The engine pulls Amazon supplier prices, eBay sold prices, fees and shipping — and surfaces the best opportunities first.</p>
+        <p>Pick a source, search any keyword, and the engine compares supplier cost against <strong>eBay.co.uk</strong> prices — fees and shipping included — surfacing the best opportunities first.</p>
 
         <div class="search-row">
           <input type="text" id="search-input" class="search-input" placeholder="Try: headphones, USB cable, watch, handbag, webcam..." autocomplete="off" />
           <button id="search-btn" class="search-go">Search</button>
+        </div>
+
+        <div class="mode-selector" id="mode-selector" role="tablist" aria-label="Research source">
+          <button type="button" class="mode-btn active" data-source="amazon" role="tab" aria-selected="true">Amazon.co.uk → eBay.co.uk</button>
+          <button type="button" class="mode-btn" data-source="aliexpress" role="tab" aria-selected="false">AliExpress → eBay.co.uk</button>
+          <button type="button" class="mode-btn" data-source="tiktok" role="tab" aria-selected="false">TikTok UK → eBay.co.uk</button>
         </div>
 
         <div class="recent-searches" id="recent-searches" hidden>
@@ -861,6 +871,7 @@ const metaEl = document.getElementById('results-meta');
 
 let lastProducts = [];   // raw response — filters operate on this
 let lastMeta = null;
+let currentSource = 'amazon';   // amazon | aliexpress | tiktok (research source mode)
 const PAGE_SIZE = 8;          // pagination: cards rendered per page
 let visibleCount = PAGE_SIZE; // how many of the filtered set are currently shown
 let filteredProducts = [];    // last filtered+sorted set (for load-more)
@@ -1003,8 +1014,8 @@ function applyFiltersAndRender() {
             </div>
           </div>
           <div class="rc-pricing">
-            <div class="item"><div class="l">eBay ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
-            <div class="item"><div class="l">Amazon${p.estimated ? ' <span title="Estimated — no confident Amazon match was found for this listing. ROI is approximate." style="color:var(--amber);font-size:11px;">(est.)</span>' : ''} ${amazonLink}</div><div class="v">${p.estimated ? '~' : ''}${fmt$(p.amazonPrice)}</div></div>
+            <div class="item"><div class="l">eBay.co.uk ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
+            <div class="item"><div class="l">${escapeHtml(p.sourceName || 'Amazon.co.uk')}${p.estimated ? ' <span title="Estimated — no confident match was found for this listing. ROI is approximate." style="color:var(--amber);font-size:11px;">(est.)</span>' : ''} ${amazonLink}</div><div class="v">${p.estimated ? '~' : ''}${fmt$(p.amazonPrice)}</div></div>
             <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
             <div class="item"><div class="l">Profit</div><div class="v ${(p.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(p.profit)}</div></div>
           </div>
@@ -1056,7 +1067,7 @@ function renderMeta(meta) {
 
 async function search(q) {
   q = (q || '').trim();
-  if (!q) {
+  if (!q && currentSource === 'amazon') {
     resultsEl.innerHTML = `
       <div class="empty-state">
         <span class="icon">${window.KEMPY ? window.KEMPY.icon('search','42px') : ''}</span>
@@ -1071,6 +1082,7 @@ async function search(q) {
   // Update URL so the search is shareable / refreshable
   const url = new URL(window.location);
   url.searchParams.set('q', q);
+  if (currentSource !== 'amazon') url.searchParams.set('source', currentSource); else url.searchParams.delete('source');
   window.history.replaceState({}, '', url);
 
   searchBtn.disabled = true;
@@ -1078,7 +1090,7 @@ async function search(q) {
   renderSkeleton();
 
   try {
-    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&source=${currentSource}`);
     if (!r.ok) throw new Error(`API ${r.status}`);
     const data = await r.json();
     lastProducts = data.products || [];
@@ -1201,6 +1213,22 @@ resultsEl.addEventListener('click', async (e) => {
 // ====================================================================
 searchBtn.addEventListener('click', () => search(searchInput.value));
 searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(searchInput.value); });
+
+// Research source mode (Amazon.co.uk / AliExpress / TikTok UK → eBay.co.uk)
+const modeSelector = document.getElementById('mode-selector');
+function setSource(src, { rerun = true } = {}) {
+  currentSource = ['amazon', 'aliexpress', 'tiktok'].includes(src) ? src : 'amazon';
+  modeSelector.querySelectorAll('.mode-btn').forEach(b => {
+    const on = b.dataset.source === currentSource;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  if (rerun) search(searchInput.value);   // mock modes surface UK picks even with an empty box
+}
+modeSelector.addEventListener('click', e => {
+  const b = e.target.closest('.mode-btn');
+  if (b) setSource(b.dataset.source);
+});
 // Recent-search chips are rendered dynamically — use a delegated handler.
 document.getElementById('suggestions').addEventListener('click', (e) => {
   const chip = e.target.closest('.suggestion');
@@ -1230,10 +1258,15 @@ document.getElementById('load-more-btn').addEventListener('click', () => {
   renderRecent();
   await loadMe();
   await loadWatchlist();
-  const urlQ = new URL(window.location).searchParams.get('q');
+  const params = new URL(window.location).searchParams;
+  const urlSource = params.get('source');
+  if (urlSource) setSource(urlSource, { rerun: false });
+  const urlQ = params.get('q');
   if (urlQ) {
     searchInput.value = urlQ === 'all' ? '' : urlQ;
     search(urlQ);
+  } else if (currentSource !== 'amazon') {
+    search('');   // dashboard quick-action into AliExpress/TikTok → show trending UK picks
   }
 })();
 
