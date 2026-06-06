@@ -6,6 +6,9 @@ import { matchAmazonBatch } from './claude.js';
 import { getCachedSearch, setCachedSearch } from './cache.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
 import { finalizeMock, searchAliExpress, searchTikTok } from './mock-sources.js';
+import * as aliexpress from './providers/aliexpress.js';
+import * as tiktok from './providers/tiktok.js';
+import { enrichWithEbay } from './providers/enrich.js';
 import { ECONOMICS, SEARCH } from '../config.js';
 
 const FEE_RATE = ECONOMICS.EBAY_FEE_RATE;
@@ -105,13 +108,49 @@ function buildProduct(item, match = null) {
   };
 }
 
+// Per-provider config for the AliExpress / TikTok modes.
+const PROVIDER_META = {
+  aliexpress: { sourceName: 'AliExpress', supplierUrlBase: 'https://www.aliexpress.com/wholesale?SearchText=', mock: searchAliExpress },
+  tiktok: { sourceName: 'TikTok UK', supplierUrlBase: 'https://www.tiktok.com/search?q=', mock: searchTikTok },
+};
+
+// Run an alternative source: live provider (keys present) → eBay-priced cards,
+// with cache + graceful fallback to the mock sample feed on any miss/error.
+async function searchViaProvider(provider, source, query, q) {
+  const meta = PROVIDER_META[source];
+  const mockResult = () => ({ products: meta.mock(query), source, realCount: 0, live: false, cached: false });
+
+  if (!provider.isConfigured()) return mockResult();
+
+  const cacheKey = `${source}:${q || '_trending'}`;
+  const hit = await getCachedSearch(cacheKey);
+  if (hit) return { ...hit, cached: true };
+
+  try {
+    const supplier = await provider.fetchSupplierProducts(query, { limit: SEARCH.EBAY_LIMIT });
+    if (supplier.length) {
+      const products = await enrichWithEbay(supplier, meta);
+      if (products.length) {
+        const payload = { products, source, realCount: products.length, live: true };
+        await setCachedSearch(cacheKey, payload);
+        return { ...payload, cached: false };
+      }
+    }
+    console.error(`[research] ${source}: provider returned no usable products, using mock`);
+  } catch (err) {
+    console.error(`[research] ${source} provider failed, using mock:`, err.message);
+  }
+  return mockResult();
+}
+
 export async function searchProducts(query, source = 'amazon') {
   const q = (query || '').toLowerCase().trim();
 
-  // Alternative discovery modes — mock UK/GBP data (Amazon.co.uk → eBay.co.uk is the
-  // live default; AliExpress/TikTok return sample opportunities until a live API lands).
-  if (source === 'aliexpress') return { products: searchAliExpress(query), source: 'aliexpress', realCount: 0, cached: false };
-  if (source === 'tiktok') return { products: searchTikTok(query), source: 'tiktok', realCount: 0, cached: false };
+  // Alternative discovery modes: AliExpress → eBay.co.uk and TikTok UK → eBay.co.uk.
+  // Live when the provider's API keys are set (real supplier products priced against
+  // eBay.co.uk); otherwise fall back to the mock sample feed so the UI still works.
+  if (source === 'aliexpress') return searchViaProvider(aliexpress, 'aliexpress', query, q);
+  if (source === 'tiktok') return searchViaProvider(tiktok, 'tiktok', query, q);
 
   const hasEbay = !!process.env.EBAY_CLIENT_ID;
   if (hasEbay && q && q !== 'all') {
