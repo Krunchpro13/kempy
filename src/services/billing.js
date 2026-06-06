@@ -45,8 +45,21 @@ export async function createCheckoutSession(user) {
     cancel_url: `${APP_URL}/app/billing.html?sub=cancel`,
   };
   if (process.env.STRIPE_COUPON_ID) params.discounts = [{ coupon: process.env.STRIPE_COUPON_ID }];
-  const session = await stripe.checkout.sessions.create(params);
-  return session.url;
+  try {
+    const session = await stripe.checkout.sessions.create(params);
+    return session.url;
+  } catch (err) {
+    // A misconfigured discount (wrong coupon id, or a coupon whose currency
+    // doesn't match the price) must never fully block subscribing. Retry once
+    // without the discount so the customer can still pay full price.
+    if (params.discounts && /coupon|discount|promotion/i.test(err.message || '')) {
+      console.error('[billing] discount rejected, retrying without coupon:', err.message);
+      delete params.discounts;
+      const session = await stripe.checkout.sessions.create(params);
+      return session.url;
+    }
+    throw err;
+  }
 }
 
 export async function createPortalSession(user) {
