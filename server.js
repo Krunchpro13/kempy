@@ -171,7 +171,12 @@ await initCache();
 initDb();
 
 // ---- Health ----
-app.get('/api/health', async (_req, res, next) => {
+// Public response is a minimal liveness probe. The detailed infra topology
+// (which integrations are live, cache hit rates, DB up/down) is gated behind
+// HEALTH_TOKEN so it isn't world-readable: GET /api/health?token=<HEALTH_TOKEN>.
+app.get('/api/health', async (req, res, next) => {
+  const detailed = !!process.env.HEALTH_TOKEN && req.query.token === process.env.HEALTH_TOKEN;
+  if (!detailed) return res.json({ status: 'ok' });
   try {
     const db = await dbPing();
     res.json({

@@ -160,7 +160,11 @@ export async function getProfit(userId, period = 30) {
 
   const days = [7, 30, 90, 365].includes(Number(period)) ? Number(period) : 30;
   const cutoff = Date.now() - days * 86_400_000;
-  const inWindow = orders.filter(o => o.placedAt && new Date(o.placedAt).getTime() >= cutoff);
+  const priorCutoff = cutoff - days * 86_400_000;
+  const ts = (o) => (o.placedAt ? new Date(o.placedAt).getTime() : 0);
+  const inWindow = orders.filter(o => o.placedAt && ts(o) >= cutoff);
+  // Equal-length window immediately before this one — powers the "vs prior" deltas.
+  const inPrior = orders.filter(o => o.placedAt && ts(o) >= priorCutoff && ts(o) < cutoff);
 
   const revenue = round2(inWindow.reduce((s, o) => s + o.salePrice, 0));
   const profit = round2(inWindow.reduce((s, o) => s + o.profit, 0));
@@ -169,6 +173,11 @@ export async function getProfit(userId, period = 30) {
     orders: inWindow.length,
     revenue,
     profit,
+    prior: {
+      orders: inPrior.length,
+      revenue: round2(inPrior.reduce((s, o) => s + o.salePrice, 0)),
+      profit: round2(inPrior.reduce((s, o) => s + o.profit, 0)),
+    },
     series: buildSeries(inWindow, days),
     topProducts: buildTopProducts(inWindow),
     channels: buildChannels(inWindow),

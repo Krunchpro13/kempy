@@ -184,7 +184,10 @@
       if (key && el) el.innerHTML = icon(key, '16px');
     });
     var mb = document.getElementById('menu-btn');
-    if (mb && mb.textContent.indexOf('☰') >= 0) mb.innerHTML = icon('menu', '18px');
+    if (mb) {
+      if (mb.textContent.indexOf('☰') >= 0) mb.innerHTML = icon('menu', '18px');
+      if (!mb.getAttribute('aria-label')) mb.setAttribute('aria-label', 'Open menu');
+    }
     // Generic: any element with data-ico gets the named icon (scales to font-size).
     document.querySelectorAll('[data-ico]').forEach(function (el) {
       var svg = icon(el.getAttribute('data-ico'));

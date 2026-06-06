@@ -210,3 +210,12 @@ CREATE TABLE IF NOT EXISTS ebay_listings (
 CREATE INDEX IF NOT EXISTS ebay_listings_user_idx ON ebay_listings (user_id);
 CREATE INDEX IF NOT EXISTS ebay_listings_status_idx ON ebay_listings (user_id, status);
 
+-- ====================================================================
+-- Stripe webhook idempotency — one row per processed event id, so retries
+-- and duplicate/out-of-order deliveries are applied at most once.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS processed_stripe_events (
+  event_id TEXT PRIMARY KEY,
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

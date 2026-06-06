@@ -1575,7 +1575,7 @@ function renderResults(prods, meta) {
     const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
     const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
     const amazonLink = p.amazonUrl ? `<a href="${escapeHtml(p.amazonUrl)}" target="_blank" style="color:var(--cyan);text-decoration:none;">↗</a>` : '';
-    const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
+    const matchBadge = p.matchVia === 'claude' && p.matchConfidence != null
       ? `<span title="${escapeHtml(p.matchReasoning || '')}" style="font-size:10px;font-family:var(--font-mono);color:var(--cyan);margin-left:8px;border:1px solid var(--border-cyan);padding:1px 6px;border-radius:100px;">${Math.round(p.matchConfidence * 100)}% match</span>`
       : '';
     return `

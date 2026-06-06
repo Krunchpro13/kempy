@@ -92,6 +92,18 @@ async function applyByCustomer(sub) {
 }
 
 export async function handleWebhookEvent(event) {
+  // Idempotency: Stripe retries and can deliver the same event more than once (or
+  // out of order). Record each event id once and skip repeats. Fail OPEN if the
+  // table isn't present yet (un-migrated DB) so the webhook never starts erroring.
+  try {
+    const seen = await query(
+      `INSERT INTO processed_stripe_events (event_id) VALUES ($1) ON CONFLICT (event_id) DO NOTHING`,
+      [event.id],
+    );
+    if (seen.rowCount === 0) return; // already handled
+  } catch (err) {
+    console.error('[stripe] idempotency check skipped:', err.message);
+  }
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;

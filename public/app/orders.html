@@ -622,7 +622,7 @@ html.sb-collapsed .nav-item:hover::after {
         <div class="status-tabs" id="status-tabs">
           <button class="status-tab active" data-status="all">All <span class="count" id="ct-all">0</span></button>
           <button class="status-tab urgent" data-status="new">New <span class="count" id="ct-new">0</span></button>
-          <button class="status-tab" data-status="ordered">Ordered <span class="count" id="ct-ordered">0</span></button>
+          <button class="status-tab" data-status="ordered" disabled title="Coming soon — KEMPY will auto-purchase from Amazon and track this stage" style="opacity:.55;cursor:not-allowed;">Ordered <span class="count" style="border:1px solid var(--border);border-radius:100px;padding:0 6px;opacity:.9;">soon</span></button>
           <button class="status-tab" data-status="shipped">Shipped <span class="count" id="ct-shipped">0</span></button>
           <button class="status-tab" data-status="delivered">Delivered <span class="count" id="ct-delivered">0</span></button>
         </div>
@@ -875,8 +875,9 @@ function filterAndRender() {
 function updateCounts() {
   document.getElementById('ct-all').textContent = ORDERS.length;
   for (const s of STATUS_FLOW) {
-    const n = ORDERS.filter(o => o.status === s).length;
-    document.getElementById('ct-' + s).textContent = n;
+    if (s === 'ordered') continue;        // 'Ordered' is a coming-soon stage — no live count
+    const el = document.getElementById('ct-' + s);
+    if (el) el.textContent = ORDERS.filter(o => o.status === s).length;
   }
 }
 

@@ -241,6 +241,11 @@ html.sb-collapsed .nav-item:hover::after {
   .topbar { padding: 0 16px; }
   .page-header h1 { font-size: 24px; }
 }
+/* Toast (matches the other app pages) */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--surface-2); border: 1px solid var(--border-cyan); color: var(--text); padding: 12px 20px; border-radius: 10px; font-family: var(--font-mono); font-size: 13px; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.2s, transform 0.2s; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
 </style>
   <link rel="stylesheet" href="/assets/css/theme.css" />
   <script>(function(){try{var t=localStorage.getItem('kempy-theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
@@ -371,7 +376,7 @@ html.sb-collapsed .nav-item:hover::after {
 
       <div class="card">
         <div class="card-header">
-          <h3><span class="icon">⟳</span>Recent transactions</h3>
+          <h3><span class="icon" data-ico="refresh"></span>Recent transactions</h3>
           <a href="/app/orders.html" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;text-transform:uppercase;letter-spacing:1px;">all orders →</a>
         </div>
         <div class="tx-table" id="tx-table"></div>
@@ -436,7 +441,7 @@ let PROFIT = { orders: 0, revenue: 0, profit: 0, series: [], topProducts: [], ch
 
 async function loadEbay(url) {
   try {
-    const r = await fetch(url, { credentials: 'include' });
+    const r = await fetch(url, { credentials: 'include', cache: 'no-store' });
     if (r.status === 401) return { auth: false };
     if (r.status === 402) return { paywall: true };
     if (!r.ok) return { error: true };
@@ -503,12 +508,36 @@ function aggregate() {
 // State + render
 let currentPeriod = 30;
 
+// Relative % change vs the prior equal-length period (null when there's no basis).
+function pctDelta(cur, prev) {
+  if (!prev) return null;
+  const d = ((cur - prev) / Math.abs(prev)) * 100;
+  return isFinite(d) ? d : null;
+}
+function setDelta(id, cur, prev, suffix) {
+  const el = document.getElementById(id); if (!el) return;
+  const d = pctDelta(cur, prev);
+  if (d === null) { el.textContent = '—'; el.className = 'delta'; return; }
+  const up = d >= 0;
+  el.textContent = (up ? '+' : '') + d.toFixed(0) + '%' + (suffix || '');
+  el.className = 'delta ' + (up ? 'up' : 'down');
+}
+// Margin moves in percentage POINTS, not relative %, so report it as pp.
+function setPoints(id, cur, prev) {
+  const el = document.getElementById(id); if (!el) return;
+  if (!prev && !cur) { el.textContent = '—'; el.className = 'delta'; return; }
+  const d = cur - prev; const up = d >= 0;
+  el.textContent = (up ? '+' : '') + d.toFixed(1) + 'pp';
+  el.className = 'delta ' + (up ? 'up' : 'down');
+}
+
 function renderHero() {
   const { rev, prof, fees, orders } = aggregate();
+  const P = PROFIT.prior || {};
+  const pRev = P.revenue || 0, pProf = P.profit || 0, pOrders = P.orders || 0;
 
   document.getElementById('hero-profit').textContent = fmt$(prof);
-  document.getElementById('hero-delta').textContent = '— vs prior';
-  document.getElementById('hero-delta').className = 'delta';
+  setDelta('hero-delta', prof, pProf, ' vs prior');
   document.getElementById('hero-period-label').textContent =
     { 7: 'last 7 days', 30: 'last 30 days', 90: 'last 90 days', 365: 'last 12 months' }[currentPeriod];
 
@@ -516,21 +545,19 @@ function renderHero() {
   document.getElementById('bd-fees').textContent = '−' + fmtCents(fees);
   document.getElementById('bd-net').textContent  = fmtCents(prof);
 
-  document.getElementById('kpi-margin').textContent = rev ? ((prof / rev) * 100).toFixed(1) + '%' : '—';
-  document.getElementById('kpi-margin-delta').textContent = '—';
-  document.getElementById('kpi-margin-delta').className = 'delta';
+  const curMargin = rev ? (prof / rev) * 100 : 0;
+  const pMargin = pRev ? (pProf / pRev) * 100 : 0;
+  document.getElementById('kpi-margin').textContent = rev ? curMargin.toFixed(1) + '%' : '—';
+  setPoints('kpi-margin-delta', curMargin, pMargin);
 
   document.getElementById('kpi-orders').textContent = orders;
-  document.getElementById('kpi-orders-delta').textContent = '—';
-  document.getElementById('kpi-orders-delta').className = 'delta';
+  setDelta('kpi-orders-delta', orders, pOrders, '');
 
   document.getElementById('kpi-aov').textContent = orders ? fmtCents(rev / orders) : '—';
-  document.getElementById('kpi-aov-delta').textContent = '—';
-  document.getElementById('kpi-aov-delta').className = 'delta';
+  setDelta('kpi-aov-delta', orders ? rev / orders : 0, pOrders ? pRev / pOrders : 0, '');
 
   document.getElementById('kpi-aop').textContent = orders ? fmtCents(prof / orders) : '—';
-  document.getElementById('kpi-aop-delta').textContent = '—';
-  document.getElementById('kpi-aop-delta').className = 'delta';
+  setDelta('kpi-aop-delta', orders ? prof / orders : 0, pOrders ? pProf / pOrders : 0, '');
 }
 
 // SVG chart (custom, no library)
@@ -755,6 +782,14 @@ function downloadCsv(rows, filename) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
 document.getElementById('export-btn').addEventListener('click', () => {
   const txs = PROFIT.transactions || [];
   const series = PROFIT.series || [];
@@ -777,6 +812,7 @@ document.getElementById('export-btn').addEventListener('click', () => {
     return;
   }
   downloadCsv(rows, name);
+  showToast('Export downloaded', 'success');
 });
 
 // Re-render chart on resize so SVG fits new width
@@ -793,6 +829,7 @@ window.addEventListener('resize', () => {
 })();
 </script>
 
+<div class="toast" id="toast"></div>
 <script src="/assets/js/theme.js"></script>
 </body>
 </html>

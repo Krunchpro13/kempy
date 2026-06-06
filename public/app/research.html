@@ -986,7 +986,7 @@ function applyFiltersAndRender() {
     const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
     const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">↗</a>` : '';
     const amazonLink = p.amazonUrl ? `<a href="${escapeHtml(p.amazonUrl)}" target="_blank" rel="noopener">↗</a>` : '';
-    const matchBadge = p.matchSource === 'claude' && p.matchConfidence != null
+    const matchBadge = p.matchVia === 'claude' && p.matchConfidence != null
       ? `<span class="match-badge" title="${escapeHtml(p.matchReasoning || '')}">${window.KEMPY ? window.KEMPY.icon('bot','12px') : ''} ${Math.round(p.matchConfidence * 100)}%</span>`
       : '';
     const savedKey = p.asin || p.ebayItemId;

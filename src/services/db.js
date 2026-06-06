@@ -14,9 +14,15 @@ export function initDb() {
     return;
   }
   try {
+    // TLS: managed Postgres (Neon/Supabase/RDS) works with no cert verification by
+    // default. Opt into full verification with PGSSL_VERIFY=true (optionally supply
+    // the CA bundle via PGSSL_CA). Default is unchanged so existing deploys don't break.
+    const ssl = process.env.PGSSL_VERIFY === 'true'
+      ? { rejectUnauthorized: true, ...(process.env.PGSSL_CA ? { ca: process.env.PGSSL_CA } : {}) }
+      : { rejectUnauthorized: false };
     pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },     // Neon, Supabase, RDS — all want this
+      ssl,
       max: 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 8_000,

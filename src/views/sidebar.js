@@ -62,7 +62,9 @@ export function renderSidebar(activeKey = '', user = null) {
 
   const label = user ? (user.name || user.email || 'You') : 'Guest';
   const avatar = (label[0] || 'G').toUpperCase();
-  const role = user ? 'OWNER' : 'PREVIEW MODE';
+  const role = user
+    ? (['active', 'trialing'].includes(user.subscription_status) ? 'OWNER' : 'FREE')
+    : 'PREVIEW MODE';
 
   return `<aside class="sidebar" id="sidebar">
     <a href="/" class="brand"><span class="brand-text">KEMPY</span></a>
@@ -75,7 +77,7 @@ export function renderSidebar(activeKey = '', user = null) {
         <div class="name" id="user-name">${esc(label)}</div>
         <div class="role" id="user-role">${role}</div>
       </div>
-      <button class="user-menu" id="user-menu-btn" title="Account">⋯</button>
+      <button class="user-menu" id="user-menu-btn" title="Account" aria-label="Account menu">⋯</button>
     </div>
   </aside>`;
 }

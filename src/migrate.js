@@ -22,9 +22,12 @@ async function main() {
   const sql = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
 
   // Neon (and most cloud Postgres) need explicit ssl config alongside ?sslmode=require
+  const ssl = process.env.PGSSL_VERIFY === 'true'
+    ? { rejectUnauthorized: true, ...(process.env.PGSSL_CA ? { ca: process.env.PGSSL_CA } : {}) }
+    : { rejectUnauthorized: false };
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl,
   });
 
   console.log('▸ Connecting to database...');

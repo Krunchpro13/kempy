@@ -50,13 +50,14 @@ async function matchAll(items, candidates) {
           candidate: candidates[cm.match_index],
           confident: (cm.confidence ?? 0) >= SEARCH.MATCH_CONFIDENCE_MIN,
           via: 'claude',
+          confidence: cm.confidence ?? null,
         };
       }
       return null; // Claude ran but found no match for this item → estimate
     }
     // No Claude (no key, or batch failed) → local heuristic
     const local = bestMatch(item.name, candidates);
-    return local ? { candidate: local.candidate, confident: local.confident, via: 'local' } : null;
+    return local ? { candidate: local.candidate, confident: local.confident, via: 'local', confidence: null } : null;
   });
 }
 
@@ -94,6 +95,8 @@ function buildProduct(item, match = null) {
     asin: hasReal ? match.candidate.asin : null,
     estimated: !hasReal,                                  // honest flag for the UI
     matchSource: hasReal ? `ebay+keepa(${match.via})` : 'estimate',
+    matchVia: hasReal ? match.via : null,                 // 'claude' | 'local' | null
+    matchConfidence: hasReal && match.confidence != null ? match.confidence : null, // 0..1
     image: item.image,
     condition: item.condition,
     ebayItemId: item.ebayItemId,
