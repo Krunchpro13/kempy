@@ -34,23 +34,24 @@ Methods used: `aliexpress.affiliate.product.query` (keyword search) and
 
 ## TikTok (EchoTik — paid third-party; no official TikTok trending API exists)
 
+Verified live 2026-06-07 against the real API — field mapping is done.
+
 1. Sign up at **https://echotik.live** and choose a plan that includes **API access**
    (they offer ~100 free test calls). API docs: https://opendoc.echotik.live.
-2. Copy your **API token**.
+2. Copy your **API key**.
 3. Set in **Railway → Variables**:
 
    | Variable | Value |
    |---|---|
-   | `TIKTOK_API_KEY` | your EchoTik API token *(secret)* |
-   | `TIKTOK_REGION` | `GB` (default) |
-   | `TIKTOK_PRICE_GBP_RATE` | `0.79` default — EchoTik prices are USD; this converts to GBP. Set `1` if your plan returns GBP. |
+   | `TIKTOK_API_KEY` | your EchoTik API key *(secret)* — sent as HTTP Basic-auth username |
+   | `TIKTOK_REGION` | `GB` (default) — prices come back in the region currency (GB → GBP) |
+   | `TIKTOK_PRICE_GBP_RATE` | `1` default (GB returns GBP already). Set only if you use a non-GBP region and want conversion. |
    | `TIKTOK_API_URL` | *(optional)* override the product-list endpoint |
 
-> **One-time check for TikTok:** EchoTik's exact response field names can vary by
-> plan. After you add the key, run a search in the TikTok mode and eyeball one card.
-> If titles/prices look wrong, the field mapping in
-> `src/services/providers/tiktok.js` (`normalize()` / `pick()` calls) needs a small
-> tweak against a real sample response — send me one and it's a 2-minute fix.
+Implementation notes: uses EchoTik `/api/v2/product/list` with `is_hot=1` for the
+trending list (or `keyword=` when the user searches). `page_size` caps at 10, so
+it pages up to 3× and ranks client-side by `total_sale_cnt`. `cover_url` is a
+JSON-array-encoded string — parsed for the first image.
 
 ---
 

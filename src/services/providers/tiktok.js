@@ -2,21 +2,23 @@
 //
 // Live TikTok-trending supply-side feed via EchoTik's TikTok Shop Data API
 // (https://opendoc.echotik.live). There is NO official TikTok "trending products"
-// API, so this uses EchoTik — a paid third-party data provider that exposes a
-// real REST API. Returns trending TikTok Shop products which research.js then
-// prices against eBay.co.uk (providers/enrich.js) to compute profit/ROI.
+// API, so this uses EchoTik — a paid third-party data provider with a real REST
+// API. Returns trending TikTok Shop products which research.js then prices
+// against eBay.co.uk (providers/enrich.js) to compute profit/ROI.
 //
-// Auth + config (set in Railway once you have an EchoTik plan with API access):
-//   TIKTOK_API_KEY        — your EchoTik API token (sent as ?token=… )  [required]
-//   TIKTOK_REGION         — market filter, default 'GB' (UK)
-//   TIKTOK_API_URL        — override the product-list endpoint (default below)
-//   TIKTOK_PRICE_GBP_RATE — EchoTik prices are USD; multiply by this to get GBP
-//                           (default 0.79). Set to 1 if your plan returns GBP.
+// Auth: HTTP Basic Auth, API key as the username (empty password) — verified
+// against the live API 2026-06-07. Endpoint: /api/v2/product/list.
+//
+// Config (set in Railway once you have an EchoTik plan with API access):
+//   TIKTOK_API_KEY        — your EchoTik API key (Basic-auth username)  [required]
+//   TIKTOK_REGION         — market filter, default 'GB' (UK). Prices come back
+//                           in the region's currency (GB → GBP), so no FX by default.
+//   TIKTOK_PRICE_GBP_RATE — multiply prices by this (default 1; set if a non-GBP
+//                           region is used and you want conversion).
+//   TIKTOK_API_URL        — override the product-list endpoint (default below).
 //
 // Until TIKTOK_API_KEY is set, isConfigured() is false and research.js uses the
-// mock feed. EchoTik's exact response field names can vary by plan — the
-// normalizer below is defensive (tries several known field names); if a real
-// response differs, adjust `pick()` calls here (no other file changes needed).
+// mock feed.
 
 import axios from 'axios';
 
@@ -26,56 +28,79 @@ export function isConfigured() {
   return !!process.env.TIKTOK_API_KEY;
 }
 
-// First defined value among several candidate field names.
-function pick(obj, ...keys) {
-  for (const k of keys) {
-    if (obj && obj[k] != null && obj[k] !== '') return obj[k];
-  }
-  return undefined;
+function authHeader() {
+  // EchoTik Basic Auth: API key as username, empty password.
+  return 'Basic ' + Buffer.from(`${process.env.TIKTOK_API_KEY}:`).toString('base64');
 }
 
-// EchoTik wraps results differently across endpoints/plans — find the array.
-function extractList(data) {
-  if (Array.isArray(data)) return data;
-  const d = data?.data ?? data;
-  return d?.list || d?.items || d?.products || (Array.isArray(d) ? d : []);
+// cover_url arrives as a JSON-array-encoded STRING: '[{"url":"https://..."}]'
+// (or '[]' when empty). Parse it and return the first image URL.
+function firstImage(cover) {
+  if (!cover) return null;
+  try {
+    const arr = typeof cover === 'string' ? JSON.parse(cover) : cover;
+    if (Array.isArray(arr) && arr.length) return arr[0]?.url || (typeof arr[0] === 'string' ? arr[0] : null);
+  } catch {
+    if (typeof cover === 'string' && cover.startsWith('http')) return cover;
+  }
+  return null;
 }
 
 function normalize(p, rate) {
-  const name = pick(p, 'product_name', 'title', 'product_title', 'spu_name', 'name');
+  const name = p.product_name || p.title || p.spu_name;
   if (!name) return null;
-  const rawPrice = Number(pick(p, 'spu_avg_price', 'avg_price', 'price', 'sale_price', 'min_price'));
-  if (!Number.isFinite(rawPrice) || rawPrice <= 0) return null;
-  const vol = Number(pick(p, 'total_sale_cnt', 'sale_cnt', 'sold_count', 'sales')) || '—';
+  const price = Number(p.spu_avg_price ?? p.min_price ?? p.max_price);
+  if (!Number.isFinite(price) || price <= 0) return null;
   return {
     name,
-    supplierPrice: Math.round(rawPrice * rate * 100) / 100,   // USD→GBP (or ×1)
-    cat: pick(p, 'category_name', 'category', 'category_l2_name') || 'TikTok Trending',
-    vol,
-    image: pick(p, 'cover_url', 'image', 'image_url', 'product_image', 'cover') || null,
-    supplierUrl: pick(p, 'product_url', 'detail_url', 'url') || null,
-    productId: pick(p, 'product_id', 'spu_id', 'id') || null,
+    supplierPrice: Math.round(price * rate * 100) / 100,    // GB region → GBP (rate 1)
+    cat: 'TikTok Trending',                                 // API gives category_id only, no name
+    vol: Number(p.total_sale_cnt) || '—',
+    image: firstImage(p.cover_url),
+    supplierUrl: null,                                      // API has no product URL → search fallback
+    productId: p.product_id || null,
+    _sales: Number(p.total_sale_cnt) || 0,                  // for client-side ranking
   };
 }
 
-// Fetch trending TikTok Shop products. Returns [] on error so research.js
-// falls back to mock cleanly.
-export async function fetchSupplierProducts(query, { limit = 20 } = {}) {
-  const url = process.env.TIKTOK_API_URL || DEFAULT_URL;
-  const rate = Number(process.env.TIKTOK_PRICE_GBP_RATE) || 0.79;
-  const params = {
-    token: process.env.TIKTOK_API_KEY,
-    region: process.env.TIKTOK_REGION || 'GB',
-    page_num: 1,
-    page_size: Math.min(Math.max(limit, 1), 50),
-    sort: 'total_sale_cnt_desc',                              // most-sold first
-  };
-  const q = (query || '').trim();
-  if (q) params.keyword = q;
+const PAGE_SIZE = 10;          // EchoTik hard cap is 10 per page
+const MAX_PAGES = 3;           // up to 30 candidates, then rank client-side
 
-  const res = await axios.get(url, { params, timeout: 12000 });
+async function fetchPage(url, baseParams, pageNum) {
+  const res = await axios.get(url, {
+    params: { ...baseParams, page_num: pageNum, page_size: PAGE_SIZE },
+    headers: { Authorization: authHeader() },
+    timeout: 15000,
+  });
   if (res.data && res.data.code != null && res.data.code !== 0 && res.data.code !== 200) {
     throw new Error(`EchoTik API error: ${res.data.message || res.data.code}`);
   }
-  return extractList(res.data).map((p) => normalize(p, rate)).filter(Boolean);
+  const d = res.data?.data ?? res.data;
+  return d?.list || d?.items || d?.products || (Array.isArray(d) ? d : []);
+}
+
+// Fetch trending TikTok Shop products. No keyword → hot/trending list; with a
+// keyword → matching products. EchoTik's server-side sort params are unreliable
+// (an invalid sort 500s) and page_size caps at 10, so we page then rank
+// client-side by sales. Returns [] on error.
+export async function fetchSupplierProducts(query, { limit = 20 } = {}) {
+  const url = process.env.TIKTOK_API_URL || DEFAULT_URL;
+  const rate = Number(process.env.TIKTOK_PRICE_GBP_RATE) || 1;
+  const q = (query || '').trim();
+  const baseParams = { region: process.env.TIKTOK_REGION || 'GB' };
+  if (q) baseParams.keyword = q;
+  else baseParams.is_hot = 1;                               // trending when no query
+
+  const pages = Math.min(Math.ceil(limit / PAGE_SIZE) + 1, MAX_PAGES);
+  const raw = [];
+  for (let pg = 1; pg <= pages; pg++) {
+    const list = await fetchPage(url, baseParams, pg);
+    raw.push(...list);
+    if (list.length < PAGE_SIZE) break;                     // last page
+  }
+  return raw
+    .map((p) => normalize(p, rate))
+    .filter(Boolean)
+    .sort((a, b) => b._sales - a._sales)                    // most-sold first
+    .slice(0, limit);
 }

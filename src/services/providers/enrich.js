@@ -34,12 +34,24 @@ async function mapLimit(items, limit, fn) {
   return out;
 }
 
+// Supplier titles (esp. TikTok) are long and keyword-stuffed, which throws off
+// eBay search. Trim to the first ~8 meaningful words, drop punctuation/specs.
+function searchTermFor(name) {
+  const cleaned = String(name)
+    .replace(/[|/\\]+/g, ' ')
+    .replace(/[^A-Za-z0-9 .'-]/g, ' ')          // strip emoji/symbols
+    .replace(/\b\d+(ml|g|kg|cm|mm|pcs?|pack|x)\b/gi, ' ') // drop size/qty specs
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned.split(' ').slice(0, 8).join(' ') || cleaned;
+}
+
 // Find a representative eBay.co.uk sell price for a supplier product.
 // Returns { ebayPrice, shipping, ebayUrl, ebayItemId } or null if no comparable.
 async function ebayPriceFor(name) {
   let items = [];
   try {
-    items = await searchEbay(name, { limit: 5 });
+    items = await searchEbay(searchTermFor(name), { limit: 5 });
   } catch {
     return null;
   }
