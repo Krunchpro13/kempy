@@ -23,10 +23,15 @@ So both modes also depend on the existing `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET
 
    | Variable | Value |
    |---|---|
-   | `ALIEXPRESS_APP_KEY` | your app key |
-   | `ALIEXPRESS_APP_SECRET` | your app secret *(secret — never commit)* |
-   | `ALIEXPRESS_TRACKING_ID` | your affiliate tracking id |
+   | `ALIEXPRESS_APP_KEY` | your app key **(required)** |
+   | `ALIEXPRESS_APP_SECRET` | your app secret **(required)** *(secret — never commit)* |
+   | `ALIEXPRESS_TRACKING_ID` | *(optional)* affiliate tracking id — only needed to **earn commission** on links; product search works without it |
    | `ALIEXPRESS_SESSION` | *(optional)* access token, only if your app requires one |
+
+The feed goes live on just the **App Key + App Secret** — the tracking ID is
+optional. Without it there is no affiliate `promotion_link`, so cards link to
+the plain AliExpress product page instead (no commission attribution). Add the
+tracking ID later (from the Affiliate/Portals dashboard) once you want commission.
 
 Prices come back already in **GBP** (`target_currency=GBP`, `ship_to_country=UK`).
 Methods used: `aliexpress.affiliate.product.query` (keyword search) and

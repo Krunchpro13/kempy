@@ -27,7 +27,10 @@ const METHOD_QUERY = 'aliexpress.affiliate.product.query';     // keyword search
 const METHOD_HOT = 'aliexpress.affiliate.hotproduct.query';    // trending (no keyword)
 
 export function isConfigured() {
-  return !!(process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET && process.env.ALIEXPRESS_TRACKING_ID);
+  // tracking_id is OPTIONAL: it's only needed to earn affiliate commission
+  // (promotion links). Product search works without it — we fall back to the
+  // plain product page URL. So the feed goes live on just the app key + secret.
+  return !!(process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET);
 }
 
 // HMAC-SHA256 sign: sorted concat of key+value over all params, uppercase hex.
@@ -47,12 +50,13 @@ async function call(method, extra) {
     sign_method: SIGN_METHOD,
     timestamp: String(Date.now()),
     v: '2.0',
-    tracking_id: process.env.ALIEXPRESS_TRACKING_ID,
     target_currency: 'GBP',
     target_language: 'EN',
     ship_to_country: 'UK',
     ...extra,
   };
+  // Only attach tracking_id / session when present (both optional for search).
+  if (process.env.ALIEXPRESS_TRACKING_ID) params.tracking_id = process.env.ALIEXPRESS_TRACKING_ID;
   if (process.env.ALIEXPRESS_SESSION) params.session = process.env.ALIEXPRESS_SESSION;
   params.sign = sign(params, process.env.ALIEXPRESS_APP_SECRET);
 
@@ -81,13 +85,16 @@ function extractProducts(data, method) {
 function normalize(p) {
   const price = Number(p.target_sale_price ?? p.sale_price ?? p.target_app_sale_price);
   if (!Number.isFinite(price) || price <= 0) return null;
+  // Without a tracking_id there's no promotion_link, so fall back to the plain
+  // detail URL, then to a canonical product page built from the id.
+  const canonical = p.product_id ? `https://www.aliexpress.com/item/${p.product_id}.html` : null;
   return {
     name: p.product_title,
     supplierPrice: price,                                  // already GBP (target_currency)
     cat: p.second_level_category_name || p.first_level_category_name || 'AliExpress',
     vol: p.lastest_volume || '—',
     image: p.product_main_image_url || null,
-    supplierUrl: p.promotion_link || p.product_detail_url || null,
+    supplierUrl: p.promotion_link || p.product_detail_url || canonical,
     productId: p.product_id || null,
   };
 }
