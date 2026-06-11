@@ -99,6 +99,11 @@ CREATE TABLE IF NOT EXISTS watchlist (
 -- For databases created before image_url existed:
 ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS image_url TEXT;
 
+-- FR-2 cross-platform identifiers (so a saved card keeps its source id + barcode).
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS source_platform TEXT;  -- amazon|aliexpress|tiktok
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS source_id TEXT;        -- ASIN / AliExpress / TikTok id
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS gtin TEXT;             -- GTIN/EAN/UPC where available
+
 CREATE INDEX IF NOT EXISTS watchlist_user_idx ON watchlist (user_id);
 CREATE INDEX IF NOT EXISTS watchlist_asin_idx ON watchlist (user_id, asin) WHERE asin IS NOT NULL;
 CREATE INDEX IF NOT EXISTS watchlist_ebay_idx ON watchlist (user_id, ebay_item_id) WHERE ebay_item_id IS NOT NULL;
