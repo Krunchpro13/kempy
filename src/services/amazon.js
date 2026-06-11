@@ -91,6 +91,45 @@ export async function findAmazonProduct(query) {
   return candidates && candidates.length > 0 ? candidates[0] : null;
 }
 
+// =============================================================================
+// Source-primary provider interface (mirrors AliExpress / TikTok providers)
+// =============================================================================
+// Lets research.js treat Amazon like every other source: search the SOURCE
+// catalogue (Amazon via Keepa) for the keyword, then look up each product's
+// eBay.co.uk sale price (enrichWithEbay). This is the arbitrage-correct
+// direction — find a cheap product on Amazon, then check what it flips for.
+
+/** True when the Keepa key is set (the Amazon catalogue is reachable). */
+export function isConfigured() {
+  return !!process.env.KEEPA_API_KEY;
+}
+
+/**
+ * Fetch Amazon products for a keyword, normalized to the shape enrichWithEbay
+ * expects ({ name, supplierPrice, image, supplierUrl, productId, gtin, ... }).
+ * Returns [] for an empty query (Keepa has no keyword-free "trending" feed),
+ * which makes the caller fall back to the mock sample.
+ */
+export async function fetchSupplierProducts(query, { limit = 12 } = {}) {
+  const term = (query || '').trim();
+  if (!term || term.toLowerCase() === 'all') return [];
+
+  const candidates = (await findAmazonCandidates(term, Math.max(limit, 12))) || [];
+  return candidates
+    .filter((c) => c.amazonPrice > 0)
+    .map((c) => ({
+      name: c.title,
+      supplierPrice: c.amazonPrice,   // Amazon cost = the supplier price
+      image: c.image,
+      supplierUrl: c.url,
+      productId: c.asin,              // FR-2 source id (ASIN)
+      asin: c.asin,
+      gtin: c.gtin || null,           // FR-2 barcode (free from Keepa)
+      cat: 'Marketplace',
+      _sales: c.reviewCount || 0,     // popularity hint for ordering
+    }));
+}
+
 /**
  * @typedef AmazonProduct
  * @property {string} asin

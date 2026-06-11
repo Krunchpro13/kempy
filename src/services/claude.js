@@ -215,3 +215,118 @@ For EACH eBay listing, return the index of the Amazon candidate that is the SAME
     return null;
   }
 }
+
+// =============================================================================
+// Source → eBay matcher (source-primary direction)
+// =============================================================================
+// The reverse of matchAmazonBatch: given SOURCE products (Amazon/AliExpress/
+// TikTok) and, for EACH one, its own list of candidate eBay resale listings,
+// pick which candidate(s) are genuinely the same product. This both (a) prices
+// from confirmed comparables instead of a blind median over loosely-related
+// results, and (b) turns "no match" into a trustworthy "no eBay comparable
+// exists" signal (a real market gap) rather than a search/keyword miss.
+
+const SOURCE_SYSTEM_PROMPT = `You match a SOURCE product (sold on Amazon/AliExpress/TikTok) to its resale \
+listings on eBay for a dropshipping research tool. A correct match is the SAME product — same model number, \
+same SKU, same configuration. Colour and size variants of the same model are acceptable matches. Different \
+models, different generations, single-vs-multipack with very different value, or "compatible with X" \
+accessories are NOT matches. Be strict: a wrong match produces a wrong resale price and a bad business \
+decision. When no eBay listing is genuinely the same product, returning an empty match list is the correct, \
+expected answer.`;
+
+const SOURCE_MATCH_SCHEMA = {
+  type: 'object',
+  properties: {
+    matches: {
+      type: 'array',
+      description: 'One entry per source product, in the same order as given',
+      items: {
+        type: 'object',
+        properties: {
+          product_index: { type: 'integer', description: 'Index of the source product' },
+          match_indices: {
+            type: 'array',
+            items: { type: 'integer' },
+            description: "Indices (within THIS product's own candidate list) of eBay listings that are the SAME product; empty if none match",
+          },
+          confidence: { type: 'number', description: 'Confidence 0 (guess) to 1 (certain)' },
+        },
+        required: ['product_index', 'match_indices', 'confidence'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['matches'],
+  additionalProperties: false,
+};
+
+const trimTitle = (s, words = 14) => String(s || '').split(/\s+/).slice(0, words).join(' ');
+
+/**
+ * Match MANY source products to their OWN candidate eBay listings in ONE call.
+ *
+ * @param {Array<{ title: string, candidates: Array<{ title: string, price?: number }> }>} products
+ * @returns {Promise<Array<{ match_indices: number[], confidence: number } | null>>}
+ *          Array aligned to `products` (null where Claude gave no entry).
+ *          Returns null entirely if the key is missing or the call errors —
+ *          callers should fall back to a heuristic in that case.
+ */
+export async function matchEbayBatch(products) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!products || products.length === 0) return [];
+
+  const block = products
+    .map((p, i) => {
+      const cands = (p.candidates || [])
+        .map((c, j) => `    ${j}: "${trimTitle(c.title)}" — £${Number(c.price || 0).toFixed(2)}`)
+        .join('\n');
+      return `Product ${i}: "${trimTitle(p.title)}"\n  eBay candidates:\n${cands || '    (none)'}`;
+    })
+    .join('\n\n');
+
+  const userPrompt = `For EACH source product below, identify which of ITS OWN eBay candidate listings are \
+the SAME product. Return the matching candidate indices (relative to that product's own list), or an empty \
+array when none of its candidates are genuinely the same product.
+
+${block}`;
+
+  try {
+    const { data } = await axios.post(
+      CLAUDE_API,
+      {
+        model: MODEL,
+        max_tokens: 2048,
+        system: SOURCE_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+        output_config: { format: { type: 'json_schema', schema: SOURCE_MATCH_SCHEMA } },
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        timeout: 30_000,
+      }
+    );
+
+    const text = data?.content?.[0]?.text;
+    if (!text) return null;
+
+    const parsed = JSON.parse(text);
+    const out = new Array(products.length).fill(null);
+    for (const m of parsed.matches || []) {
+      if (m.product_index >= 0 && m.product_index < out.length) {
+        out[m.product_index] = {
+          match_indices: Array.isArray(m.match_indices) ? m.match_indices : [],
+          confidence: m.confidence ?? 0,
+        };
+      }
+    }
+    return out;
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    console.error('[claude.ebay-batch] error:', msg);
+    return null;
+  }
+}

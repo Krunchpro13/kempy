@@ -1,216 +1,30 @@
 // src/services/research.js
-import { searchEbay } from './ebay.js';
-import { findAmazonCandidates } from './amazon.js';
-import { bestMatch } from './match-local.js';
-import { matchAmazonBatch } from './claude.js';
+//
+// Product research engine. ALL sources are now "source-primary": the search
+// starts from the SOURCE marketplace (where you buy) and looks up the eBay.co.uk
+// sale price (where you sell) for each product. This is the arbitrage-correct
+// direction — find a cheap product on the source, then check what it flips for.
+//
+//   amazon     → Keepa search        → eBay.co.uk price  (enrichWithEbay)
+//   aliexpress → AliExpress DS feeds  → eBay.co.uk price  (enrichWithEbay)
+//   tiktok     → EchoTik trending     → eBay.co.uk price  (enrichWithEbay)
+//
+// Each mode is LIVE when its provider keys are set; otherwise it falls back to
+// the mock sample feed so the UI always works. Cards with no eBay comparable
+// are dropped (no sale price → no real profit/ROI), so every card is actionable.
+
 import { getCachedSearch, setCachedSearch } from './cache.js';
 import { FALLBACK_PRODUCTS } from './fallback-data.js';
 import { finalizeMock, searchAliExpress, searchTikTok } from './mock-sources.js';
+import * as amazon from './amazon.js';
 import * as aliexpress from './providers/aliexpress.js';
 import * as tiktok from './providers/tiktok.js';
 import { enrichWithEbay } from './providers/enrich.js';
-import { ECONOMICS, SEARCH } from '../config.js';
+import { SEARCH } from '../config.js';
 
-const FEE_RATE = ECONOMICS.EBAY_FEE_RATE;
-const PACKAGING = ECONOMICS.PACKAGING_COST;
-
-function emojiFor(name = '') {
-  const n = name.toLowerCase();
-  if (/headphone|earbud|airpod|earphone/.test(n)) return '🎧';
-  if (/watch|smartwatch/.test(n)) return '⌚';
-  if (/cable|cord/.test(n)) return '🔌';
-  if (/charger|adapter|power/.test(n)) return '🔌';
-  if (/webcam|camera/.test(n)) return '📷';
-  if (/bag|handbag|purse|tote/.test(n)) return '👜';
-  if (/phone|iphone|galaxy/.test(n)) return '📱';
-  if (/laptop|macbook/.test(n)) return '💻';
-  if (/keyboard/.test(n)) return '⌨️';
-  if (/mouse/.test(n)) return '🖱️';
-  if (/lamp|light/.test(n)) return '💡';
-  return '📦';
-}
-
-function round2(n) { return Math.round(n * 100) / 100; }
-
-// Decide the Amazon match for every eBay item against the shared candidate pool.
-// Strategy:
-//   - With ANTHROPIC_API_KEY: ONE batch Claude call for all items (fast, cheap,
-//     no per-connection rate-limit issues). Falls back to local if it errors.
-//   - Without a key (or on Claude error): the local heuristic matcher per item.
-// Returns an array (aligned to items) of { candidate, confident, via } | null.
-async function matchAll(items, candidates) {
-  if (!candidates || !candidates.length) return items.map(() => null);
-
-  let claudeMatches = null;
-  if (process.env.ANTHROPIC_API_KEY) {
-    claudeMatches = await matchAmazonBatch(items.map(i => ({ title: i.name })), candidates);
-  }
-
-  return items.map((item, idx) => {
-    if (claudeMatches) {
-      const cm = claudeMatches[idx];
-      if (cm && cm.match_index != null && candidates[cm.match_index]) {
-        return {
-          candidate: candidates[cm.match_index],
-          confident: (cm.confidence ?? 0) >= SEARCH.MATCH_CONFIDENCE_MIN,
-          via: 'claude',
-          confidence: cm.confidence ?? null,
-        };
-      }
-      return null; // Claude ran but found no match for this item → estimate
-    }
-    // No Claude (no key, or batch failed) → local heuristic
-    const local = bestMatch(item.name, candidates);
-    return local ? { candidate: local.candidate, confident: local.confident, via: 'local', confidence: null } : null;
-  });
-}
-
-// Build a product card. If `match` is a confident match with a real Amazon
-// price, use it (real ROI). Otherwise fall back to a clearly-flagged estimate
-// rather than presenting a fabricated price as if it were real.
-function buildProduct(item, match = null) {
-  const ebayPrice = item.ebayPrice;
-  const shipping = item.ebayShipping != null ? item.ebayShipping : ECONOMICS.DEFAULT_SHIPPING;
-
-  const hasReal = !!(match && match.confident && match.candidate?.amazonPrice > 0);
-  const amazonPrice = hasReal ? match.candidate.amazonPrice : round2(ebayPrice * ECONOMICS.ESTIMATE_RATIO);
-
-  const fees = round2(ebayPrice * FEE_RATE);
-  const packaging = PACKAGING;
-  const profit = round2(ebayPrice - amazonPrice - fees - shipping - packaging);
-  const roi = amazonPrice > 0 ? round2((profit / amazonPrice) * 100) : 0;
-
-  const cand = hasReal ? match.candidate : null;
-  return {
-    name: item.name,
-    emoji: emojiFor(item.name),
-    cat: item.categories?.[0] || 'Marketplace',
-    vol: '—',
-    comp: 'live',
-    trend: '—',
-    ebayPrice,
-    amazonPrice,
-    ebayUrl: item.ebayUrl,
-    amazonUrl: cand ? cand.url : null,
-    fees,
-    shipping,
-    packaging,
-    profit,
-    roi,
-    asin: cand ? cand.asin : null,
-    estimated: !hasReal,                                  // honest flag for the UI
-    matchSource: hasReal ? `ebay+keepa(${match.via})` : 'estimate',
-    matchVia: hasReal ? match.via : null,                 // 'claude' | 'local' | null
-    matchConfidence: hasReal && match.confidence != null ? match.confidence : null, // 0..1
-    sourceName: 'Amazon.co.uk',                           // supplier-column label
-    image: item.image,
-    condition: item.condition,
-    ebayItemId: item.ebayItemId,
-
-    // ---- FR-1 dual-platform display (source = Amazon, destination = eBay) ----
-    sourcePlatform: 'amazon',
-    sourceTitle: cand ? cand.title : null,                // Amazon listing title (null when unmatched)
-    sourceImage: cand ? cand.image : null,                // Amazon listing image
-    sourcePrice: amazonPrice,
-    sourceUrl: cand ? cand.url : null,
-    ebayTitle: item.name,                                 // the eBay listing title
-    ebayImage: item.image,                                // the eBay listing image
-
-    // ---- FR-2 cross-platform identifiers ----
-    sourceId: cand ? cand.asin : null,                    // ASIN
-    gtin: cand ? (cand.gtin || null) : null,              // GTIN/EAN/UPC from Keepa (may be null)
-    ebayItemNumber: item.legacyItemId || null,
-  };
-}
-
-// Per-provider config for the AliExpress / TikTok modes.
-const PROVIDER_META = {
-  aliexpress: { sourceName: 'AliExpress', supplierUrlBase: 'https://www.aliexpress.com/wholesale?SearchText=', mock: searchAliExpress },
-  tiktok: { sourceName: 'TikTok UK', supplierUrlBase: 'https://www.tiktok.com/search?q=', mock: searchTikTok },
-};
-
-// Run an alternative source: live provider (keys present) → eBay-priced cards,
-// with cache + graceful fallback to the mock sample feed on any miss/error.
-async function searchViaProvider(provider, source, query, q) {
-  const meta = PROVIDER_META[source];
-  const mockResult = () => ({ products: meta.mock(query), source, realCount: 0, live: false, cached: false });
-
-  if (!provider.isConfigured()) return mockResult();
-
-  const cacheKey = `${source}:${q || '_trending'}`;
-  const hit = await getCachedSearch(cacheKey);
-  if (hit) return { ...hit, cached: true };
-
-  try {
-    const supplier = await provider.fetchSupplierProducts(query, { limit: SEARCH.EBAY_LIMIT });
-    if (supplier.length) {
-      const products = await enrichWithEbay(supplier, meta);
-      if (products.length) {
-        const payload = { products, source, realCount: products.length, live: true };
-        await setCachedSearch(cacheKey, payload);
-        return { ...payload, cached: false };
-      }
-    }
-    console.error(`[research] ${source}: provider returned no usable products, using mock`);
-  } catch (err) {
-    console.error(`[research] ${source} provider failed, using mock:`, err.message);
-  }
-  return mockResult();
-}
-
-export async function searchProducts(query, source = 'amazon') {
+// Amazon.co.uk mock feed (used when Keepa/eBay keys are missing or return nothing).
+function searchAmazonMock(query) {
   const q = (query || '').toLowerCase().trim();
-
-  // Alternative discovery modes: AliExpress → eBay.co.uk and TikTok UK → eBay.co.uk.
-  // Live when the provider's API keys are set (real supplier products priced against
-  // eBay.co.uk); otherwise fall back to the mock sample feed so the UI still works.
-  if (source === 'aliexpress') return searchViaProvider(aliexpress, 'aliexpress', query, q);
-  if (source === 'tiktok') return searchViaProvider(tiktok, 'tiktok', query, q);
-
-  const hasEbay = !!process.env.EBAY_CLIENT_ID;
-  if (hasEbay && q && q !== 'all') {
-    // Cache layer 1: the full response (eBay + Keepa + Claude matches). A hit
-    // skips all three upstream calls — turning a ~20s search into milliseconds.
-    const hit = await getCachedSearch(q);
-    if (hit) return { ...hit, cached: true };
-
-    try {
-      const items = await searchEbay(query, { limit: SEARCH.EBAY_LIMIT });
-      if (items.length) {
-        // One Keepa search for the query → shared pool of real Amazon candidates
-        // (titles + prices). ~10 tokens regardless of how many eBay items we map.
-        let candidates = [];
-        try {
-          candidates = (await findAmazonCandidates(query, SEARCH.CANDIDATE_POOL)) || [];
-        } catch (err) {
-          console.error('[research] Keepa candidate search failed:', err.message);
-        }
-
-        // Match all eBay listings against the shared pool (one batch Claude call
-        // when the key is set, else the local matcher), then build cards.
-        const matches = await matchAll(items, candidates);
-        const enriched = items.map((item, idx) => buildProduct(item, matches[idx]));
-
-        // Real (confident) matches first, then estimates; each block by ROI.
-        const products = enriched
-          .filter(p => p.amazonPrice > 0.5)
-          .sort((a, b) => {
-            if (a.estimated !== b.estimated) return a.estimated ? 1 : -1;
-            return (b.roi || 0) - (a.roi || 0);
-          });
-
-        const realCount = products.filter(p => !p.estimated).length;
-        const payload = { products, source: 'ebay+keepa', realCount };
-        await setCachedSearch(q, payload);   // no-op when Redis is off
-        return { ...payload, cached: false };
-      }
-    } catch (err) {
-      console.error('[research] eBay/Keepa failed, falling back:', err.message);
-    }
-  }
-
-  // Fallback to mock data (Amazon.co.uk → eBay.co.uk), finalized so every card
-  // gets real fees/profit/ROI instead of blanks.
   let raw = FALLBACK_PRODUCTS.slice();
   if (q && q !== 'all') {
     raw = raw.filter(p =>
@@ -219,8 +33,68 @@ export async function searchProducts(query, source = 'amazon') {
       (p.keywords || []).some(k => k.toLowerCase().includes(q))
     );
   }
-  const products = raw
+  return raw
     .map(p => finalizeMock(p, { sourceName: 'Amazon.co.uk', supplierUrlBase: 'https://www.amazon.co.uk/s?k=' }))
     .sort((a, b) => (b.roi || 0) - (a.roi || 0));
-  return { products, cached: false, source: 'mock' };
+}
+
+// Per-source config: the provider module (live), the supplier-column label,
+// a fallback supplier search URL, and the mock sample feed.
+const PROVIDERS = {
+  amazon: {
+    provider: amazon,
+    sourceName: 'Amazon.co.uk',
+    supplierUrlBase: 'https://www.amazon.co.uk/s?k=',
+    mock: searchAmazonMock,
+  },
+  aliexpress: {
+    provider: aliexpress,
+    sourceName: 'AliExpress',
+    supplierUrlBase: 'https://www.aliexpress.com/wholesale?SearchText=',
+    mock: searchAliExpress,
+  },
+  tiktok: {
+    provider: tiktok,
+    sourceName: 'TikTok UK',
+    supplierUrlBase: 'https://www.tiktok.com/search?q=',
+    mock: searchTikTok,
+  },
+};
+
+// Run a source: live provider (keys present) → eBay-priced cards, with a cache
+// layer and graceful fallback to the mock sample feed on any miss/error.
+async function searchSource(sourceKey, query, q) {
+  const cfg = PROVIDERS[sourceKey];
+  const { provider, sourceName, supplierUrlBase, mock } = cfg;
+  const mockResult = () => ({ products: mock(query), source: sourceKey, realCount: 0, live: false, cached: false });
+
+  if (!provider.isConfigured()) return mockResult();
+
+  const cacheKey = `${sourceKey}:${q || '_trending'}`;
+  const hit = await getCachedSearch(cacheKey);
+  if (hit) return { ...hit, cached: true };
+
+  try {
+    const supplier = await provider.fetchSupplierProducts(query, { limit: SEARCH.EBAY_LIMIT });
+    if (supplier.length) {
+      const products = await enrichWithEbay(supplier, { sourceName, supplierUrlBase });
+      if (products.length) {
+        const payload = { products, source: sourceKey, realCount: products.length, live: true };
+        await setCachedSearch(cacheKey, payload);
+        return { ...payload, cached: false };
+      }
+    }
+    console.error(`[research] ${sourceKey}: provider returned no usable products, using mock`);
+  } catch (err) {
+    console.error(`[research] ${sourceKey} provider failed, using mock:`, err.message);
+  }
+  return mockResult();
+}
+
+// Public API: search a given source (default Amazon). Always returns
+// { products, source, realCount, live, cached }.
+export async function searchProducts(query, source = 'amazon') {
+  const q = (query || '').toLowerCase().trim();
+  const key = PROVIDERS[source] ? source : 'amazon';
+  return searchSource(key, query, q);
 }
