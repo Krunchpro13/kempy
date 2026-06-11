@@ -797,11 +797,32 @@ const EBAY_LOGO = '<svg viewBox="0 0 96 36" role="img" aria-label="eBay"><text x
 
 let ebayStatus = { connected: false, configured: true };
 
+// AliExpress sourcing (app-level DS OAuth connection).
+const ALIEXPRESS_LOGO = '<svg viewBox="0 0 150 28" role="img" aria-label="AliExpress"><text x="0" y="22" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="22"><tspan fill="#e62e04">Ali</tspan><tspan fill="#1f1f1f">Express</tspan></text></svg>';
+let aliexpressStatus = { connected: false, configured: true };
+
 async function fetchEbayStatus() {
   try {
     const r = await fetch('/api/ebay/status', { credentials: 'include' });
     if (r.ok) ebayStatus = await r.json();
   } catch (_) {}
+}
+
+async function fetchAliexpressStatus() {
+  try {
+    const r = await fetch('/api/aliexpress/status', { credentials: 'include' });
+    if (r.ok) aliexpressStatus = await r.json();
+  } catch (_) {}
+}
+
+function aliexpressHint() {
+  if (!aliexpressStatus.configured) return 'AliExpress integration not configured yet';
+  if (aliexpressStatus.lastError) return 'Connection needs attention — reconnect to refresh';
+  if (aliexpressStatus.connected) {
+    const who = aliexpressStatus.aeUserId ? `Connected (acct ${aliexpressStatus.aeUserId})` : 'Connected';
+    return `${who} — sourcing trending products for research`;
+  }
+  return 'Not connected — source AliExpress products for research';
 }
 
 function ebayHint() {
@@ -815,26 +836,65 @@ function ebayHint() {
   return 'Not connected — sync orders, listings, and stock';
 }
 
-function renderStores() {
-  const conn = !!ebayStatus.connected;
-  const wrap = document.getElementById('stores-list');
-  wrap.innerHTML = `
-    <div class="store-card ${conn ? 'connected' : ''}">
-      <div class="store-logo">${EBAY_LOGO}</div>
+function storeCard({ logo, name, hint, connected, configured, store }) {
+  return `
+    <div class="store-card ${connected ? 'connected' : ''}">
+      <div class="store-logo">${logo}</div>
       <div class="store-info">
-        <div class="name">eBay</div>
-        <div class="meta">${escapeHtml(ebayHint())}</div>
+        <div class="name">${name}</div>
+        <div class="meta">${escapeHtml(hint)}</div>
       </div>
-      ${conn
-        ? `<button class="btn ghost sm" data-action="disconnect">Disconnect</button>`
-        : `<button class="btn sm" data-action="connect" ${ebayStatus.configured ? '' : 'disabled'}>Connect</button>`}
+      ${connected
+        ? `<button class="btn ghost sm" data-action="disconnect" data-store="${store}">Disconnect</button>`
+        : `<button class="btn sm" data-action="connect" data-store="${store}" ${configured ? '' : 'disabled'}>Connect</button>`}
     </div>`;
+}
+
+function renderStores() {
+  const wrap = document.getElementById('stores-list');
+  wrap.innerHTML =
+    storeCard({ logo: EBAY_LOGO, name: 'eBay', hint: ebayHint(), connected: !!ebayStatus.connected, configured: ebayStatus.configured !== false, store: 'ebay' }) +
+    storeCard({ logo: ALIEXPRESS_LOGO, name: 'AliExpress', hint: aliexpressHint(), connected: !!aliexpressStatus.connected, configured: aliexpressStatus.configured !== false, store: 'aliexpress' });
+}
+
+async function ensureRealSession() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); if (d && d.user) return true; }
+  } catch (_) {}
+  showToast('Please sign in to your account first', 'error');
+  setTimeout(() => {
+    window.location.href = '/auth/login.html?next=' + encodeURIComponent('/app/settings.html?panel=stores');
+  }, 900);
+  return false;
 }
 
 document.getElementById('stores-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   const action = btn.dataset.action;
+  const store = btn.dataset.store || 'ebay';
+
+  // ---- AliExpress sourcing connection ----
+  if (store === 'aliexpress') {
+    if (action === 'connect') {
+      if (!aliexpressStatus.configured) { showToast('AliExpress integration is not configured yet', 'error'); return; }
+      if (!(await ensureRealSession())) return;
+      window.location.href = '/api/aliexpress/connect';
+    } else if (action === 'disconnect') {
+      if (!confirm('Disconnect AliExpress sourcing? Research will fall back to sample data.')) return;
+      try {
+        const r = await fetch('/api/aliexpress/disconnect', { method: 'POST', credentials: 'include' });
+        if (!r.ok) throw new Error();
+        await fetchAliexpressStatus();
+        renderStores();
+        showToast('Disconnected AliExpress', 'success');
+      } catch (_) {
+        showToast('Could not disconnect — try again', 'error');
+      }
+    }
+    return;
+  }
 
   if (action === 'connect') {
     if (!ebayStatus.configured) { showToast('eBay integration is not configured yet', 'error'); return; }
@@ -892,6 +952,23 @@ function flashEbayResult() {
   if (r === 'error' && detail) console.warn('[ebay] connect error detail:', detail);
   // Clean the URL so a refresh doesn't re-toast.
   p.delete('ebay'); p.delete('panel'); p.delete('detail');
+  const qs = p.toString();
+  window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+}
+
+// Surface the AliExpress OAuth callback result (?aliexpress=connected|error|badstate|notconfigured).
+function flashAliexpressResult() {
+  const p = new URLSearchParams(window.location.search);
+  const r = p.get('aliexpress');
+  if (!r) return;
+  const msg = {
+    connected: ['AliExpress connected — sourcing is now live', 'success'],
+    error: ['AliExpress connection failed — please try again', 'error'],
+    badstate: ['AliExpress connection expired — please try again', 'error'],
+    notconfigured: ['AliExpress integration is not configured yet', 'error'],
+  }[r];
+  if (msg) showToast(msg[0], msg[1]);
+  p.delete('aliexpress'); p.delete('panel');
   const qs = p.toString();
   window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
 }
@@ -1145,9 +1222,10 @@ async function initCurrency() {
 
 (async function init() {
   await loadMe();
-  await fetchEbayStatus();
+  await Promise.all([fetchEbayStatus(), fetchAliexpressStatus()]);
   renderStores();
   flashEbayResult();
+  flashAliexpressResult();
   initCurrency();
 })();
 </script>
