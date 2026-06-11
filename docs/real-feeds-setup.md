@@ -13,29 +13,44 @@ So both modes also depend on the existing `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET
 
 ---
 
-## AliExpress (official Open Platform — free)
+## AliExpress (Dropshipping / DS API — via OAuth)
 
-1. Go to **https://open.aliexpress.com** → register as a developer.
-2. Join the **AliExpress Affiliate** program (Portals) to get a **tracking ID**.
-3. Create an app → you get an **App Key** and **App Secret**. Approval is usually
-   1–2 days.
-4. Set in **Railway → Variables**:
+Verified live 2026-06-11. The account is registered for the **DS (Dropshipping)
+API**, not the Affiliate API. The DS API has **no keyword product search**, so
+KEMPY pulls AliExpress's best-seller **feeds** as a live catalog and
+keyword-filters them client-side (empty search box = trending). The DS API also
+requires **OAuth** (a one-time owner authorization), not just a key.
+
+**1. Railway → Variables:**
 
    | Variable | Value |
    |---|---|
    | `ALIEXPRESS_APP_KEY` | your app key **(required)** |
    | `ALIEXPRESS_APP_SECRET` | your app secret **(required)** *(secret — never commit)* |
-   | `ALIEXPRESS_TRACKING_ID` | *(optional)* affiliate tracking id — only needed to **earn commission** on links; product search works without it |
-   | `ALIEXPRESS_SESSION` | *(optional)* access token, only if your app requires one |
+   | `ALIEXPRESS_FEEDS` | *(optional)* comma-separated DS feed names (default: `AEB_Droplo_BestsellersItems_20241016,AEB_CETagItems_20241017`) |
+   | `ALIEXPRESS_REDIRECT_URI` | *(optional)* defaults to `${APP_URL}/api/aliexpress/callback` |
+   | `ADMIN_EMAIL` | *(optional)* restrict who can connect AliExpress to this email |
 
-The feed goes live on just the **App Key + App Secret** — the tracking ID is
-optional. Without it there is no affiliate `promotion_link`, so cards link to
-the plain AliExpress product page instead (no commission attribution). Add the
-tracking ID later (from the Affiliate/Portals dashboard) once you want commission.
+   `ENCRYPTION_KEY` (already set for eBay) encrypts the refresh token at rest.
 
-Prices come back already in **GBP** (`target_currency=GBP`, `ship_to_country=UK`).
-Methods used: `aliexpress.affiliate.product.query` (keyword search) and
-`aliexpress.affiliate.hotproduct.query` (trending, empty search box).
+**2. Register the callback URL** on the AliExpress app:
+   `https://kempzonline.com/api/aliexpress/callback`
+
+**3. Connect (one-time, owner):** while logged into kempzonline.com, go to
+   **Settings → Connected stores → AliExpress → Connect** (or visit
+   `/api/aliexpress/connect`). Consent on AliExpress → redirected back. The
+   shared app-level token is stored (single `aliexpress_oauth` row) and
+   auto-refreshes.
+
+Prices come back already in **GBP**. Methods used: `aliexpress.ds.feedname.get`
+(discover feed names) + `aliexpress.ds.recommend.feed.get` (feed products; array
+nested under `products.traffic_product_d_t_o`).
+
+**Known limitation:** keyword search filters the trending/best-seller feed
+catalog (~100 products/query), not the whole AliExpress catalog — a long-tail
+keyword that isn't currently trending may fall back to the trending set. Full
+free-text catalog search would need the Affiliate API (different app
+registration) or a paid third-party search service.
 
 ## TikTok (EchoTik — paid third-party; no official TikTok trending API exists)
 

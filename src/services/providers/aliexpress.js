@@ -85,7 +85,7 @@ export async function fetchSupplierProducts(query, { limit = 20 } = {}) {
   if (!accessToken) throw new Error('AliExpress not connected (no OAuth token)');
 
   const q = (query || '').toLowerCase().trim();
-  const perFeed = Math.max(limit, 20);
+  const perFeed = 50;   // pull a full page per feed so keyword-filtering has more to match
 
   // Pull a few feeds in parallel, tolerate individual feed failures.
   const results = await Promise.allSettled(DEFAULT_FEEDS.map((f) => fetchFeed(f, accessToken, perFeed)));
