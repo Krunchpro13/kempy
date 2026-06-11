@@ -19,7 +19,9 @@ import { callSigned, getValidAccessToken, isConfigured as oauthConfigured } from
 
 // Default feeds to pull when AE's feedname list is unavailable. AE's canonical
 // dropship feeds; overridable via env (comma-separated).
-const DEFAULT_FEEDS = (process.env.ALIEXPRESS_FEEDS || 'DS bestselling,DS Top Selling,Hot Selling')
+// Real DS feed names (from aliexpress.ds.feedname.get). Big global bestseller
+// feeds work well as a trending catalog. Override/extend via ALIEXPRESS_FEEDS.
+const DEFAULT_FEEDS = (process.env.ALIEXPRESS_FEEDS || 'AEB_Droplo_BestsellersItems_20241016,AEB_CETagItems_20241017')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
 // isConfigured() only checks app creds exist (sync). Whether we actually have an
@@ -36,10 +38,12 @@ function extractProducts(data) {
     throw new Error(`AliExpress DS API error: ${data.error_response.msg || data.error_response.code || 'unknown'}`);
   }
   const result =
+    data.aliexpress_ds_recommend_feed_get_response?.result ||              // DS feed shape
     data.aliexpress_ds_recommend_feed_get_response?.resp_result?.result ||
     data.resp_result?.result || {};
   let products = result.products;
-  if (products && products.product) products = products.product;
+  // DS feeds nest the array under traffic_product_d_t_o; affiliate uses product.
+  if (products) products = products.traffic_product_d_t_o || products.product || products;
   return Array.isArray(products) ? products : [];
 }
 

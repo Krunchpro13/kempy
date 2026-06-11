@@ -86,29 +86,4 @@ router.post('/disconnect', requireDb, requireOwner, async (req, res) => {
   res.json({ ok: true });
 });
 
-// TEMP DIAGNOSTIC — discover valid DS feed names + test recommend.feed.get.
-// Owner-gated; returns only non-secret data. Remove after feed names are fixed.
-router.get('/diag', requireDb, requireOwner, async (req, res) => {
-  try {
-    const token = await ae.getValidAccessToken();
-    if (!token) return res.json({ error: 'no token stored' });
-    const out = {};
-    try {
-      const feeds = await ae.callSigned('aliexpress.ds.feedname.get', {}, { accessToken: token });
-      out.feednames = JSON.stringify(feeds).slice(0, 2500);
-    } catch (e) { out.feednamesError = e.message; }
-    const feedName = req.query.feed || 'DS bestselling';
-    try {
-      const prods = await ae.callSigned('aliexpress.ds.recommend.feed.get',
-        { feed_name: feedName, target_currency: 'GBP', target_language: 'EN', country: 'UK', page_no: '1', page_size: '3' },
-        { accessToken: token });
-      out.feedTried = feedName;
-      out.recommendSample = JSON.stringify(prods).slice(0, 2000);
-    } catch (e) { out.recommendError = e.message; }
-    res.json(out);
-  } catch (e) {
-    res.json({ error: e.message });
-  }
-});
-
 export default router;
