@@ -533,6 +533,30 @@ html.sb-collapsed .nav-item:hover::after {
 .rc-pricing .item a { color: var(--cyan); text-decoration: none; opacity: 0.6; }
 .rc-pricing .item a:hover { opacity: 1; }
 
+/* FR-1 dual-platform display: source (cost) | eBay (sale) side by side */
+.rc-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+@media (max-width: 720px) { .rc-dual { grid-template-columns: 1fr; } }
+.rc-side { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; gap: 10px; align-items: flex-start; background: var(--bg-2); min-width: 0; }
+.rc-side.dest { border-color: var(--border-cyan); }
+.rc-side .st { font-size: 12px; line-height: 1.3; font-weight: 600; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rc-side .sl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 3px; }
+.rc-side.src .sl { color: var(--amber); }
+.rc-side.dest .sl { color: var(--cyan); }
+.rc-side .sp { font-family: var(--font-mono); font-weight: 700; font-size: 14px; }
+.rc-side a.go { color: var(--cyan); text-decoration: none; font-size: 11px; opacity: 0.7; margin-left: 6px; }
+.rc-side a.go:hover { opacity: 1; }
+.rc-side.unmatched .st { color: var(--text-muted); font-style: italic; font-weight: 500; }
+.rc-econ { display: flex; gap: 22px; font-family: var(--font-mono); font-size: 12px; margin-bottom: 10px; }
+.rc-econ .l { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.rc-econ .v { font-weight: 600; font-size: 13px; }
+.rc-econ .v.pos { color: var(--green); }
+.rc-econ .v.neg { color: var(--red); }
+.rc-ids { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-id { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; }
+.rc-id b { color: var(--text); font-weight: 600; }
+.rc-id .copy { cursor: pointer; color: var(--cyan); opacity: 0.7; background: none; border: none; padding: 0 0 0 2px; font-size: 10px; font-family: var(--font-mono); }
+.rc-id .copy:hover { opacity: 1; }
+
 .rc-verdict {
   text-align: right;
   display: flex;
@@ -920,6 +944,51 @@ function verdictFor(roi) {
   if (roi >= 10) return { label: 'Marginal — needs volume', cls: 'medium' };
   return { label: 'Skip — ROI too low', cls: 'poor' };
 }
+
+// ---- FR-1 dual-platform card panels + FR-2 identifier chips ----
+function rcThumb(img, alt) {
+  const ph = window.KEMPY ? window.KEMPY.icon('image', '18px') : '';
+  const i = img ? `<img src="${escapeAttr(img)}" alt="${escapeHtml(alt || '')}" loading="lazy" decoding="async" onerror="this.remove()" />` : '';
+  return `<div class="thumb" style="width:38px;height:38px;">${ph}${i}</div>`;
+}
+function srcPanel(p) {
+  const label = escapeHtml(p.sourceName || 'Source');
+  const link = p.sourceUrl || p.amazonUrl;
+  const go = link ? `<a class="go" href="${escapeHtml(link)}" target="_blank" rel="noopener">View ↗</a>` : '';
+  const unmatched = !!p.estimated && !p.sourceTitle;   // no confident source → flag, don't pretend
+  if (unmatched) {
+    return `<div class="rc-side src unmatched">${rcThumb(null)}<div style="min-width:0;flex:1;">
+      <div class="sl">${label} · unmatched</div>
+      <div class="st">No confident source — verify manually</div>
+      <div class="sp" style="color:var(--text-muted);">~${fmt$(p.sourcePrice)} <span style="font-size:9px;">est.</span></div>
+    </div></div>`;
+  }
+  return `<div class="rc-side src">${rcThumb(p.sourceImage, p.sourceTitle)}<div style="min-width:0;flex:1;">
+    <div class="sl">${label} · cost</div>
+    <div class="st">${escapeHtml(p.sourceTitle || p.name)}</div>
+    <div class="sp">${fmt$(p.sourcePrice != null ? p.sourcePrice : p.amazonPrice)}${go}</div>
+  </div></div>`;
+}
+function dstPanel(p) {
+  const img = p.ebayImage || p.image;
+  const go = p.ebayUrl ? `<a class="go" href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">View ↗</a>` : '';
+  return `<div class="rc-side dest">${rcThumb(img, p.ebayTitle)}<div style="min-width:0;flex:1;">
+    <div class="sl">eBay.co.uk · sale</div>
+    <div class="st">${escapeHtml(p.ebayTitle || p.name)}</div>
+    <div class="sp">${fmt$(p.ebayPrice)}${go}</div>
+  </div></div>`;
+}
+function idChip(label, val) {
+  return `<span class="rc-id">${escapeHtml(label)} <b>${escapeHtml(String(val))}</b><button class="copy" data-copy="${escapeAttr(String(val))}" title="Copy ${escapeHtml(label)}">copy</button></span>`;
+}
+function idsRow(p) {
+  const idLabel = { amazon: 'ASIN', aliexpress: 'AliExpress ID', tiktok: 'TikTok ID' }[p.sourcePlatform] || 'Source ID';
+  const chips = [];
+  if (p.sourceId) chips.push(idChip(idLabel, p.sourceId));
+  if (p.ebayItemNumber) chips.push(idChip('eBay item', p.ebayItemNumber));
+  if (p.gtin) chips.push(idChip('GTIN', p.gtin));
+  return chips.join('');
+}
 function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
@@ -1007,18 +1076,17 @@ function applyFiltersAndRender() {
       <div class="research-card ${cardCls}" data-product='${escapeAttr(JSON.stringify(p))}'>
         <div>
           <div class="head">
-            <div class="thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}${p.image ? `<img src="${escapeAttr(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
-            <div style="min-width:0;">
+            <div style="min-width:0;flex:1;">
               <div class="rc-name">${escapeHtml(p.name)}${matchBadge}</div>
               <div class="rc-cat">${escapeHtml(p.cat || '')} · ${escapeHtml(p.vol || '?')}/mo · ${escapeHtml(p.comp || '?')} comp · ${escapeHtml(p.trend || '?')}</div>
             </div>
           </div>
-          <div class="rc-pricing">
-            <div class="item"><div class="l">eBay.co.uk ${ebayLink}</div><div class="v">${fmt$(p.ebayPrice)}</div></div>
-            <div class="item"><div class="l">${escapeHtml(p.sourceName || 'Amazon.co.uk')}${p.estimated ? ' <span title="Estimated — no confident match was found for this listing. ROI is approximate." style="color:var(--amber);font-size:11px;">(est.)</span>' : ''} ${amazonLink}</div><div class="v">${p.estimated ? '~' : ''}${fmt$(p.amazonPrice)}</div></div>
-            <div class="item"><div class="l">Fees+Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
-            <div class="item"><div class="l">Profit</div><div class="v ${(p.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(p.profit)}</div></div>
+          <div class="rc-dual">${srcPanel(p)}${dstPanel(p)}</div>
+          <div class="rc-econ">
+            <div><div class="l">Fees + Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
+            <div><div class="l">Profit</div><div class="v ${(p.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(p.profit)}</div></div>
           </div>
+          <div class="rc-ids">${idsRow(p)}</div>
         </div>
         <div class="rc-verdict">
           <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
@@ -1135,6 +1203,20 @@ function saveLocal(items) {
 loadLocal().forEach(i => { const k = i.asin || i.ebayItemId; if (k) savedAsins.add(k); });
 
 // List on eBay → open the shared modal with the full product object.
+// FR-2: copy an identifier (ASIN / source id / eBay item # / GTIN) to clipboard.
+resultsEl.addEventListener('click', async (e) => {
+  const cp = e.target.closest('.rc-id .copy');
+  if (!cp) return;
+  e.preventDefault();
+  const val = cp.getAttribute('data-copy') || '';
+  try {
+    await navigator.clipboard.writeText(val);
+    showToast('Copied ' + val, 'success');
+  } catch (_) {
+    showToast('Copy failed — ' + val, 'error');
+  }
+});
+
 resultsEl.addEventListener('click', (e) => {
   const lb = e.target.closest('[data-action="list"]');
   if (!lb) return;
