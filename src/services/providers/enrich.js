@@ -58,7 +58,7 @@ async function ebayPriceFor(name) {
   if (!items.length) return null;
   const price = median(items.map((it) => it.ebayPrice));
   if (price == null) return null;
-  // Pick the listing closest to the median for the link/shipping signal.
+  // Pick the listing closest to the median for the link/title/image/id signal.
   const ref = items
     .filter((it) => Number.isFinite(it.ebayPrice))
     .sort((a, b) => Math.abs(a.ebayPrice - price) - Math.abs(b.ebayPrice - price))[0];
@@ -67,6 +67,9 @@ async function ebayPriceFor(name) {
     shipping: ref?.ebayShipping != null ? ref.ebayShipping : ECONOMICS.DEFAULT_SHIPPING,
     ebayUrl: ref?.ebayUrl || null,
     ebayItemId: ref?.ebayItemId || null,
+    ebayTitle: ref?.name || null,           // FR-1: the matched eBay listing's own title
+    ebayImage: ref?.image || null,          // FR-1: the matched eBay listing's image
+    legacyItemId: ref?.legacyItemId || null, // FR-2: human eBay item number
   };
 }
 
@@ -82,16 +85,23 @@ export async function enrichWithEbay(products, { sourceName, supplierUrlBase } =
     const ebay = await ebayPriceFor(p.name);
     if (!ebay) return null;
     const card = finalizeMock(
-      { ...p, ebayPrice: ebay.ebayPrice, shipping: ebay.shipping },
+      {
+        ...p,
+        ebayPrice: ebay.ebayPrice,
+        shipping: ebay.shipping,
+        ebayUrl: ebay.ebayUrl,
+        ebayItemId: ebay.ebayItemId,
+        ebayTitle: ebay.ebayTitle,           // FR-1 dual display
+        ebayImage: ebay.ebayImage,
+        sourceImage: p.image,                // supplier-side image
+        sourceId: p.productId,               // FR-2 source id (AliExpress/TikTok)
+        legacyItemId: ebay.legacyItemId,     // FR-2 eBay item number
+        matchVia: 'ebay-browse',
+        estimated: false,
+      },
       { sourceName, supplierUrlBase },
     );
-    // Prefer the real supplier/eBay links + id from live data.
-    card.ebayUrl = ebay.ebayUrl || card.ebayUrl;
-    card.ebayItemId = ebay.ebayItemId || card.ebayItemId;
-    if (p.supplierUrl) card.amazonUrl = p.supplierUrl;
-    card.estimated = false;
     card.matchSource = sourceName;
-    card.matchVia = 'ebay-browse';
     return card;
   });
   return enriched

@@ -98,6 +98,7 @@ function mapItem(it) {
 
   return {
     ebayItemId: it.itemId,
+    legacyItemId: it.legacyItemId || null,  // the human eBay item number (FR-2)
     name: it.title,
     ebayPrice: price,
     ebayShipping: shipping,                 // 0 if free, null if unknown

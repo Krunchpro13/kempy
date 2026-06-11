@@ -27,6 +27,9 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
   const profit = r2(ebayPrice - supplierPrice - fees - shipping - packaging);
   const roi = supplierPrice > 0 ? r2((profit / supplierPrice) * 100) : 0;
 
+  const label = sourceName || 'Amazon.co.uk';
+  const sourceUrl = p.supplierUrl || (supplierUrlBase ? supplierUrlBase + encodeURIComponent(p.name) : null);
+
   return {
     name: p.name,
     cat: p.cat || 'Marketplace',
@@ -36,23 +39,45 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
     ebayPrice,
     amazonPrice: supplierPrice,          // the card's supplier-cost column reads this
     supplierPrice,
-    sourceName: sourceName || 'Amazon.co.uk',
-    ebayUrl: 'https://www.ebay.co.uk/sch/i.html?_nkw=' + encodeURIComponent(p.name),
-    amazonUrl: supplierUrlBase ? supplierUrlBase + encodeURIComponent(p.name) : null,
+    sourceName: label,
+    ebayUrl: p.ebayUrl || 'https://www.ebay.co.uk/sch/i.html?_nkw=' + encodeURIComponent(p.name),
+    amazonUrl: sourceUrl,
     fees,
     shipping,
     packaging,
     profit,
     roi,
-    asin: null,
-    estimated: false,
-    matchSource: sourceName || 'Amazon.co.uk',
-    matchVia: null,
-    matchConfidence: null,
+    asin: p.asin || null,
+    estimated: p.estimated != null ? p.estimated : false,
+    matchSource: label,
+    matchVia: p.matchVia || null,
+    matchConfidence: p.matchConfidence != null ? p.matchConfidence : null,
     image: p.image || null,
     condition: p.condition || 'New',
-    ebayItemId: p.id || null,
+    ebayItemId: p.ebayItemId || p.id || null,
+
+    // ---- FR-1 dual-platform display ----
+    sourcePlatform: platformKey(label),  // 'amazon' | 'aliexpress' | 'tiktok'
+    sourceTitle: p.sourceTitle || p.name,
+    sourceImage: p.sourceImage || p.image || null,
+    sourcePrice: supplierPrice,
+    sourceUrl,
+    ebayTitle: p.ebayTitle || null,      // distinct matched-eBay-listing title (null = same as name)
+    ebayImage: p.ebayImage || null,      // distinct matched-eBay-listing image
+
+    // ---- FR-2 cross-platform identifiers ----
+    sourceId: p.sourceId || p.productId || (p.asin || null),  // ASIN / AliExpress id / TikTok id
+    gtin: p.gtin || null,                                     // GTIN/EAN/UPC where available
+    ebayItemNumber: p.legacyItemId || p.ebayItemNumber || null,
   };
+}
+
+// Map a supplier label to a short platform key used by the FR-2 identifier row.
+function platformKey(name = '') {
+  const n = name.toLowerCase();
+  if (n.includes('aliexpress')) return 'aliexpress';
+  if (n.includes('tiktok')) return 'tiktok';
+  return 'amazon';
 }
 
 function filterAndBuild(list, q, opts) {

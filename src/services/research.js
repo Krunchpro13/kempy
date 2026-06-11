@@ -80,6 +80,7 @@ function buildProduct(item, match = null) {
   const profit = round2(ebayPrice - amazonPrice - fees - shipping - packaging);
   const roi = amazonPrice > 0 ? round2((profit / amazonPrice) * 100) : 0;
 
+  const cand = hasReal ? match.candidate : null;
   return {
     name: item.name,
     emoji: emojiFor(item.name),
@@ -90,13 +91,13 @@ function buildProduct(item, match = null) {
     ebayPrice,
     amazonPrice,
     ebayUrl: item.ebayUrl,
-    amazonUrl: hasReal ? match.candidate.url : null,
+    amazonUrl: cand ? cand.url : null,
     fees,
     shipping,
     packaging,
     profit,
     roi,
-    asin: hasReal ? match.candidate.asin : null,
+    asin: cand ? cand.asin : null,
     estimated: !hasReal,                                  // honest flag for the UI
     matchSource: hasReal ? `ebay+keepa(${match.via})` : 'estimate',
     matchVia: hasReal ? match.via : null,                 // 'claude' | 'local' | null
@@ -105,6 +106,20 @@ function buildProduct(item, match = null) {
     image: item.image,
     condition: item.condition,
     ebayItemId: item.ebayItemId,
+
+    // ---- FR-1 dual-platform display (source = Amazon, destination = eBay) ----
+    sourcePlatform: 'amazon',
+    sourceTitle: cand ? cand.title : null,                // Amazon listing title (null when unmatched)
+    sourceImage: cand ? cand.image : null,                // Amazon listing image
+    sourcePrice: amazonPrice,
+    sourceUrl: cand ? cand.url : null,
+    ebayTitle: item.name,                                 // the eBay listing title
+    ebayImage: item.image,                                // the eBay listing image
+
+    // ---- FR-2 cross-platform identifiers ----
+    sourceId: cand ? cand.asin : null,                    // ASIN
+    gtin: cand ? (cand.gtin || null) : null,              // GTIN/EAN/UPC from Keepa (may be null)
+    ebayItemNumber: item.legacyItemId || null,
   };
 }
 

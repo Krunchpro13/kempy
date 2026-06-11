@@ -68,6 +68,9 @@ export async function findAmazonCandidates(query, n = 5) {
         url: `https://www.amazon.co.uk/dp/${p.asin}`,
         avgRating: p.avgRating ? p.avgRating / 10 : null,
         reviewCount: p.reviewCount || 0,
+        // Barcodes (FR-2) — already in the Keepa product, no extra token cost.
+        // Primary identifier at index 0; null when Keepa has none.
+        gtin: p.gtinList?.[0] || p.eanList?.[0] || p.upcList?.[0] || null,
       };
     })
     .filter((p) => p.amazonPrice != null);
