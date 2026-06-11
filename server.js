@@ -21,6 +21,7 @@ import ordersRouter from './src/routes/orders.js';
 import profitRouter from './src/routes/profit.js';
 import ebayRouter from './src/routes/ebay.js';
 import ebayListingsRouter from './src/routes/ebay-listings.js';
+import aliexpressRouter from './src/routes/aliexpress.js';
 import billingRouter from './src/routes/billing.js';
 import * as billing from './src/services/billing.js';
 import { requireSubscription } from './src/middleware/subscription.js';
@@ -231,6 +232,7 @@ app.use('/api/orders', requireSubscription, ordersRouter);
 app.use('/api/profit', requireSubscription, profitRouter);
 app.use('/api/ebay', ebayRouter);
 app.use('/api/ebay', ebayListingsRouter);
+app.use('/api/aliexpress', aliexpressRouter);
 app.use('/api/billing', billingRouter);
 
 // ---- Branded 404 for unmatched non-API GETs (API 404s stay JSON via notFound) ----

@@ -219,3 +219,21 @@ CREATE TABLE IF NOT EXISTS processed_stripe_events (
   processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ====================================================================
+-- AliExpress Dropshipping (DS) API OAuth — APP-LEVEL (single row, id=1).
+-- This is KEMPY's own AliExpress sourcing account, shared across all users
+-- (not per-user). access_token ~ short-lived; refresh_token encrypted at rest.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS aliexpress_oauth (
+  id INT PRIMARY KEY DEFAULT 1,
+  ae_user_id TEXT,                              -- AliExpress account/user id (diagnostics)
+  access_token TEXT,                            -- current short-lived token (refreshable)
+  access_token_expires_at TIMESTAMPTZ,          -- when access_token dies
+  refresh_token_enc TEXT,                       -- AES-256-GCM ciphertext "ivB64:tagB64:dataB64"
+  refresh_token_expires_at TIMESTAMPTZ,
+  connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_error TEXT,
+  CONSTRAINT aliexpress_oauth_singleton CHECK (id = 1)
+);
+

@@ -1,116 +1,118 @@
 // src/services/providers/aliexpress.js
 //
-// Live AliExpress supply-side feed via the official AliExpress Open Platform
-// Affiliate API (https://open.aliexpress.com). Returns trending / matching
-// products with real GBP prices, which research.js then prices against
-// eBay.co.uk (see providers/enrich.js) to compute profit/ROI.
+// Live AliExpress supply-side feed via the AliExpress DROPSHIPPING (DS) API.
+// (The account is registered for the DS API, not the Affiliate API — and the DS
+// API has NO keyword product search. So we pull AliExpress's best-seller /
+// recommended FEEDS as a live catalog of winning products, then keyword-filter
+// that catalog client-side. Empty query -> the trending feed.)
 //
-// Auth: signed requests. You need an approved Open Platform app:
-//   ALIEXPRESS_APP_KEY      — your app key
-//   ALIEXPRESS_APP_SECRET   — your app secret (used to HMAC-sign requests; secret)
-//   ALIEXPRESS_TRACKING_ID  — your affiliate tracking id
-//   ALIEXPRESS_SESSION      — (optional) access token, only if your app requires it
+// research.js prices each product against eBay.co.uk (providers/enrich.js) to
+// compute profit/ROI. Auth is the app-level OAuth token (see aliexpress-oauth.js);
+// until the owner connects, getValidAccessToken() returns null -> we throw ->
+// research.js falls back to the mock sample feed.
 //
-// Until those are set, isConfigured() is false and research.js uses the mock feed.
-//
-// Signing (mirrors AliExpress' "TOP" gateway scheme):
-//   basestring = concat of (key + value) for every request param, sorted by key.
-//   sign = HMAC-SHA256(app_secret, basestring) as UPPERCASE hex.
-// Reference: github.com/moh3a/ae_sdk (utils/client.ts) + open.aliexpress.com docs.
+// Methods used (DS, /sync gateway, signed, session=access token):
+//   aliexpress.ds.feedname.get        -> list available feed names
+//   aliexpress.ds.recommend.feed.get  -> products for a feed (Affiliate product shape)
 
-import crypto from 'crypto';
-import axios from 'axios';
+import { callSigned, getValidAccessToken, isConfigured as oauthConfigured } from './aliexpress-oauth.js';
 
-const GATEWAY = 'https://api-sg.aliexpress.com/sync';
-const SIGN_METHOD = 'sha256';
-const METHOD_QUERY = 'aliexpress.affiliate.product.query';     // keyword search
-const METHOD_HOT = 'aliexpress.affiliate.hotproduct.query';    // trending (no keyword)
+// Default feeds to pull when AE's feedname list is unavailable. AE's canonical
+// dropship feeds; overridable via env (comma-separated).
+const DEFAULT_FEEDS = (process.env.ALIEXPRESS_FEEDS || 'DS bestselling,DS Top Selling,Hot Selling')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 
+// isConfigured() only checks app creds exist (sync). Whether we actually have an
+// OAuth token is resolved at call time -> no token = throw = mock fallback.
 export function isConfigured() {
-  // tracking_id is OPTIONAL: it's only needed to earn affiliate commission
-  // (promotion links). Product search works without it — we fall back to the
-  // plain product page URL. So the feed goes live on just the app key + secret.
-  return !!(process.env.ALIEXPRESS_APP_KEY && process.env.ALIEXPRESS_APP_SECRET);
+  return oauthConfigured();
 }
 
-// HMAC-SHA256 sign: sorted concat of key+value over all params, uppercase hex.
-function sign(params, secret) {
-  const basestring = Object.keys(params)
-    .filter((k) => params[k] != null && params[k] !== '')
-    .sort()
-    .reduce((acc, k) => acc + k + String(params[k]), '');
-  return crypto.createHmac(SIGN_METHOD, secret).update(basestring, 'utf8').digest('hex').toUpperCase();
-}
-
-async function call(method, extra) {
-  const params = {
-    app_key: process.env.ALIEXPRESS_APP_KEY,
-    method,
-    format: 'json',
-    sign_method: SIGN_METHOD,
-    timestamp: String(Date.now()),
-    v: '2.0',
-    target_currency: 'GBP',
-    target_language: 'EN',
-    ship_to_country: 'UK',
-    ...extra,
-  };
-  // Only attach tracking_id / session when present (both optional for search).
-  if (process.env.ALIEXPRESS_TRACKING_ID) params.tracking_id = process.env.ALIEXPRESS_TRACKING_ID;
-  if (process.env.ALIEXPRESS_SESSION) params.session = process.env.ALIEXPRESS_SESSION;
-  params.sign = sign(params, process.env.ALIEXPRESS_APP_SECRET);
-
-  const res = await axios.get(GATEWAY, { params, timeout: 12000 });
-  return res.data;
-}
-
-// Dig the products array out of the (sometimes doubly-wrapped) affiliate response,
-// tolerating both the query and hotproduct envelopes + the `products.product` nesting.
-function extractProducts(data, method) {
+// Pull product detail array out of the DS recommend-feed envelope (same nested
+// {products:{product:[...]}} shape as the affiliate API).
+function extractProducts(data) {
   if (!data) return [];
   if (data.error_response) {
-    throw new Error(`AliExpress API error: ${data.error_response.msg || data.error_response.code || 'unknown'}`);
+    throw new Error(`AliExpress DS API error: ${data.error_response.msg || data.error_response.code || 'unknown'}`);
   }
-  const envKey =
-    method === METHOD_HOT
-      ? 'aliexpress_affiliate_hotproduct_query_response'
-      : 'aliexpress_affiliate_product_query_response';
-  const result = data[envKey]?.resp_result?.result || data.resp_result?.result || {};
+  const result =
+    data.aliexpress_ds_recommend_feed_get_response?.resp_result?.result ||
+    data.resp_result?.result || {};
   let products = result.products;
-  if (products && products.product) products = products.product; // unwrap {product:[...]}
+  if (products && products.product) products = products.product;
   return Array.isArray(products) ? products : [];
 }
 
-// Normalize one AliExpress product to the supplier shape finalizeMock expects.
+// Normalize a DS/affiliate product to the supplier shape finalizeMock expects.
 function normalize(p) {
-  const price = Number(p.target_sale_price ?? p.sale_price ?? p.target_app_sale_price);
+  const price = Number(p.target_sale_price ?? p.target_app_sale_price ?? p.sale_price);
   if (!Number.isFinite(price) || price <= 0) return null;
-  // Without a tracking_id there's no promotion_link, so fall back to the plain
-  // detail URL, then to a canonical product page built from the id.
-  const canonical = p.product_id ? `https://www.aliexpress.com/item/${p.product_id}.html` : null;
+  const id = p.product_id;
   return {
     name: p.product_title,
-    supplierPrice: price,                                  // already GBP (target_currency)
+    supplierPrice: price,                                  // GBP (target_currency=GBP)
     cat: p.second_level_category_name || p.first_level_category_name || 'AliExpress',
     vol: p.lastest_volume || '—',
     image: p.product_main_image_url || null,
-    supplierUrl: p.promotion_link || p.product_detail_url || canonical,
-    productId: p.product_id || null,
+    supplierUrl: p.promotion_link || p.product_detail_url || (id ? `https://www.aliexpress.com/item/${id}.html` : null),
+    productId: id || null,
+    _sales: Number(p.lastest_volume) || 0,
+    _kw: `${p.product_title || ''} ${p.first_level_category_name || ''} ${p.second_level_category_name || ''}`.toLowerCase(),
   };
 }
 
-// Fetch supplier-side products. With a query → keyword search; without → trending.
-// Returns [] on any error so research.js can fall back to mock cleanly.
-export async function fetchSupplierProducts(query, { limit = 20 } = {}) {
-  const q = (query || '').trim();
-  const method = q ? METHOD_QUERY : METHOD_HOT;
-  const extra = {
+async function fetchFeed(feedName, accessToken, pageSize) {
+  const data = await callSigned('aliexpress.ds.recommend.feed.get', {
+    feed_name: feedName,
+    target_currency: 'GBP',
+    target_language: 'EN',
+    country: 'UK',
     page_no: '1',
-    page_size: String(Math.min(Math.max(limit, 1), 50)),
-    sort: 'LAST_VOLUME_DESC',                              // most-sold first
-  };
-  if (q) extra.keywords = q;
+    page_size: String(Math.min(Math.max(pageSize, 1), 50)),
+  }, { accessToken });
+  return extractProducts(data);
+}
 
-  const data = await call(method, extra);
-  return extractProducts(data, method).map(normalize).filter(Boolean);
+// Fetch supplier-side products. Pulls the configured feeds, dedupes, then
+// keyword-filters client-side (DS has no text search). Empty query -> trending.
+// Returns [] / throws on no-token so research.js falls back to mock.
+export async function fetchSupplierProducts(query, { limit = 20 } = {}) {
+  const accessToken = await getValidAccessToken();
+  if (!accessToken) throw new Error('AliExpress not connected (no OAuth token)');
+
+  const q = (query || '').toLowerCase().trim();
+  const perFeed = Math.max(limit, 20);
+
+  // Pull a few feeds in parallel, tolerate individual feed failures.
+  const results = await Promise.allSettled(DEFAULT_FEEDS.map((f) => fetchFeed(f, accessToken, perFeed)));
+  const raw = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  if (!raw.length) {
+    // surface the first feed error so research.js logs it before mock fallback
+    const firstErr = results.find((r) => r.status === 'rejected');
+    if (firstErr) throw firstErr.reason;
+    return [];
+  }
+
+  // Normalize + dedupe by productId.
+  const seen = new Set();
+  let products = [];
+  for (const p of raw) {
+    const n = normalize(p);
+    if (!n) continue;
+    const key = n.productId || n.name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    products.push(n);
+  }
+
+  // Keyword filter (DS has no server-side text search). Empty query -> trending.
+  if (q && q !== 'all') {
+    const terms = q.split(/\s+/).filter(Boolean);
+    const matched = products.filter((p) => terms.every((t) => p._kw.includes(t)));
+    if (matched.length) products = matched; // else keep the trending set (demo-friendly)
+  }
+
+  return products
+    .sort((a, b) => b._sales - a._sales)
+    .slice(0, limit);
 }
