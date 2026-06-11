@@ -203,7 +203,7 @@ app.get('/api/search', async (req, res, next) => {
   if (!q && source === 'amazon') return res.json({ products: [], meta: { query: q, source, count: 0 } });
   try {
     const start = Date.now();
-    const { products, cached } = await searchProducts(q, source);
+    const { products, cached, live, realCount } = await searchProducts(q, source);
     res.json({
       products,
       meta: {
@@ -212,6 +212,8 @@ app.get('/api/search', async (req, res, next) => {
         count: products.length,
         ms: Date.now() - start,
         cached,
+        live: live ?? undefined,         // aliexpress/tiktok: true=live provider, false=sample fallback
+        realCount: realCount ?? undefined,
         sources: {
           ebay: process.env.EBAY_CLIENT_ID ? 'live' : 'mock',
           amazon: process.env.KEEPA_API_KEY ? 'live' : 'mock',
