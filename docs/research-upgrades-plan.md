@@ -14,13 +14,15 @@
 | **FR-3** | eBay seller store reverse-scan | ✅ **Buildable now** | L | Operationally constrained: eBay 5,000 calls/day shared quota; `category_ids=0` full-store trick is undocumented; AliExpress/TikTok reverse-match is fuzzy |
 | **FR-4a** | Price-band filter (£15–£60), price-point search, adjustable settings | ✅ **Build now** | S–M | None |
 | **FR-4b** | Amazon **Prime-only** filter | ✅ **Build now** | M | Keepa token cost rises ~5× when enabled (gate behind toggle) |
-| **FR-4c** | **≥30 eBay sales/month** + "consistent sales history" | ❌ **Not possible on current APIs** | L | **DECISION REQUIRED** — needs eBay Marketplace Insights (restricted/partner-gated) or a paid 3rd-party sold-data scraper. See §6. |
+| **FR-4c** | **≥30 eBay sales/month** + "consistent sales history" | ❌ Not possible on current APIs | L | **DECISION 2026-06-11: ship WITHOUT it (Option C).** Control shows "coming soon"; apply for eBay Marketplace Insights to enable later. See §6. |
 
 **Bottom line:** Phase 1 (FR-1 + FR-2) and most of Phase 2 (FR-4 price band + Prime) are clean builds on the existing engine. The **sales-velocity filter (FR-4c) is the one requirement the platform's data sources cannot satisfy as written** — it must be re-scoped or backed by a new (restricted/paid) data source. FR-3 is buildable but needs guardrails to avoid burning the shared eBay quota.
 
 ---
 
 ## 1. Decisions needed from the Product Owner (take these back to the boss)
+
+> **RESOLVED 2026-06-11 — Option C chosen.** Ship the price band + Prime filters now; the sales-velocity control is shown as "coming soon" (not faked). Owner to apply for eBay Marketplace Insights; if granted, enable the real filter, else optionally revisit the paid 3rd-party path. Phase 2 proceeds without FR-4c.
 
 1. **FR-4c "30 sales/month + sustained history" — pick a path (this is the big one):**
    - **(A) Restricted official data** — apply for eBay **Marketplace Insights API** (the only official source of sold-quantity + sold-date over ~90 days). It's a *Limited Release*; non-partner apps are **routinely declined**. If granted, the filter works properly. *Timeline: unknown, approval-gated.*
