@@ -455,6 +455,34 @@ html.sb-collapsed .nav-item:hover::after {
 .wl-pricing .item .drift.up { color: var(--green); }
 .wl-pricing .item .drift.down { color: var(--red); }
 
+/* FR-1 dual-platform panels — same source|eBay split as the research card. */
+.rc-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+@media (max-width: 720px) { .rc-dual { grid-template-columns: 1fr; } }
+.rc-side { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; gap: 10px; align-items: flex-start; background: var(--surface-2); min-width: 0; }
+.rc-side.dest { border-color: var(--border-cyan); }
+.rc-side .sl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 3px; }
+.rc-side.src .sl { color: var(--amber); }
+.rc-side.dest .sl { color: var(--cyan); }
+.rc-side .st { font-size: 12px; line-height: 1.3; font-weight: 600; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rc-side .sp { font-family: var(--font-mono); font-weight: 700; font-size: 14px; }
+.rc-side a.go { color: var(--cyan); text-decoration: none; font-size: 11px; opacity: 0.7; margin-left: 6px; }
+.rc-side a.go:hover { opacity: 1; }
+.rc-side .drift { font-family: var(--font-mono); font-size: 10px; margin-top: 3px; }
+.rc-side .drift.up { color: var(--green); }
+.rc-side .drift.down { color: var(--red); }
+.rc-thumb { width: 38px; height: 38px; flex: none; border-radius: 6px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--text-muted); }
+.rc-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.rc-econ { display: flex; gap: 22px; font-family: var(--font-mono); font-size: 12px; margin-bottom: 10px; }
+.rc-econ .l { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.rc-econ .v { font-weight: 600; font-size: 13px; }
+.rc-econ .v.pos { color: var(--green); }
+.rc-econ .v.neg { color: var(--red); }
+.rc-ids { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-id { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; }
+.rc-id b { color: var(--text); font-weight: 600; }
+.rc-id .copy { cursor: pointer; color: var(--cyan); opacity: 0.7; background: none; border: none; padding: 0 0 0 2px; font-size: 10px; font-family: var(--font-mono); }
+.rc-id .copy:hover { opacity: 1; }
+
 .wl-side {
   text-align: right;
   display: flex;
@@ -813,6 +841,7 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
 function timeAgo(iso) {
   if (!iso) return '';
   const ms = Date.now() - new Date(iso).getTime();
@@ -874,54 +903,83 @@ function sortItems(items) {
   }
 }
 
+// ---- FR-1 dual-platform panels + FR-2 identifier chips (mirror of research card) ----
+const SOURCE_LABELS = { amazon: 'Amazon.co.uk', aliexpress: 'AliExpress', tiktok: 'TikTok UK' };
+function rcThumb(img, alt) {
+  const ph = window.KEMPY ? window.KEMPY.icon('image', '18px') : '';
+  const i = img ? `<img src="${escapeAttr(img)}" alt="${escapeHtml(alt || '')}" loading="lazy" decoding="async" onerror="this.remove()" />` : '';
+  return `<div class="rc-thumb">${ph}${i}</div>`;
+}
+function driftTag(saved, current) {
+  if (!saved || !current || Math.abs(saved - current) < 0.01) return '';
+  const diff = current - saved;
+  const pct = ((diff / saved) * 100).toFixed(1);
+  return `<div class="drift ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '+' : ''}${pct}% vs saved</div>`;
+}
+function idChip(label, val) {
+  return `<span class="rc-id">${escapeHtml(label)} <b>${escapeHtml(String(val))}</b><button class="copy" data-copy="${escapeAttr(String(val))}" title="Copy ${escapeHtml(label)}">copy</button></span>`;
+}
+function idsRow(item) {
+  const idLabel = { amazon: 'ASIN', aliexpress: 'AliExpress ID', tiktok: 'TikTok ID' }[item.sourcePlatform] || 'Source ID';
+  const sid = item.sourceId || item.asin;
+  const chips = [];
+  if (sid) chips.push(idChip(idLabel, sid));
+  if (item.ebayItemNumber) chips.push(idChip('eBay item', item.ebayItemNumber));
+  if (item.gtin) chips.push(idChip('GTIN', item.gtin));
+  return chips.join('');
+}
+
 function renderCard(item) {
   const v = roiClass(item.roi || 0);
   const cardCls = (item.roi || 0) >= 30 ? 'excellent' : '';
-  const drift = (saved, current) => {
-    if (!saved || !current || Math.abs(saved - current) < 0.01) return '';
-    const diff = current - saved;
-    const pct = ((diff / saved) * 100).toFixed(1);
-    return `<div class="drift ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '+' : ''}${pct}% vs saved</div>`;
-  };
   const addedAt = item.addedAt || item.added_at;
+
+  // Source side — for source-primary cards the saved name IS the source title;
+  // sourceImage falls back to the saved card image, sourceUrl to amazon_url.
+  const srcLabel = SOURCE_LABELS[item.sourcePlatform] || 'Source';
+  const srcTitle = item.sourceTitle || item.name;
+  const srcImg = item.sourceImage || item.image;
+  const srcUrl = item.sourceUrl || item.amazonUrl;
+  const srcGo = srcUrl ? `<a class="go" href="${escapeHtml(srcUrl)}" target="_blank" rel="noopener">View ↗</a>` : '';
+
+  // eBay side — its own title/image/number now persisted; graceful fallback for older saves.
+  const ebayTitle = item.ebayTitle || item.name;
+  const ebayImg = item.ebayImage || item.image;
+  const ebayGo = item.ebayUrl ? `<a class="go" href="${escapeHtml(item.ebayUrl)}" target="_blank" rel="noopener">View ↗</a>` : '';
+
+  const totalCost = (item.fees || 0) + (item.shipping || 0) + (item.packaging || 0);
+
   return `
     <div class="wl-card ${cardCls}" data-id="${escapeHtml(String(item.id))}">
       <div>
         <div class="head">
-          <div class="wl-thumb">${window.KEMPY ? window.KEMPY.icon('image','22px') : ''}${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onerror="this.remove()" />` : ''}</div>
           <div style="min-width:0;">
             <div class="wl-name">${escapeHtml(item.name)}</div>
-            <div class="wl-meta">
-              ${escapeHtml(item.cat || '')}
-              <span class="sep">·</span> added ${timeAgo(addedAt)}
-              ${item.asin ? `<span class="sep">·</span> ${escapeHtml(item.asin)}` : ''}
-            </div>
+            <div class="wl-meta">${escapeHtml(item.cat || '')}<span class="sep">·</span> added ${timeAgo(addedAt)}</div>
           </div>
         </div>
-        <div class="wl-pricing">
-          <div class="item">
-            <div class="l">eBay</div>
-            <div class="v">${fmt$(item.ebayPrice)}</div>
-            ${drift(item.savedEbayPrice, item.ebayPrice)}
-          </div>
-          <div class="item">
-            <div class="l">Amazon</div>
-            <div class="v">${fmt$(item.amazonPrice)}</div>
-            ${drift(item.savedAmazonPrice, item.amazonPrice)}
-          </div>
-          <div class="item">
-            <div class="l">Fees+Ship</div>
-            <div class="v neg">−${fmt$((item.fees || 0) + (item.shipping || 0) + (item.packaging || 0))}</div>
-          </div>
-          <div class="item">
-            <div class="l">Profit</div>
-            <div class="v ${(item.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(item.profit)}</div>
-          </div>
+        <div class="rc-dual">
+          <div class="rc-side src">${rcThumb(srcImg, srcTitle)}<div style="min-width:0;flex:1;">
+            <div class="sl">${escapeHtml(srcLabel)} · cost</div>
+            <div class="st">${escapeHtml(srcTitle)}</div>
+            <div class="sp">${fmt$(item.amazonPrice)}${srcGo}</div>
+            ${driftTag(item.savedAmazonPrice, item.amazonPrice)}
+          </div></div>
+          <div class="rc-side dest">${rcThumb(ebayImg, ebayTitle)}<div style="min-width:0;flex:1;">
+            <div class="sl">eBay.co.uk · sale</div>
+            <div class="st">${escapeHtml(ebayTitle)}</div>
+            <div class="sp">${fmt$(item.ebayPrice)}${ebayGo}</div>
+            ${driftTag(item.savedEbayPrice, item.ebayPrice)}
+          </div></div>
         </div>
+        <div class="rc-econ">
+          <div><div class="l">Fees + Ship</div><div class="v neg">${totalCost ? '−' + fmt$(totalCost) : '—'}</div></div>
+          <div><div class="l">Profit</div><div class="v ${(item.profit||0) < 0 ? 'neg' : 'pos'}">${fmt$(item.profit)}</div></div>
+        </div>
+        <div class="rc-ids">${idsRow(item)}</div>
       </div>
       <div class="wl-side">
         <div class="wl-roi ${v}">${item.roi != null ? Number(item.roi).toFixed(1) + '%' : '—'}</div>
-        ${item.ebayUrl ? `<a href="${escapeHtml(item.ebayUrl)}" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);text-decoration:none;letter-spacing:0.5px;">↗ View on eBay</a>` : ''}
         <button class="wl-remove" data-action="list" style="border-color:var(--border-cyan);color:var(--cyan);">${window.KEMPY ? window.KEMPY.icon('bolt','13px') : ''} List on eBay</button>
         <button class="wl-remove" data-action="remove">${window.KEMPY ? window.KEMPY.icon('trash','13px') : ''} Remove</button>
       </div>
@@ -963,6 +1021,20 @@ async function render() {
 // ====================================================================
 // Remove
 // ====================================================================
+// FR-2: copy an identifier (ASIN / source id / eBay item # / GTIN) to clipboard.
+listEl.addEventListener('click', async (e) => {
+  const cp = e.target.closest('.rc-id .copy');
+  if (!cp) return;
+  e.preventDefault();
+  const val = cp.getAttribute('data-copy') || '';
+  try {
+    await navigator.clipboard.writeText(val);
+    showToast('Copied ' + val, 'success');
+  } catch (_) {
+    showToast('Copy failed — ' + val, 'error');
+  }
+});
+
 // List on eBay → find the saved item by id and open the shared modal.
 listEl.addEventListener('click', (e) => {
   const lb = e.target.closest('[data-action="list"]');

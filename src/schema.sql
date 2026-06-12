@@ -103,6 +103,11 @@ ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS source_platform TEXT;  -- amazon|aliexpress|tiktok
 ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS source_id TEXT;        -- ASIN / AliExpress / TikTok id
 ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS gtin TEXT;             -- GTIN/EAN/UPC where available
+-- FR-1 dual-platform display: keep the eBay listing's OWN title/image/number so a
+-- saved card renders the same source|eBay split as the research card.
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS ebay_title TEXT;
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS ebay_image TEXT;
+ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS ebay_item_number TEXT;  -- human eBay item # (legacyItemId)
 
 CREATE INDEX IF NOT EXISTS watchlist_user_idx ON watchlist (user_id);
 CREATE INDEX IF NOT EXISTS watchlist_asin_idx ON watchlist (user_id, asin) WHERE asin IS NOT NULL;

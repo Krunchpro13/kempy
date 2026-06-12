@@ -32,7 +32,8 @@ router.get('/', requireDb, requireAuth, async (req, res) => {
               saved_ebay_price, saved_amazon_price,
               fees, shipping, packaging, profit, roi,
               ebay_url, amazon_url, image_url,
-              source_platform, source_id, gtin, added_at
+              source_platform, source_id, gtin,
+              ebay_title, ebay_image, ebay_item_number, added_at
        FROM watchlist
        WHERE user_id = $1
        ORDER BY added_at DESC`,
@@ -61,6 +62,9 @@ router.get('/', requireDb, requireAuth, async (req, res) => {
       sourcePlatform: r.source_platform,
       sourceId: r.source_id,
       gtin: r.gtin,
+      ebayTitle: r.ebay_title,
+      ebayImage: r.ebay_image,
+      ebayItemNumber: r.ebay_item_number,
       addedAt: r.added_at,
     }));
 
@@ -94,8 +98,9 @@ router.post('/', requireDb, requireAuth, async (req, res) => {
          (user_id, asin, ebay_item_id, name, emoji, cat,
           ebay_price, amazon_price, saved_ebay_price, saved_amazon_price,
           fees, shipping, packaging, profit, roi, ebay_url, amazon_url, image_url,
-          source_platform, source_id, gtin)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+          source_platform, source_id, gtin,
+          ebay_title, ebay_image, ebay_item_number)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING id`,
       [
         req.user.user_id,
@@ -119,6 +124,9 @@ router.post('/', requireDb, requireAuth, async (req, res) => {
         product.sourcePlatform || null,
         product.sourceId || null,
         product.gtin || null,
+        product.ebayTitle || null,
+        product.ebayImage || null,
+        product.ebayItemNumber || null,
       ],
     );
 
