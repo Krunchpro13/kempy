@@ -157,7 +157,12 @@ export async function scanSeller(username, source = 'amazon', { limit = SCAN_LIM
   const provider = src === 'aliexpress' ? aliexpress : src === 'tiktok' ? tiktok : null;
   const matched = await mapLimit(items, 4, async (listing) => {
     try {
-      const m = src === 'amazon' ? await matchAmazon(listing) : await matchProvider(listing, provider);
+      let m = src === 'amazon' ? await matchAmazon(listing) : await matchProvider(listing, provider);
+      // Reverse-match sanity: a source costing far MORE than the eBay sale price is
+      // almost certainly a different (bigger) SKU mis-matched by title — drop it
+      // rather than show a misleading huge-negative ROI. (Real arbitrage = source
+      // cheaper than the eBay sale.)
+      if (m && listing.ebayPrice > 0 && m.sourcePrice > listing.ebayPrice * 1.5) m = null;
       return buildScanCard(listing, m, meta);
     } catch {
       return buildScanCard(listing, null, meta);
