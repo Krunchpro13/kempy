@@ -3,6 +3,9 @@
 **Source:** Kempzonline Product Research Change Request v1.1 (FR-1…FR-4), Fred (Product Owner), 9 Jun 2026.
 **Status:** Plan ready for implementation. Grounded in the current codebase + verified against live eBay / Keepa / AliExpress / EchoTik API capabilities (June 2026).
 
+> **IMPLEMENTED 2026-06-12.** **FR-1 + FR-2 SHIPPED** (dual source|eBay card + identifier chips + copy, across research/watchlist/landing; watchlist persists the eBay listing fields). **FR-4a + FR-4b + FR-4c SHIPPED** (cost & sell price bands + persisted operator defaults; per-search Amazon Prime-only toggle via Keepa `buybox:1`; velocity control shown as a disabled "SOON"). **FR-3 is the remaining work (Phase 3).**
+> **ARCHITECTURE CHANGE:** the search engine was flipped to **source-primary** for all three sources, and `enrichWithEbay` now uses **Claude-confirmed eBay matching** (`matchEbayBatch`). This **removed `matchAll()`/`buildProduct()`** from research.js — so FR-3's "reuses matchAll/buildProduct" note below is superseded: the reusable primitive is now `enrichWithEbay` (+ `matchEbayBatch`) and `finalizeMock`.
+
 ---
 
 ## 0. TL;DR — what's buildable, what isn't
