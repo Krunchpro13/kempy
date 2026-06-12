@@ -1147,6 +1147,7 @@ function applyFiltersAndRender() {
             ${isSaved ? 'Saved' : (window.KEMPY ? window.KEMPY.icon('watchlist','14px') : '') + ' Save'}
           </button>
           <button class="rc-save" data-action="list" style="margin-top:6px;background:transparent;border:1px solid var(--border-cyan);color:var(--cyan);">${window.KEMPY ? window.KEMPY.icon('bolt','14px') : ''} List on eBay</button>
+          ${p.seller ? `<button class="rc-save" data-action="scan" data-seller="${escapeAttr(p.seller)}" title="Find more profitable products this eBay seller lists" style="margin-top:6px;background:transparent;border:1px solid var(--border);color:var(--text-muted);">${window.KEMPY ? window.KEMPY.icon('search','14px') : ''} Scan seller</button>` : ''}
         </div>
       </div>
     `;
@@ -1280,6 +1281,56 @@ resultsEl.addEventListener('click', (e) => {
     if (window.KempyListModal) window.KempyListModal.open(product, { showToast });
   } catch (_) { showToast('Could not open the lister', 'error'); }
 });
+
+// ---- FR-3: scan this eBay seller's whole store for more profitable products ----
+resultsEl.addEventListener('click', (e) => {
+  const sb = e.target.closest('[data-action="scan"]');
+  if (!sb) return;
+  if (sb.dataset.seller) scanSellerStore(sb.dataset.seller, sb);
+});
+
+function renderScanMeta(meta) {
+  if (!meta) { metaEl.style.display = 'none'; return; }
+  metaEl.style.display = 'flex';
+  metaEl.innerHTML = `
+    <span class="chip">seller <span class="ok">${escapeHtml(meta.seller || '')}</span></span>
+    <span class="chip">scanned ${meta.scanned ?? '?'}${meta.total != null ? ' / ' + meta.total : ''}</span>
+    <span class="chip ${meta.matched ? 'ok' : 'warn'}">${meta.matched ?? 0} matched to ${escapeHtml(meta.source || '')}</span>
+    ${meta.limited ? '<span class="chip warn">store capped</span>' : ''}
+    ${meta.budget ? `<span class="chip">scans ${meta.budget.used}/${meta.budget.limit} today</span>` : ''}
+    <span class="chip">${meta.ms || 0}ms</span>`;
+}
+
+async function scanSellerStore(seller, btn) {
+  const restore = () => { renderMeta(lastMeta); filterBar.classList.toggle('hidden', lastProducts.length === 0); applyFiltersAndRender(); };
+  if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+  renderSkeleton();
+  metaEl.style.display = 'none';
+  filterBar.classList.add('hidden');
+  try {
+    const r = await fetch(`/api/seller-scan?seller=${encodeURIComponent(seller)}&source=${currentSource}`, { credentials: 'include' });
+    if (r.status === 401) { showToast('Sign in to scan a seller’s store', 'error'); restore(); return; }
+    if (r.status === 402) { showToast('Subscribing unlocks seller scans — see Settings → Billing', 'error'); restore(); return; }
+    if (r.status === 429) { const d = await r.json().catch(() => ({})); showToast(d.error || 'Daily scan limit reached', 'error'); restore(); return; }
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    const data = await r.json();
+    lastProducts = data.products || [];
+    lastMeta = null;
+    populateCategoryFilter(lastProducts);
+    visibleCount = PAGE_SIZE;
+    renderScanMeta(data.meta);
+    filterBar.classList.toggle('hidden', lastProducts.length === 0);
+    applyFiltersAndRender();
+    if (!lastProducts.length) {
+      resultsEl.innerHTML = `<div class="empty-state"><span class="icon">${window.KEMPY ? window.KEMPY.icon('search','42px') : ''}</span><h3>Nothing to scan for ${escapeHtml(seller)}</h3><p>No active fixed-price listings came back for this store.</p></div>`;
+    }
+    showToast(`Scanned ${seller} — ${data.meta?.matched ?? 0} matched`, 'success');
+  } catch (err) {
+    resultsEl.innerHTML = `<div class="empty-state"><span class="icon">${window.KEMPY ? window.KEMPY.icon('danger','42px') : ''}</span><h3>Scan failed</h3><p>${escapeHtml(err.message)}</p></div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = (window.KEMPY ? window.KEMPY.icon('search','14px') : '') + ' Scan seller'; }
+  }
+}
 
 resultsEl.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action="save"]');

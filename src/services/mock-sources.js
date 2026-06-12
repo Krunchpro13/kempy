@@ -78,6 +78,9 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
     // ---- FR-4 quality signals ----
     prime: p.prime ?? null,        // Amazon buy-box Prime eligibility (true | null); only set when Prime-only on
     promoWarning,                  // true = source price looks like a promo, ROI is a lead not a guarantee
+
+    // ---- FR-3 seller-scan anchor ----
+    seller: p.seller || null,      // eBay seller username (enables "Scan this seller's store")
   };
 }
 

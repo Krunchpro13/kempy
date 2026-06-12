@@ -10,6 +10,7 @@ import { readFileSync } from 'fs';
 import { sessionMiddleware } from './src/middleware/auth.js';
 import { notFound, errorHandler } from './src/middleware/error.js';
 import { searchProducts } from './src/services/research.js';
+import { scanSeller, checkScanBudget } from './src/services/seller-scan.js';
 import { initCache, isEnabled as cacheEnabled, getStats as cacheStats } from './src/services/cache.js';
 import { initDb, isEnabled as dbEnabled, ping as dbPing } from './src/services/db.js';
 
@@ -224,6 +225,25 @@ app.get('/api/search', async (req, res, next) => {
         },
       },
     });
+  } catch (err) { next(err); }
+});
+
+// ---- Seller-store reverse-scan (FR-3) ----
+// Subscription-gated + per-user daily budget (the shared eBay quota is the risk).
+app.get('/api/seller-scan', requireSubscription, async (req, res, next) => {
+  const seller = String(req.query.seller || '').trim();
+  const source = ['aliexpress', 'tiktok'].includes(req.query.source) ? req.query.source : 'amazon';
+  if (!seller) return res.status(400).json({ error: 'A seller username is required.' });
+  try {
+    const userId = req.user.id || req.user.user_id;
+    const day = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
+    const budget = await checkScanBudget(userId, day);
+    if (!budget.ok) {
+      return res.status(429).json({ error: `Daily scan limit reached (${budget.limit}/day). Try again tomorrow.`, code: 'scan_budget' });
+    }
+    const start = Date.now();
+    const { products, meta, cached } = await scanSeller(seller, source, {});
+    res.json({ products, meta: { ...meta, ms: Date.now() - start, cached, budget: { used: budget.used, limit: budget.limit } } });
   } catch (err) { next(err); }
 });
 

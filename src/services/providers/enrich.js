@@ -100,6 +100,7 @@ function priceFromListings(listings) {
     ebayTitle: ref?.name || null,
     ebayImage: ref?.image || null,
     legacyItemId: ref?.legacyItemId || null,
+    seller: ref?.seller || null,            // FR-3: enables "Scan this seller's store"
   };
 }
 
@@ -158,6 +159,7 @@ export async function enrichWithEbay(products, { sourceName, supplierUrlBase } =
         sourceImage: p.image,                // source-side image
         sourceId: p.productId,               // FR-2 source id (ASIN / AliExpress / TikTok)
         legacyItemId: ebay.legacyItemId,     // FR-2 eBay item number
+        seller: ebay.seller,                 // FR-3 seller-scan anchor
         matchVia: via,                       // 'claude-match' | 'ebay-browse'
         matchConfidence: confidence,
         estimated: false,

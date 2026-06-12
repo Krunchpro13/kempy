@@ -54,6 +54,15 @@ async function getAccessToken() {
   return access_token;
 }
 
+// UK-first Browse headers (override marketplace with EBAY_MARKETPLACE_ID).
+function browseHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+    'X-EBAY-C-MARKETPLACE-ID': process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB',
+    'X-EBAY-C-ENDUSERCTX': 'contextualLocation=country=GB',
+  };
+}
+
 // ---------- search ----------
 //
 // Returns a list of normalized listing objects. We return raw eBay data
@@ -67,12 +76,7 @@ export async function searchEbay(query, { limit = 20 } = {}) {
 
   const token = await getAccessToken();
   const res = await axios.get(SEARCH_URL, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // UK-first: default to eBay.co.uk. Override with EBAY_MARKETPLACE_ID for other markets.
-      'X-EBAY-C-MARKETPLACE-ID': process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB',
-      'X-EBAY-C-ENDUSERCTX': 'contextualLocation=country=GB',
-    },
+    headers: browseHeaders(token),
     params: {
       q: query,
       limit,
@@ -85,6 +89,38 @@ export async function searchEbay(query, { limit = 20 } = {}) {
 
   const items = (res.data && res.data.itemSummaries) || [];
   return items.map(mapItem).filter(Boolean);
+}
+
+// ---------- seller-store scan (FR-3) ----------
+//
+// Fetch a single seller's active fixed-price listings. eBay rejects a
+// `sellers:` filter on its own (error 12001) — it must be paired with a `q`
+// OR `category_ids`. With no keyword we use the whole-store `category_ids=0`
+// trick (undocumented; eBay may change it). Returns { items, total, limited }.
+// NOTE: every call spends from the shared 5,000/day Browse quota — callers MUST
+// cap the listing count and cache by seller.
+export async function searchEbaySeller(username, { limit = 50, offset = 0, q = '', categoryId = '0' } = {}) {
+  if (!isConfigured()) throw new Error('EBAY_CLIENT_ID / EBAY_CLIENT_SECRET not set');
+  if (!username) throw new Error('seller username required');
+
+  const token = await getAccessToken();
+  const params = {
+    limit: Math.min(Math.max(Number(limit) || 50, 1), 200),  // eBay caps page at 200
+    offset: Math.min(Math.max(Number(offset) || 0, 0), 9800),
+    filter: `sellers:{${username}},buyingOptions:{FIXED_PRICE}`,
+  };
+  // Prefer a seeded keyword (sharper, cheaper); else fall back to whole-store.
+  if (q) params.q = q; else params.category_ids = String(categoryId);
+
+  const res = await axios.get(SEARCH_URL, {
+    headers: browseHeaders(token),
+    params,
+    timeout: 12000,
+  });
+
+  const items = ((res.data && res.data.itemSummaries) || []).map(mapItem).filter(Boolean);
+  const total = res.data?.total ?? null;
+  return { items, total, limited: total != null && total > items.length };
 }
 
 // ---------- response mapper ----------
