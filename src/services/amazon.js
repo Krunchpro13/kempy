@@ -77,9 +77,15 @@ export async function findAmazonCandidates(query, n = 5, { primeOnly = false } =
         // Barcodes (FR-2) — already in the Keepa product, no extra token cost.
         // Primary identifier at index 0; null when Keepa has none.
         gtin: p.gtinList?.[0] || p.eanList?.[0] || p.upcList?.[0] || null,
-        // FR-4b Prime: the current buy-box winner's Prime eligibility. Only present
-        // when buybox was requested; null = "unknown" (e.g. no buy box).
-        prime: primeOnly ? (p.stats?.buyBoxIsPrimeEligible === true) : null,
+        // FR-4b Prime: Keepa's /search does NOT populate buyBoxIsPrimeEligible
+        // (that's a /product-only field — always null here), but it DOES give
+        // buyBoxIsAmazon / buyBoxIsFBA. Amazon- or FBA-held buy box ⇒ Prime-
+        // eligible, so that's our reliable signal. null when buybox wasn't requested.
+        prime: primeOnly
+          ? (p.stats?.buyBoxIsPrimeEligible === true
+             || p.stats?.buyBoxIsAmazon === true
+             || p.stats?.buyBoxIsFBA === true)
+          : null,
       };
     })
     .filter((p) => p.amazonPrice != null);
