@@ -199,11 +199,13 @@ app.get('/api/health', async (req, res, next) => {
 app.get('/api/search', async (req, res, next) => {
   const q = (req.query.q || '').trim();
   const source = ['aliexpress', 'tiktok'].includes(req.query.source) ? req.query.source : 'amazon';
+  // FR-4b: Prime-only is an Amazon-route toggle (costs extra Keepa tokens, off by default).
+  const primeOnly = source === 'amazon' && ['1', 'true', 'yes'].includes(String(req.query.primeOnly || '').toLowerCase());
   // Amazon mode needs a keyword; AliExpress/TikTok surface trending UK picks with no query.
   if (!q && source === 'amazon') return res.json({ products: [], meta: { query: q, source, count: 0 } });
   try {
     const start = Date.now();
-    const { products, cached, live, realCount } = await searchProducts(q, source);
+    const { products, cached, live, realCount } = await searchProducts(q, source, { primeOnly });
     res.json({
       products,
       meta: {
@@ -214,6 +216,7 @@ app.get('/api/search', async (req, res, next) => {
         cached,
         live: live ?? undefined,         // aliexpress/tiktok: true=live provider, false=sample fallback
         realCount: realCount ?? undefined,
+        primeOnly: primeOnly || undefined,   // FR-4b: echo when the Prime-only filter was applied
         sources: {
           ebay: process.env.EBAY_CLIENT_ID ? 'live' : 'mock',
           amazon: process.env.KEEPA_API_KEY ? 'live' : 'mock',

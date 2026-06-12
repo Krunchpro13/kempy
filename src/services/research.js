@@ -63,19 +63,22 @@ const PROVIDERS = {
 
 // Run a source: live provider (keys present) → eBay-priced cards, with a cache
 // layer and graceful fallback to the mock sample feed on any miss/error.
-async function searchSource(sourceKey, query, q) {
+async function searchSource(sourceKey, query, q, opts = {}) {
   const cfg = PROVIDERS[sourceKey];
   const { provider, sourceName, supplierUrlBase, mock } = cfg;
+  // FR-4b: Prime-only is an Amazon concept (AliExpress/TikTok have no Prime).
+  const primeOnly = !!opts.primeOnly && sourceKey === 'amazon';
   const mockResult = () => ({ products: mock(query), source: sourceKey, realCount: 0, live: false, cached: false });
 
   if (!provider.isConfigured()) return mockResult();
 
-  const cacheKey = `${sourceKey}:${q || '_trending'}`;
+  // Prime-enriched results differ from plain ones → keep them in a separate cache slot.
+  const cacheKey = `${sourceKey}:${q || '_trending'}${primeOnly ? ':prime' : ''}`;
   const hit = await getCachedSearch(cacheKey);
   if (hit) return { ...hit, cached: true };
 
   try {
-    const supplier = await provider.fetchSupplierProducts(query, { limit: SEARCH.EBAY_LIMIT });
+    const supplier = await provider.fetchSupplierProducts(query, { limit: SEARCH.EBAY_LIMIT, primeOnly });
     if (supplier.length) {
       const products = await enrichWithEbay(supplier, { sourceName, supplierUrlBase });
       if (products.length) {
@@ -93,8 +96,8 @@ async function searchSource(sourceKey, query, q) {
 
 // Public API: search a given source (default Amazon). Always returns
 // { products, source, realCount, live, cached }.
-export async function searchProducts(query, source = 'amazon') {
+export async function searchProducts(query, source = 'amazon', opts = {}) {
   const q = (query || '').toLowerCase().trim();
   const key = PROVIDERS[source] ? source : 'amazon';
-  return searchSource(key, query, q);
+  return searchSource(key, query, q, opts);
 }

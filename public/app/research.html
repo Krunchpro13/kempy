@@ -443,6 +443,20 @@ html.sb-collapsed .nav-item:hover::after {
 }
 .filter-bar .stats .v { color: var(--text); }
 .filter-bar .stats .pos { color: var(--green); }
+/* FR-4 controls */
+.filter-bar input[type="number"] { width: 60px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; outline: none; transition: border-color 0.15s; }
+.filter-bar input[type="number"]:hover { border-color: var(--border-cyan); }
+.filter-bar input[type="number"]:focus { border-color: var(--cyan); }
+.filter-bar .group .dash { color: var(--text-muted); }
+.filter-bar .group[hidden] { display: none; }
+.filter-bar .toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.filter-bar .toggle input { accent-color: var(--cyan); width: 14px; height: 14px; cursor: pointer; margin: 0; }
+.filter-bar .group.disabled { opacity: 0.55; }
+.filter-bar .group.disabled select { cursor: not-allowed; }
+.soon-tag { font-size: 8px; background: var(--border); color: var(--text-muted); padding: 1px 5px; border-radius: 100px; letter-spacing: 1px; }
+/* FR-4 card badges */
+.rc-prime { display: inline-flex; align-items: center; font-size: 9px; font-family: var(--font-mono); color: #1ea7e1; border: 1px solid #1ea7e1; padding: 1px 6px; border-radius: 100px; margin-left: 6px; letter-spacing: 0.5px; }
+.rc-promo { font-size: 10px; color: var(--amber); margin-top: 3px; font-family: var(--font-mono); }
 
 /* Results meta strip */
 .results-meta {
@@ -748,6 +762,28 @@ html.sb-collapsed .nav-item:hover::after {
             <option value="50">50%+</option>
           </select>
         </div>
+        <div class="group" title="Filter by what the item SELLS for on eBay.co.uk (£)">
+          <label>Sell £</label>
+          <input type="number" id="filter-sell-min" min="0" step="1" placeholder="min" inputmode="numeric" />
+          <span class="dash">–</span>
+          <input type="number" id="filter-sell-max" min="0" step="1" placeholder="max" inputmode="numeric" />
+        </div>
+        <div class="group" title="Filter by what the item COSTS at the source (£)">
+          <label>Cost £</label>
+          <input type="number" id="filter-cost-min" min="0" step="1" placeholder="min" inputmode="numeric" />
+          <span class="dash">–</span>
+          <input type="number" id="filter-cost-max" min="0" step="1" placeholder="max" inputmode="numeric" />
+        </div>
+        <div class="group" id="group-prime" title="Only Amazon products whose buy box is Prime-eligible (uses extra Keepa tokens; re-runs the search)">
+          <label class="toggle"><input type="checkbox" id="filter-prime" /> Prime only</label>
+        </div>
+        <div class="group disabled" id="group-velocity" title="Needs eBay Marketplace Insights access — not yet available, so it's never faked">
+          <label>Min sales/mo</label>
+          <select id="filter-velocity" disabled>
+            <option value="0">Any</option>
+          </select>
+          <span class="soon-tag">SOON</span>
+        </div>
         <div class="group">
           <label>Sort</label>
           <select id="filter-sort">
@@ -890,6 +926,12 @@ const filterBar = document.getElementById('filter-bar');
 const filterCat = document.getElementById('filter-cat');
 const filterRoi = document.getElementById('filter-roi');
 const filterSort = document.getElementById('filter-sort');
+const filterSellMin = document.getElementById('filter-sell-min');
+const filterSellMax = document.getElementById('filter-sell-max');
+const filterCostMin = document.getElementById('filter-cost-min');
+const filterCostMax = document.getElementById('filter-cost-max');
+const filterPrime = document.getElementById('filter-prime');
+const groupPrime = document.getElementById('group-prime');
 const filterStats = document.getElementById('filter-stats');
 const metaEl = document.getElementById('results-meta');
 
@@ -967,6 +1009,7 @@ function srcPanel(p) {
     <div class="sl">${label} · cost</div>
     <div class="st">${escapeHtml(p.sourceTitle || p.name)}</div>
     <div class="sp">${fmt$(p.sourcePrice != null ? p.sourcePrice : p.amazonPrice)}${go}</div>
+    ${p.promoWarning ? '<div class="rc-promo">⚠ promo price — verify real bulk cost</div>' : ''}
   </div></div>`;
 }
 function dstPanel(p) {
@@ -1023,6 +1066,15 @@ function applyFiltersAndRender() {
   const minRoi = Number(filterRoi.value || 0);
   if (minRoi > 0) products = products.filter(p => (p.roi || 0) >= minRoi);
 
+  // FR-4a price bands: keep products whose eBay SELL price and source COST price
+  // fall inside the operator's bands. Blank input = unbounded on that end.
+  const numOr = (el, fallback) => { const n = Number(el.value); return el.value !== '' && Number.isFinite(n) ? n : fallback; };
+  const within = (val, min, max) => (val == null ? false : val >= min && val <= max);
+  const sellMin = numOr(filterSellMin, 0), sellMax = numOr(filterSellMax, Infinity);
+  const costMin = numOr(filterCostMin, 0), costMax = numOr(filterCostMax, Infinity);
+  if (sellMin > 0 || sellMax < Infinity) products = products.filter(p => within(p.ebayPrice, sellMin, sellMax));
+  if (costMin > 0 || costMax < Infinity) products = products.filter(p => within(p.sourcePrice != null ? p.sourcePrice : p.amazonPrice, costMin, costMax));
+
   // Sort
   const sort = filterSort.value;
   products.sort((a, b) => {
@@ -1077,7 +1129,7 @@ function applyFiltersAndRender() {
         <div>
           <div class="head">
             <div style="min-width:0;flex:1;">
-              <div class="rc-name">${escapeHtml(p.name)}${matchBadge}</div>
+              <div class="rc-name">${escapeHtml(p.name)}${matchBadge}${p.prime === true ? '<span class="rc-prime">✓ Prime</span>' : ''}</div>
               <div class="rc-cat">${escapeHtml(p.cat || '')} · ${escapeHtml(p.vol || '?')}/mo · ${escapeHtml(p.comp || '?')} comp · ${escapeHtml(p.trend || '?')}</div>
             </div>
           </div>
@@ -1158,7 +1210,8 @@ async function search(q) {
   renderSkeleton();
 
   try {
-    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&source=${currentSource}`);
+    const primeParam = (currentSource === 'amazon' && filterPrime.checked) ? '&primeOnly=1' : '';
+    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&source=${currentSource}${primeParam}`);
     if (!r.ok) throw new Error(`API ${r.status}`);
     const data = await r.json();
     lastProducts = data.products || [];
@@ -1305,6 +1358,9 @@ function setSource(src, { rerun = true } = {}) {
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
+  // Prime-only is Amazon-specific — hide it (and clear it) on AliExpress/TikTok.
+  if (groupPrime) groupPrime.hidden = currentSource !== 'amazon';
+  if (currentSource !== 'amazon' && filterPrime.checked) filterPrime.checked = false;
   if (rerun) search(searchInput.value);   // mock modes surface UK picks even with an empty box
 }
 modeSelector.addEventListener('click', e => {
@@ -1327,11 +1383,65 @@ document.getElementById('load-more-btn').addEventListener('click', () => {
   applyFiltersAndRender();
 });
 
-// Changing a filter resets pagination to the first page.
+// ---- FR-4a: persist + hydrate the operator's default research filters ----
+const RESEARCH_PREFS_KEY = 'kempy_research_prefs';
+function currentResearchPrefs() {
+  const numOrNull = (el) => (el.value === '' ? null : Number(el.value));
+  return {
+    costMin: numOrNull(filterCostMin), costMax: numOrNull(filterCostMax),
+    sellMin: numOrNull(filterSellMin), sellMax: numOrNull(filterSellMax),
+    minRoi: Number(filterRoi.value || 0),
+    primeOnly: !!filterPrime.checked,
+  };
+}
+let savePrefsTimer = null;
+function saveResearchPrefs() {
+  const prefs = currentResearchPrefs();
+  try { localStorage.setItem(RESEARCH_PREFS_KEY, JSON.stringify(prefs)); } catch (_) {}
+  if (!currentUser) return;                 // only sync to the account for signed-in users
+  clearTimeout(savePrefsTimer);
+  savePrefsTimer = setTimeout(() => {
+    fetch('/api/settings/research', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', body: JSON.stringify({ research: prefs }),
+    }).catch(() => {});
+  }, 800);
+}
+function applyResearchPrefs(prefs) {
+  if (!prefs || typeof prefs !== 'object') return;
+  const set = (el, v) => { if (v != null && v !== '') el.value = v; };
+  set(filterCostMin, prefs.costMin); set(filterCostMax, prefs.costMax);
+  set(filterSellMin, prefs.sellMin); set(filterSellMax, prefs.sellMax);
+  if (prefs.minRoi != null) filterRoi.value = String(prefs.minRoi);
+  filterPrime.checked = !!prefs.primeOnly;
+}
+async function hydrateResearchPrefs() {
+  let prefs = null;
+  if (currentUser) {
+    try { const r = await fetch('/api/settings', { credentials: 'include' }); if (r.ok) prefs = (await r.json()).research; } catch (_) {}
+  }
+  if (!prefs || !Object.keys(prefs).length) {
+    try { prefs = JSON.parse(localStorage.getItem(RESEARCH_PREFS_KEY) || 'null'); } catch (_) {}
+  }
+  applyResearchPrefs(prefs);
+}
+
+// Changing a client-side filter resets pagination and re-renders instantly (no re-fetch).
 [filterCat, filterRoi, filterSort].forEach(el => el.addEventListener('change', () => {
   visibleCount = PAGE_SIZE;
   applyFiltersAndRender();
+  saveResearchPrefs();
 }));
+[filterSellMin, filterSellMax, filterCostMin, filterCostMax].forEach(el => el.addEventListener('input', () => {
+  visibleCount = PAGE_SIZE;
+  applyFiltersAndRender();
+  saveResearchPrefs();
+}));
+// Prime-only needs server data (Keepa buy-box) → re-run the search.
+filterPrime.addEventListener('change', () => {
+  saveResearchPrefs();
+  search(searchInput.value);
+});
 
 // ====================================================================
 // On load: read ?q= from URL and search automatically
@@ -1339,6 +1449,7 @@ document.getElementById('load-more-btn').addEventListener('click', () => {
 (async function init() {
   renderRecent();
   await loadMe();
+  await hydrateResearchPrefs();            // FR-4a: seed the filter bar from saved defaults
   await loadWatchlist();
   const params = new URL(window.location).searchParams;
   const urlSource = params.get('source');

@@ -26,17 +26,22 @@ const KEEPA_BASE = 'https://api.keepa.com';
  * @param {number} n  Maximum candidates to return (default 5)
  * @returns {Promise<Array<AmazonProduct> | null>}
  */
-export async function findAmazonCandidates(query, n = 5) {
+export async function findAmazonCandidates(query, n = 5, { primeOnly = false } = {}) {
   if (!process.env.KEEPA_API_KEY) return null;
 
-  // Cache check — saves a Keepa token (real money) on hit
-  const cached = await getCachedKeepa(query);
+  // Cache check — saves a Keepa token (real money) on hit. Prime-enriched results
+  // carry an extra field + cost more tokens, so they must NOT be cross-served with
+  // plain results: key them separately.
+  const cacheKey = primeOnly ? `${query}|buybox` : query;
+  const cached = await getCachedKeepa(cacheKey);
   if (cached) return cached.slice(0, n);
 
   const domain = process.env.KEEPA_DOMAIN || 2; // 2 = Amazon.co.uk (UK-first); 1 = amazon.com
 
   // Single call — Keepa's /search returns full product objects (with stats when
   // stats:1 is passed), so we get titles + prices in one ~10-token request.
+  // `buybox:1` adds the buy-box Prime signal (buyBoxIsPrimeEligible) at +2 tokens
+  // per product, so it's only requested when the operator turns Prime-only on.
   // NOTE: the response field is `products`, not `asinList` (that was a bug).
   const searchResp = await axios.get(`${KEEPA_BASE}/search`, {
     params: {
@@ -46,6 +51,7 @@ export async function findAmazonCandidates(query, n = 5) {
       term: query,
       stats: 1,
       page: 0,
+      ...(primeOnly ? { buybox: 1 } : {}),
     },
     timeout: 20_000,
   });
@@ -71,12 +77,15 @@ export async function findAmazonCandidates(query, n = 5) {
         // Barcodes (FR-2) — already in the Keepa product, no extra token cost.
         // Primary identifier at index 0; null when Keepa has none.
         gtin: p.gtinList?.[0] || p.eanList?.[0] || p.upcList?.[0] || null,
+        // FR-4b Prime: the current buy-box winner's Prime eligibility. Only present
+        // when buybox was requested; null = "unknown" (e.g. no buy box).
+        prime: primeOnly ? (p.stats?.buyBoxIsPrimeEligible === true) : null,
       };
     })
     .filter((p) => p.amazonPrice != null);
 
   // Cache full candidate list (n is just a slicing hint at read time)
-  await setCachedKeepa(query, mapped);
+  await setCachedKeepa(cacheKey, mapped);
 
   return mapped.slice(0, n);
 }
@@ -110,13 +119,16 @@ export function isConfigured() {
  * Returns [] for an empty query (Keepa has no keyword-free "trending" feed),
  * which makes the caller fall back to the mock sample.
  */
-export async function fetchSupplierProducts(query, { limit = 12 } = {}) {
+export async function fetchSupplierProducts(query, { limit = 12, primeOnly = false } = {}) {
   const term = (query || '').trim();
   if (!term || term.toLowerCase() === 'all') return [];
 
-  const candidates = (await findAmazonCandidates(term, Math.max(limit, 12))) || [];
+  const candidates = (await findAmazonCandidates(term, Math.max(limit, 12), { primeOnly })) || [];
   return candidates
     .filter((c) => c.amazonPrice > 0)
+    // FR-4b: when Prime-only is on, keep only confirmed Prime buy boxes (exclude
+    // null/"unknown" — strict policy, so a "Prime only" search never shows non-Prime).
+    .filter((c) => (primeOnly ? c.prime === true : true))
     .map((c) => ({
       name: c.title,
       supplierPrice: c.amazonPrice,   // Amazon cost = the supplier price
@@ -125,6 +137,7 @@ export async function fetchSupplierProducts(query, { limit = 12 } = {}) {
       productId: c.asin,              // FR-2 source id (ASIN)
       asin: c.asin,
       gtin: c.gtin || null,           // FR-2 barcode (free from Keepa)
+      prime: c.prime,                 // FR-4b Prime flag (true | null)
       cat: 'Marketplace',
       _sales: c.reviewCount || 0,     // popularity hint for ordering
     }));

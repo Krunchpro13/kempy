@@ -30,6 +30,11 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
   const label = sourceName || 'Amazon.co.uk';
   const sourceUrl = p.supplierUrl || (supplierUrlBase ? supplierUrlBase + encodeURIComponent(p.name) : null);
 
+  // Guard against "too good to be true" ROI from AliExpress DS first-order PROMO
+  // prices (e.g. £0.99) that are not the real bulk cost. Flag as a lead, not gospel.
+  const promoWarning = platformKey(label) === 'aliexpress' && supplierPrice > 0
+    && (supplierPrice < 1.5 || roi > 300);
+
   return {
     name: p.name,
     cat: p.cat || 'Marketplace',
@@ -69,6 +74,10 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
     sourceId: p.sourceId || p.productId || (p.asin || null),  // ASIN / AliExpress id / TikTok id
     gtin: p.gtin || null,                                     // GTIN/EAN/UPC where available
     ebayItemNumber: p.legacyItemId || p.ebayItemNumber || null,
+
+    // ---- FR-4 quality signals ----
+    prime: p.prime ?? null,        // Amazon buy-box Prime eligibility (true | null); only set when Prime-only on
+    promoWarning,                  // true = source price looks like a promo, ROI is a lead not a guarantee
   };
 }
 
