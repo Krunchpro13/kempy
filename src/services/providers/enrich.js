@@ -111,10 +111,10 @@ function priceFromListings(listings) {
 // Cards with no confirmed eBay comparable are dropped (can't compute real arbitrage).
 export async function enrichWithEbay(products, { sourceName, supplierUrlBase } = {}) {
   if (!products.length) return [];
-  const top = products.slice(0, 12);                 // cap eBay calls per search
+  const top = products.slice(0, SEARCH.ENRICH_LIMIT);   // how many products to price (tunable)
 
-  // 1) Candidate eBay listings for each source product (concurrency-capped).
-  const candidatesPer = await mapLimit(top, 4, (p) => ebayCandidates(p.name));
+  // 1) Candidate eBay listings for each source product (concurrency-capped, tunable).
+  const candidatesPer = await mapLimit(top, SEARCH.ENRICH_CONCURRENCY, (p) => ebayCandidates(p.name));
 
   // 2) ONE Claude call to confirm the genuinely-matching listings per product.
   //    null when no key / error → fall back to the median heuristic per product.

@@ -18,6 +18,11 @@ export const SEARCH = {
   EBAY_LIMIT: num(process.env.EBAY_SEARCH_LIMIT, 24),        // eBay listings per query
   CANDIDATE_POOL: num(process.env.KEEPA_CANDIDATES, 20),     // Amazon candidates per query
   MATCH_CONFIDENCE_MIN: num(process.env.MATCH_CONFIDENCE_MIN, 0.6), // Claude match threshold
+  // How many source products get an eBay price-lookup per search, and how many
+  // of those lookups run in parallel. Higher LIMIT = more results (but more eBay
+  // calls against the shared 5,000/day quota); higher CONCURRENCY = faster.
+  ENRICH_LIMIT: num(process.env.ENRICH_LIMIT, 18),
+  ENRICH_CONCURRENCY: num(process.env.ENRICH_CONCURRENCY, 8),
 };
 
 // Supported display currencies (mirrors the client config in public/assets/js/theme.js).
