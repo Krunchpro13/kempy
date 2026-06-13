@@ -567,15 +567,15 @@ html.sb-collapsed .nav-item:hover::after {
             </div>
 
             <div class="section">
-              <h2>Fulfillment supplier</h2>
-              <p class="help">When an order comes in, KEMPY uses this account to auto-purchase from your supplier.</p>
+              <h2>Fulfillment</h2>
+              <p class="help">When an eBay order comes in, you buy the item from your source. Amazon has no API that lets an app place retail orders, so purchasing is a manual step — KEMPY shows you the source listing and margin; you complete the checkout.</p>
               <div class="store-card" id="amazon-supplier">
                 <div class="store-logo"><svg viewBox="0 0 116 40" role="img" aria-label="Amazon"><text x="2" y="27" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="27" fill="#221f1f">amazon</text><path d="M16 31 C 42 41, 78 41, 100 31" stroke="#ff9900" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M100 31 l-1.5 -6 l8.5 3 z" fill="#ff9900"/></svg></div>
                 <div class="store-info">
                   <div class="name">Amazon</div>
-                  <div class="meta">Used to auto-fulfill orders from your eBay store</div>
+                  <div class="meta">Source for fulfillment — purchased manually at checkout</div>
                 </div>
-                <button class="btn ghost sm" id="connect-amazon-supplier">Connect</button>
+                <span style="font-family:var(--font-mono);font-size:11px;padding:4px 10px;border-radius:100px;color:var(--text-muted);border:1px solid var(--border);">Manual</span>
               </div>
             </div>
           </div>
@@ -805,6 +805,10 @@ let aliexpressStatus = { connected: false, configured: true };
 const TIKTOK_LOGO = '<svg viewBox="0 0 120 28" role="img" aria-label="TikTok"><text x="0" y="22" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="22" fill="#111">TikTok</text></svg>';
 let tiktokStatus = { connected: false, configured: false };
 
+// Amazon sourcing (app-level Keepa key — no per-user OAuth, so it's "managed").
+const AMAZON_LOGO = '<svg viewBox="0 0 116 40" role="img" aria-label="Amazon"><text x="2" y="27" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="27" fill="#221f1f">amazon</text><path d="M16 31 C 42 41, 78 41, 100 31" stroke="#ff9900" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M100 31 l-1.5 -6 l8.5 3 z" fill="#ff9900"/></svg>';
+let amazonStatus = { connected: false, configured: false };
+
 async function fetchEbayStatus() {
   try {
     const r = await fetch('/api/ebay/status', { credentials: 'include' });
@@ -826,9 +830,21 @@ async function fetchTiktokStatus() {
   } catch (_) {}
 }
 
+async function fetchAmazonStatus() {
+  try {
+    const r = await fetch('/api/amazon/status', { credentials: 'include' });
+    if (r.ok) amazonStatus = await r.json();
+  } catch (_) {}
+}
+
 function tiktokHint() {
   if (!tiktokStatus.configured) return 'Not configured yet — add a TikTok (EchoTik) API key to source trending products';
   return 'Active — sourcing trending TikTok Shop products for research';
+}
+
+function amazonHint() {
+  if (!amazonStatus.configured) return 'Not configured yet — add a Keepa API key to source Amazon products';
+  return 'Active — sourcing Amazon products for research (managed centrally)';
 }
 
 function aliexpressHint() {
@@ -878,6 +894,7 @@ function renderStores() {
   const wrap = document.getElementById('stores-list');
   wrap.innerHTML =
     storeCard({ logo: EBAY_LOGO, name: 'eBay', hint: ebayHint(), connected: !!ebayStatus.connected, configured: ebayStatus.configured !== false, store: 'ebay' }) +
+    storeCard({ logo: AMAZON_LOGO, name: 'Amazon', hint: amazonHint(), connected: !!amazonStatus.connected, configured: !!amazonStatus.configured, store: 'amazon', managed: true }) +
     storeCard({ logo: ALIEXPRESS_LOGO, name: 'AliExpress', hint: aliexpressHint(), connected: !!aliexpressStatus.connected, configured: aliexpressStatus.configured !== false, store: 'aliexpress', managed: !aliexpressStatus.canConnect }) +
     storeCard({ logo: TIKTOK_LOGO, name: 'TikTok Shop', hint: tiktokHint(), connected: !!tiktokStatus.connected, configured: !!tiktokStatus.configured, store: 'tiktok', managed: true });
 }
@@ -1000,10 +1017,6 @@ function flashAliexpressResult() {
 
 document.getElementById('add-store-btn').addEventListener('click', () => {
   showToast('More marketplaces coming soon (Etsy, Mercari, TikTok Shop)', '');
-});
-
-document.getElementById('connect-amazon-supplier').addEventListener('click', () => {
-  showToast('Amazon supplier connection needs Keepa + LWA setup — coming soon', 'error');
 });
 
 // ====================================================================
@@ -1247,7 +1260,7 @@ async function initCurrency() {
 
 (async function init() {
   await loadMe();
-  await Promise.all([fetchEbayStatus(), fetchAliexpressStatus(), fetchTiktokStatus()]);
+  await Promise.all([fetchEbayStatus(), fetchAliexpressStatus(), fetchTiktokStatus(), fetchAmazonStatus()]);
   renderStores();
   flashEbayResult();
   flashAliexpressResult();
