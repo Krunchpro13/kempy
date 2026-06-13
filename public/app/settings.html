@@ -838,7 +838,10 @@ function aliexpressHint() {
     const who = aliexpressStatus.aeUserId ? `Connected (acct ${aliexpressStatus.aeUserId})` : 'Connected';
     return `${who} — sourcing trending products for research`;
   }
-  return 'Not connected — source AliExpress products for research';
+  // AliExpress is one shared sourcing account; only the owner connects it.
+  return aliexpressStatus.canConnect
+    ? 'Not connected — source AliExpress products for research'
+    : 'Managed centrally — the site owner connects this account';
 }
 
 function ebayHint() {
@@ -875,7 +878,7 @@ function renderStores() {
   const wrap = document.getElementById('stores-list');
   wrap.innerHTML =
     storeCard({ logo: EBAY_LOGO, name: 'eBay', hint: ebayHint(), connected: !!ebayStatus.connected, configured: ebayStatus.configured !== false, store: 'ebay' }) +
-    storeCard({ logo: ALIEXPRESS_LOGO, name: 'AliExpress', hint: aliexpressHint(), connected: !!aliexpressStatus.connected, configured: aliexpressStatus.configured !== false, store: 'aliexpress' }) +
+    storeCard({ logo: ALIEXPRESS_LOGO, name: 'AliExpress', hint: aliexpressHint(), connected: !!aliexpressStatus.connected, configured: aliexpressStatus.configured !== false, store: 'aliexpress', managed: !aliexpressStatus.canConnect }) +
     storeCard({ logo: TIKTOK_LOGO, name: 'TikTok Shop', hint: tiktokHint(), connected: !!tiktokStatus.connected, configured: !!tiktokStatus.configured, store: 'tiktok', managed: true });
 }
 

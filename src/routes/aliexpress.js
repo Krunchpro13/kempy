@@ -65,18 +65,27 @@ router.get('/callback', requireDb, async (req, res) => {
 });
 
 // GET /api/aliexpress/status
+// AliExpress is APP-LEVEL (one shared sourcing account). Only the owner may
+// connect it; `canConnect` tells the UI whether to show a Connect action vs a
+// read-only "owner manages this" state. (Never leak the admin email — just the bool.)
+function canConnect(req) {
+  const admin = process.env.ADMIN_EMAIL;
+  return !admin || (req.user && req.user.email === admin);
+}
+
 router.get('/status', requireDb, async (req, res) => {
   try {
     const c = await ae.getConnection();
     res.json({
       configured: ae.isConfigured(),
       connected: !!(c && c.has_token),
+      canConnect: canConnect(req),
       aeUserId: c?.ae_user_id || null,
       connectedAt: c?.connected_at || null,
       lastError: c?.last_error || null,
     });
   } catch {
-    res.json({ configured: ae.isConfigured(), connected: false });
+    res.json({ configured: ae.isConfigured(), connected: false, canConnect: canConnect(req) });
   }
 });
 

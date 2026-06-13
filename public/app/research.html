@@ -940,6 +940,7 @@ let lastMeta = null;
 let currentSource = 'amazon';   // amazon | aliexpress | tiktok (research source mode)
 let ebayConnected = false;      // gate Amazon/TikTok research until the eBay store is connected
 let aliexpressConnected = false; // gate AliExpress research until the AliExpress source is connected
+let aliexpressCanConnect = false; // AliExpress is app-level/owner-connected — members can't connect it
 async function fetchEbayConnected() {
   try {
     const r = await fetch('/api/ebay/status', { credentials: 'include' });
@@ -949,7 +950,7 @@ async function fetchEbayConnected() {
 async function fetchAliexpressConnected() {
   try {
     const r = await fetch('/api/aliexpress/status', { credentials: 'include' });
-    if (r.ok) { const d = await r.json(); aliexpressConnected = !!d.connected; }
+    if (r.ok) { const d = await r.json(); aliexpressConnected = !!d.connected; aliexpressCanConnect = !!d.canConnect; }
   } catch (_) {}
 }
 const PAGE_SIZE = 8;          // pagination: cards rendered per page
@@ -1203,10 +1204,23 @@ function renderConnectGate(store = 'ebay') {
   const href = currentUser
     ? '/app/settings.html?panel=stores'
     : '/auth/login.html?next=' + encodeURIComponent('/app/settings.html?panel=stores');
+
+  // AliExpress is an app-level sourcing account connected by the owner. A member
+  // (who can't connect it) gets an informational notice, not a dead Connect button.
+  if (store === 'aliexpress' && !aliexpressCanConnect) {
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <span class="icon">${window.KEMPY ? window.KEMPY.icon('store','42px') : ''}</span>
+        <h3>AliExpress sourcing isn’t available yet</h3>
+        <p>AliExpress research is enabled centrally by the site owner — it’ll appear here once the sourcing account is connected. In the meantime, try the Amazon or TikTok modes.</p>
+      </div>`;
+    return;
+  }
+
   const copy = store === 'aliexpress'
     ? {
         title: 'Connect AliExpress to source products',
-        body: 'AliExpress research pulls live products from <strong>your</strong> AliExpress sourcing account. Connect it first — otherwise there are no real products to price.',
+        body: 'AliExpress research pulls live products from the shared sourcing account. Connect it to pull real trending products instead of sample data.',
         btn: currentUser ? 'Connect AliExpress →' : 'Sign in to connect →',
       }
     : {
