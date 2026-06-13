@@ -5,6 +5,8 @@
 // replacing the `<!--SIDEBAR-->` marker. Previously this markup was copy-pasted
 // into all 8 app pages — a nav change meant editing 8 files.
 
+import { isAdmin } from '../services/authz.js';
+
 const NAV = [
   { section: 'Workspace' },
   { key: 'dashboard', href: '/app/dashboard.html', label: 'Dashboard' },
@@ -16,6 +18,7 @@ const NAV = [
   { section: 'Account' },
   { key: 'settings',  href: '/app/settings.html',  label: 'Settings' },
   { key: 'billing',   href: '/app/billing.html',   label: 'Billing' },
+  { key: 'admin',     href: '/app/admin.html',     label: 'Manage users', role: 'admin' },
 ];
 
 // Lucide-style icon paths — kept in sync with public/assets/js/theme.js so the
@@ -30,6 +33,7 @@ const ICON_PATHS = {
   profit:    '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
   settings:  '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   billing:   '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+  admin:     '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3 3-1.5-1.5"/>',
 };
 function svgIcon(key) {
   const p = ICON_PATHS[key];
@@ -51,7 +55,9 @@ function esc(s) {
 // Rendering the real identity server-side avoids the "Guest / PREVIEW MODE" flash
 // that happened while the client waited for /api/auth/me.
 export function renderSidebar(activeKey = '', user = null) {
-  const items = NAV.map(n => {
+  // Role-gated items (e.g. admin) only render for owner/admin.
+  const visibleNav = NAV.filter(n => !n.role || isAdmin(user));
+  const items = visibleNav.map(n => {
     if (n.section) return `<div class="nav-label">${n.section}</div>`;
     const isActive = n.key === activeKey;
     const cls = 'nav-item' + (isActive ? ' active' : '');

@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email));
 
+-- Durable owner/admin role (replaces matching a hardcoded ADMIN_EMAIL). 'owner' is
+-- assigned via SQL; the in-app admin screen promotes/demotes between 'admin' and
+-- 'member'. ADMIN_EMAIL remains a bootstrap fallback (see src/services/authz.js).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'member';
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('owner','admin','member'));
+
 -- ====================================================================
 -- Sessions
 -- One row per active sign-in. We store SHA-256 of the token, never the

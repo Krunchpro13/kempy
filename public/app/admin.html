@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manage users — KEMPY</title>
+<script>
+  if (window.innerWidth > 900 && localStorage.getItem('kempy_sidebar_collapsed') === '1') {
+    document.documentElement.classList.add('sb-collapsed');
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050708; --bg-2: #0a0d10; --surface: #0e1316; --surface-2: #131a1e; --surface-3: #182025;
+  --border: #1a2329; --border-cyan: #1e3a44;
+  --cyan: #00e5ff; --cyan-glow: #00e5ff40; --cyan-dim: #4ad4e4;
+  --green: #00ff9d; --green-dim: #00cc7a; --amber: #ffb800; --red: #ff4d6d;
+  --text: #e6f1f5; --text-dim: #8a9ba3; --text-muted: #5a6970;
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Archivo Black', sans-serif;
+  --sidebar-w: 248px; --sidebar-w-collapsed: 68px; --topbar-h: 64px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-weight: 400; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; min-height: 100vh;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgba(0,229,255,0.05), transparent 60%),
+    radial-gradient(ellipse 50% 30% at 100% 100%, rgba(0,255,157,0.03), transparent 60%);
+}
+
+/* ---------- App layout (shared) ---------- */
+.app {
+  display: grid; grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh; position: relative; z-index: 1;
+  transition: grid-template-columns 0.25s ease;
+}
+html.sb-collapsed .app { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+html.sb-collapsed .brand-text,
+html.sb-collapsed .nav-label,
+html.sb-collapsed .nav-item .label,
+html.sb-collapsed .nav-item .pill,
+html.sb-collapsed .user-info,
+html.sb-collapsed .user-menu { display: none; }
+html.sb-collapsed .nav-item { justify-content: center; padding: 11px 0; gap: 0; }
+html.sb-collapsed .brand { justify-content: center; padding: 18px 0; gap: 0; }
+html.sb-collapsed .sidebar-footer { justify-content: center; padding: 14px 8px; }
+html.sb-collapsed .nav { padding: 14px 8px; }
+html.sb-collapsed .nav-item { position: relative; }
+html.sb-collapsed .nav-item:hover::after {
+  content: attr(data-label); position: absolute;
+  left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  background: var(--surface-2); border: 1px solid var(--border-cyan);
+  color: var(--text); padding: 6px 10px; border-radius: 6px;
+  font-size: 12px; font-family: var(--font-mono); letter-spacing: 0.5px;
+  white-space: nowrap; z-index: 200; pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* ---------- Sidebar (shared) ---------- */
+.sidebar {
+  background: rgba(10,13,16,0.72);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+}
+.brand {
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-display); font-size: 22px; letter-spacing: -1px;
+  color: var(--cyan); display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.brand::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 12px var(--green);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--green); }
+  50% { box-shadow: 0 0 6px var(--green), 0 0 0 4px rgba(0,255,157,0.08); }
+}
+.nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 1px; overflow-y: auto; }
+.nav::-webkit-scrollbar { width: 4px; }
+.nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.nav-label {
+  font-family: var(--font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--text-muted); padding: 14px 12px 6px;
+}
+.nav-label:first-child { padding-top: 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px; border-radius: 8px;
+  color: var(--text-dim); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active {
+  background: rgba(0,229,255,0.08); color: var(--cyan);
+  border-color: var(--border-cyan);
+  box-shadow: inset 0 0 20px rgba(0,229,255,0.04);
+}
+.nav-item .icon { width: 18px; display: inline-flex; justify-content: center; flex-shrink: 0; opacity: 0.95; }
+.sidebar-footer {
+  padding: 14px; border-top: 1px solid var(--border);
+  display: flex; gap: 10px; align-items: center;
+}
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; color: var(--bg);
+  flex-shrink: 0; font-size: 14px;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-info .name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-info .role { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.user-menu { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 6px; border-radius: 6px; line-height: 1; transition: all 0.15s; }
+.user-menu:hover { background: var(--surface); color: var(--text); }
+
+/* ---------- Main (shared) ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+  height: var(--topbar-h); padding: 0 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,7,8,0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar .crumb { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
+.topbar .crumb .arrow { margin: 0 8px; opacity: 0.5; }
+.topbar .crumb .current { color: var(--cyan); }
+.btn-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; transition: all 0.15s;
+}
+.btn-icon:hover { border-color: var(--border-cyan); color: var(--cyan); }
+.content { padding: 32px; flex: 1; max-width: 1200px; width: 100%; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: var(--cyan); color: var(--bg);
+  border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;
+  border: none; cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+  font-family: var(--font-sans);
+}
+.btn:hover { background: var(--cyan-dim); box-shadow: 0 0 28px var(--cyan-glow); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.btn.ghost { background: transparent; color: var(--cyan); border: 1px solid var(--border-cyan); }
+.btn.ghost:hover { background: rgba(0,229,255,0.06); box-shadow: none; }
+.btn.sm { padding: 7px 12px; font-size: 12px; }
+
+/* Page header + section */
+.page-header { margin-bottom: 22px; }
+.page-header h1 { font-family: var(--font-display); font-size: 32px; letter-spacing: -1.2px; margin-bottom: 4px; }
+.page-header h1 .accent { color: var(--cyan); }
+.page-header p { color: var(--text-dim); font-size: 14px; }
+.section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin-bottom: 16px;
+}
+.section h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.01em; }
+.section .help { color: var(--text-dim); font-size: 13px; margin-bottom: 18px; }
+
+/* Users table */
+.utable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.utable th { text-align: left; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); padding: 0 12px 10px; border-bottom: 1px solid var(--border); }
+.utable td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.utable tr:last-child td { border-bottom: none; }
+.muted { color: var(--text-muted); font-size: 12px; font-family: var(--font-mono); }
+.role-badge { display: inline-block; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 100px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--surface-2); border: 1px solid var(--border-cyan);
+  color: var(--text); padding: 12px 20px;
+  border-radius: 10px; font-family: var(--font-mono); font-size: 13px;
+  opacity: 0; pointer-events: none; z-index: 1000;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; left: -100%; top: 0; width: 280px; z-index: 100; transition: left 0.28s ease; }
+  .sidebar.open { left: 0; }
+  .sidebar.open + .main::before { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
+  .content { padding: 20px; }
+  .topbar { padding: 0 16px; }
+  .page-header h1 { font-size: 24px; }
+}
+</style>
+  <link rel="stylesheet" href="/assets/css/theme.css" />
+  <script>(function(){try{var t=localStorage.getItem('kempy-theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+</head>
+<body>
+
+<div class="app">
+
+  <!--SIDEBAR-->
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-icon" id="menu-btn" title="Menu">☰</button>
+        <div class="crumb">KEMPY <span class="arrow">/</span> <span class="current">Manage users</span></div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <div class="page-header">
+        <h1>Manage <span class="accent">users</span></h1>
+        <p>Promote teammates to admin or revoke access. Admins can connect the shared AliExpress account and reach admin tools.</p>
+      </div>
+
+      <div style="max-width:760px;">
+        <div class="section">
+          <h2>Users</h2>
+          <p class="help" id="manage-note">Loading…</p>
+          <div id="users-box"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Sidebar / topbar shared behavior ----
+const menuBtn = document.getElementById('menu-btn');
+const sidebar = document.getElementById('sidebar');
+const isDesktop = () => window.innerWidth > 900;
+menuBtn?.addEventListener('click', () => {
+  if (isDesktop()) {
+    const collapsed = document.documentElement.classList.toggle('sb-collapsed');
+    localStorage.setItem('kempy_sidebar_collapsed', collapsed ? '1' : '0');
+  } else { sidebar.classList.toggle('open'); }
+});
+document.addEventListener('click', (e) => {
+  if (isDesktop()) return;
+  if (!sidebar.classList.contains('open')) return;
+  if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
+  sidebar.classList.remove('open');
+});
+window.addEventListener('resize', () => { if (isDesktop()) sidebar.classList.remove('open'); });
+
+// ---- Toast ----
+const toastEl = document.getElementById('toast');
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show ' + type;
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
+}
+
+// ---- Auth (sidebar footer + sign out) ----
+let currentUser = null;
+async function loadMe() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); if (d.user) currentUser = d.user; }
+  } catch (_) {}
+  if (currentUser) {
+    const label = currentUser.name || currentUser.email || 'You';
+    document.getElementById('user-name').textContent = label;
+    document.getElementById('user-role').textContent = (currentUser.role || 'MEMBER').toUpperCase();
+    document.getElementById('user-avatar').textContent = label[0].toUpperCase();
+  }
+  const mb = document.getElementById('user-menu-btn');
+  if (mb) {
+    mb.title = currentUser ? 'Sign out' : 'Sign in';
+    mb.textContent = currentUser ? '⎋' : '→';
+    mb.addEventListener('click', async () => {
+      if (currentUser) {
+        if (!confirm('Sign out of KEMPY?')) return;
+        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
+        localStorage.removeItem('kempy_signed_in');
+        window.location.href = '/';
+      } else {
+        window.location.href = '/auth/login.html?next=' + encodeURIComponent(window.location.pathname);
+      }
+    });
+  }
+}
+
+// ---- Admin: user roster + promote/demote ----
+let canManage = false, selfId = null;
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function roleBadge(role) {
+  const color = role === 'owner' ? 'var(--green)' : role === 'admin' ? 'var(--cyan)' : 'var(--text-muted)';
+  return `<span class="role-badge" style="color:${color};border-color:${color};">${escapeHtml(role)}</span>`;
+}
+async function loadUsers() {
+  const box = document.getElementById('users-box');
+  const note = document.getElementById('manage-note');
+  let data;
+  try {
+    const r = await fetch('/api/admin/users', { credentials: 'include' });
+    if (r.status === 401) { note.textContent = 'Sign in to manage users.'; box.innerHTML = ''; return; }
+    if (r.status === 403) { note.textContent = 'Admin access only — ask the owner to grant you access.'; box.innerHTML = ''; return; }
+    if (!r.ok) throw new Error('API ' + r.status);
+    data = await r.json();
+  } catch (e) { note.textContent = 'Could not load users.'; box.innerHTML = ''; return; }
+
+  canManage = !!data.canManage; selfId = data.selfId;
+  note.textContent = canManage
+    ? 'Promote members to admin or demote admins. The owner is assigned via SQL.'
+    : 'Read-only — only the owner can change roles.';
+
+  const rows = (data.users || []).map(u => {
+    const isSelf = u.id === selfId;
+    let action = '';
+    if (u.role === 'owner') action = '<span class="muted">owner</span>';
+    else if (isSelf) action = '<span class="muted">you</span>';
+    else if (canManage) {
+      action = u.role === 'admin'
+        ? `<button class="btn sm ghost" data-act="demote" data-id="${u.id}">Demote</button>`
+        : `<button class="btn sm" data-act="promote" data-id="${u.id}">Make admin</button>`;
+    }
+    return `<tr>
+      <td>${escapeHtml(u.name || '—')}<div class="muted">${escapeHtml(u.email)}</div></td>
+      <td>${roleBadge(u.role)}</td>
+      <td class="muted">${escapeHtml(u.subscription_status || '—')}</td>
+      <td style="text-align:right;">${action}</td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `<table class="utable"><thead><tr><th>User</th><th>Role</th><th>Plan</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+document.getElementById('users-box').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const role = btn.dataset.act === 'promote' ? 'admin' : 'member';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/admin/users/${id}/role`, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('API ' + r.status));
+    showToast(role === 'admin' ? 'Promoted to admin' : 'Demoted to member', 'success');
+    loadUsers();
+  } catch (err) { btn.disabled = false; showToast(err.message, 'error'); }
+});
+
+(async function init() {
+  await loadMe();
+  await loadUsers();
+})();
+</script>
+
+<script src="/assets/js/theme.js"></script>
+</body>
+</html>

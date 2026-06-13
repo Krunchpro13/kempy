@@ -12,6 +12,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { isEnabled as dbEnabled } from '../services/db.js';
 import * as ae from '../services/providers/aliexpress-oauth.js';
+import { isAdmin } from '../services/authz.js';
 
 const router = express.Router();
 
@@ -34,17 +35,17 @@ function requireDb(req, res, next) {
   if (!dbEnabled()) return res.status(503).json({ error: 'Database not configured.' });
   next();
 }
-// Only the owner should connect the shared sourcing account. If ADMIN_EMAIL is
-// set, require it; otherwise any authenticated user may connect (the owner).
-function requireOwner(req, res, next) {
+// Connecting the shared sourcing account is owner/admin-only (role-based, with
+// ADMIN_EMAIL as a bootstrap fallback — see authz.isAdmin). Browser-friendly:
+// redirect to login when signed out, 403 otherwise.
+function requireConnectAuth(req, res, next) {
   if (!req.user) return res.redirect('/auth/login.html?next=/app/settings.html?panel=stores');
-  const admin = process.env.ADMIN_EMAIL;
-  if (admin && req.user.email !== admin) return res.status(403).send('Not authorised to connect AliExpress.');
+  if (!isAdmin(req.user)) return res.status(403).send('Not authorised to connect AliExpress.');
   next();
 }
 
 // GET /api/aliexpress/connect
-router.get('/connect', requireDb, requireOwner, (req, res) => {
+router.get('/connect', requireDb, requireConnectAuth, (req, res) => {
   if (!ae.isConfigured()) return res.redirect('/app/settings.html?panel=stores&aliexpress=notconfigured');
   res.redirect(ae.buildAuthUrl(newState()));
 });
@@ -65,12 +66,11 @@ router.get('/callback', requireDb, async (req, res) => {
 });
 
 // GET /api/aliexpress/status
-// AliExpress is APP-LEVEL (one shared sourcing account). Only the owner may
+// AliExpress is APP-LEVEL (one shared sourcing account). Only an owner/admin may
 // connect it; `canConnect` tells the UI whether to show a Connect action vs a
-// read-only "owner manages this" state. (Never leak the admin email — just the bool.)
+// read-only "managed centrally" state. (Role-based via authz.isAdmin.)
 function canConnect(req) {
-  const admin = process.env.ADMIN_EMAIL;
-  return !admin || (req.user && req.user.email === admin);
+  return isAdmin(req.user);
 }
 
 router.get('/status', requireDb, async (req, res) => {
@@ -90,7 +90,7 @@ router.get('/status', requireDb, async (req, res) => {
 });
 
 // POST /api/aliexpress/disconnect
-router.post('/disconnect', requireDb, requireOwner, async (req, res) => {
+router.post('/disconnect', requireDb, requireConnectAuth, async (req, res) => {
   await ae.disconnect();
   res.json({ ok: true });
 });
