@@ -938,6 +938,13 @@ const metaEl = document.getElementById('results-meta');
 let lastProducts = [];   // raw response — filters operate on this
 let lastMeta = null;
 let currentSource = 'amazon';   // amazon | aliexpress | tiktok (research source mode)
+let ebayConnected = false;      // gate Amazon/TikTok research until the eBay store is connected
+async function fetchEbayConnected() {
+  try {
+    const r = await fetch('/api/ebay/status', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); ebayConnected = !!d.connected; }
+  } catch (_) {}
+}
 const PAGE_SIZE = 8;          // pagination: cards rendered per page
 let visibleCount = PAGE_SIZE; // how many of the filtered set are currently shown
 let filteredProducts = [];    // last filtered+sorted set (for load-more)
@@ -1172,22 +1179,41 @@ function populateCategoryFilter(products) {
     cats.map(c => `<option value="${escapeHtml(c)}"${c === current ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
 }
 
-function renderMeta(meta) {
-  if (!meta) { metaEl.style.display = 'none'; return; }
-  const s = meta.sources || {};
-  const cls = (val, want = 'live') => val === want ? 'ok' : 'warn';
-  metaEl.style.display = 'flex';
-  metaEl.innerHTML = `
-    <span class="chip">${meta.ms || 0}ms</span>
-    ${meta.cached ? '<span class="chip ok">cached</span>' : ''}
-    <span class="chip">eBay: <span class="${cls(s.ebay)}">${s.ebay || 'mock'}</span></span>
-    <span class="chip">Amazon: <span class="${cls(s.amazon, 'live')}">${(s.amazon || 'mock')}</span></span>
-    <span class="chip">Matcher: <span class="${cls(s.matcher, 'claude')}">${s.matcher || 'first-result'}</span></span>
-  `;
+function renderMeta() {
+  // The source/timing chips (ms · cached · eBay · Amazon · Matcher) were removed
+  // from the research UI per request — keep the meta row hidden for searches.
+  // (Seller-store scans still show their own summary via renderScanMeta.)
+  metaEl.style.display = 'none';
+}
+
+// Gate Amazon/TikTok research until the seller's eBay store is connected.
+function renderConnectGate() {
+  metaEl.style.display = 'none';
+  filterBar.classList.add('hidden');
+  const moreWrap = document.getElementById('load-more-wrap');
+  if (moreWrap) moreWrap.hidden = true;
+  const href = currentUser
+    ? '/app/settings.html?panel=stores'
+    : '/auth/login.html?next=' + encodeURIComponent('/app/settings.html?panel=stores');
+  resultsEl.innerHTML = `
+    <div class="empty-state">
+      <span class="icon">${window.KEMPY ? window.KEMPY.icon('store','42px') : ''}</span>
+      <h3>Connect your eBay store to start researching</h3>
+      <p>KEMPY prices every product against <strong>your</strong> eBay.co.uk store — connect it first, then search Amazon and TikTok for products to flip.</p>
+      <a href="${href}" style="margin-top:14px;display:inline-block;padding:10px 18px;border-radius:8px;background:var(--cyan);color:#04181d;font-weight:700;text-decoration:none;font-size:13px;">${currentUser ? 'Connect eBay store →' : 'Sign in to connect →'}</a>
+    </div>`;
 }
 
 async function search(q) {
   q = (q || '').trim();
+
+  // Amazon & TikTok research is anchored to the operator's own eBay store —
+  // require it connected before showing any products.
+  if (['amazon', 'tiktok'].includes(currentSource) && !ebayConnected) {
+    renderConnectGate();
+    return;
+  }
+
   if (!q && currentSource === 'amazon') {
     resultsEl.innerHTML = `
       <div class="empty-state">
@@ -1500,6 +1526,7 @@ filterPrime.addEventListener('change', () => {
 (async function init() {
   renderRecent();
   await loadMe();
+  await fetchEbayConnected();              // gate: Amazon/TikTok research needs eBay connected
   await hydrateResearchPrefs();            // FR-4a: seed the filter bar from saved defaults
   await loadWatchlist();
   const params = new URL(window.location).searchParams;

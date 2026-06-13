@@ -21,9 +21,14 @@
 import { searchEbay } from '../ebay.js';
 import { finalizeMock } from '../mock-sources.js';
 import { matchEbayBatch } from '../claude.js';
+import { scoreCandidate } from '../match-local.js';
 import { ECONOMICS, SEARCH } from '../../config.js';
 
 const CONF_MIN = SEARCH.MATCH_CONFIDENCE_MIN;
+// Local matcher is trusted to SKIP the Claude call only when it's clearly confident
+// (a shared model-number/strong token overlap). Set a touch above bestMatch's 0.55
+// bar since skipping means no AI second opinion. Branded items score 0.7–1.0+.
+const LOCAL_SKIP_CONF = 0.65;
 
 const median = (nums) => {
   const a = nums.filter((n) => Number.isFinite(n) && n > 0).sort((x, y) => x - y);
@@ -112,36 +117,51 @@ function priceFromListings(listings) {
 export async function enrichWithEbay(products, { sourceName, supplierUrlBase } = {}) {
   if (!products.length) return [];
   const top = products.slice(0, SEARCH.ENRICH_LIMIT);   // how many products to price (tunable)
+  const hasClaude = !!process.env.ANTHROPIC_API_KEY;
 
   // 1) Candidate eBay listings for each source product (concurrency-capped, tunable).
   const candidatesPer = await mapLimit(top, SEARCH.ENRICH_CONCURRENCY, (p) => ebayCandidates(p.name));
 
-  // 2) ONE Claude call to confirm the genuinely-matching listings per product.
-  //    null when no key / error → fall back to the median heuristic per product.
-  const claudeMatches = await matchEbayBatch(
-    top.map((p, i) => ({
-      title: p.name,
-      candidates: candidatesPer[i].map((l) => ({ title: l.name, price: l.ebayPrice })),
-    })),
-  );
+  // 2) LOCAL-FIRST pass — when the model-number/token matcher is clearly confident
+  //    we trust it and SKIP Claude for that product (instant, no AI call). Only the
+  //    ambiguous ones go to Claude → smaller (often empty) batch = faster searches.
+  const localPer = top.map((p, i) => {
+    const listings = candidatesPer[i];
+    if (!listings.length) return null;
+    const strong = listings.filter((l) => scoreCandidate(p.name, { title: l.name }) >= LOCAL_SKIP_CONF);
+    if (!strong.length) return null;
+    const conf = Math.max(...listings.map((l) => scoreCandidate(p.name, { title: l.name })));
+    return { matched: strong, confidence: Number(Math.min(conf, 1).toFixed(3)) };
+  });
 
-  // 3) Build cards.
+  // 3) Claude only for products with candidates but no confident local match.
+  const needIdx = top.map((_, i) => i).filter((i) => candidatesPer[i].length && !localPer[i] && hasClaude);
+  const claudeByIdx = {};
+  let claudeRan = false;
+  if (needIdx.length) {
+    const res = await matchEbayBatch(needIdx.map((i) => ({
+      title: top[i].name,
+      candidates: candidatesPer[i].map((l) => ({ title: l.name, price: l.ebayPrice })),
+    })));
+    if (res) { claudeRan = true; needIdx.forEach((i, k) => { claudeByIdx[i] = res[k]; }); }
+  }
+
+  // 4) Build cards.
   const cards = top.map((p, i) => {
     const listings = candidatesPer[i];
     if (!listings.length) return null;                 // no eBay results at all → gap
 
-    let matched = listings;                            // default (no-Claude) = all candidates
-    let via = 'ebay-browse';
-    let confidence = null;
-
-    const cm = claudeMatches ? claudeMatches[i] : null;
-    if (cm) {
-      // Claude ran for this product: trust it. Low confidence or no matches → genuine gap → drop.
-      if (!(cm.confidence >= CONF_MIN) || !cm.match_indices.length) return null;
+    let matched, via, confidence = null;
+    if (localPer[i]) {                                 // confident local match → Claude skipped
+      matched = localPer[i].matched; via = 'local-match'; confidence = localPer[i].confidence;
+    } else if (hasClaude && claudeRan) {               // ambiguous → Claude's verdict is authoritative
+      const cm = claudeByIdx[i];
+      if (!cm || !(cm.confidence >= CONF_MIN) || !cm.match_indices.length) return null;
       matched = cm.match_indices.map((idx) => listings[idx]).filter(Boolean);
       if (!matched.length) return null;
-      via = 'claude-match';
-      confidence = cm.confidence;
+      via = 'claude-match'; confidence = cm.confidence;
+    } else {                                           // no Claude key, or Claude errored → median heuristic
+      matched = listings; via = 'ebay-browse';
     }
 
     const ebay = priceFromListings(matched);

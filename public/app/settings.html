@@ -801,6 +801,10 @@ let ebayStatus = { connected: false, configured: true };
 const ALIEXPRESS_LOGO = '<svg viewBox="0 0 150 28" role="img" aria-label="AliExpress"><text x="0" y="22" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="22"><tspan fill="#e62e04">Ali</tspan><tspan fill="#1f1f1f">Express</tspan></text></svg>';
 let aliexpressStatus = { connected: false, configured: true };
 
+// TikTok sourcing (app-level EchoTik key — no per-user OAuth, so it's "managed").
+const TIKTOK_LOGO = '<svg viewBox="0 0 120 28" role="img" aria-label="TikTok"><text x="0" y="22" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="22" fill="#111">TikTok</text></svg>';
+let tiktokStatus = { connected: false, configured: false };
+
 async function fetchEbayStatus() {
   try {
     const r = await fetch('/api/ebay/status', { credentials: 'include' });
@@ -813,6 +817,18 @@ async function fetchAliexpressStatus() {
     const r = await fetch('/api/aliexpress/status', { credentials: 'include' });
     if (r.ok) aliexpressStatus = await r.json();
   } catch (_) {}
+}
+
+async function fetchTiktokStatus() {
+  try {
+    const r = await fetch('/api/tiktok/status', { credentials: 'include' });
+    if (r.ok) tiktokStatus = await r.json();
+  } catch (_) {}
+}
+
+function tiktokHint() {
+  if (!tiktokStatus.configured) return 'Not configured yet — add a TikTok (EchoTik) API key to source trending products';
+  return 'Active — sourcing trending TikTok Shop products for research';
 }
 
 function aliexpressHint() {
@@ -836,7 +852,14 @@ function ebayHint() {
   return 'Not connected — sync orders, listings, and stock';
 }
 
-function storeCard({ logo, name, hint, connected, configured, store }) {
+function storeCard({ logo, name, hint, connected, configured, store, managed }) {
+  // `managed` stores (e.g. TikTok via an app-level API key) have no per-user
+  // connect/disconnect flow — show a static status pill instead of a button.
+  const action = managed
+    ? `<span style="font-family:var(--font-mono);font-size:11px;padding:4px 10px;border-radius:100px;${connected ? 'background:rgba(0,255,157,0.1);color:var(--green);' : 'color:var(--text-muted);border:1px solid var(--border);'}">${connected ? 'Active' : 'Inactive'}</span>`
+    : (connected
+        ? `<button class="btn ghost sm" data-action="disconnect" data-store="${store}">Disconnect</button>`
+        : `<button class="btn sm" data-action="connect" data-store="${store}" ${configured ? '' : 'disabled'}>Connect</button>`);
   return `
     <div class="store-card ${connected ? 'connected' : ''}">
       <div class="store-logo">${logo}</div>
@@ -844,9 +867,7 @@ function storeCard({ logo, name, hint, connected, configured, store }) {
         <div class="name">${name}</div>
         <div class="meta">${escapeHtml(hint)}</div>
       </div>
-      ${connected
-        ? `<button class="btn ghost sm" data-action="disconnect" data-store="${store}">Disconnect</button>`
-        : `<button class="btn sm" data-action="connect" data-store="${store}" ${configured ? '' : 'disabled'}>Connect</button>`}
+      ${action}
     </div>`;
 }
 
@@ -854,7 +875,8 @@ function renderStores() {
   const wrap = document.getElementById('stores-list');
   wrap.innerHTML =
     storeCard({ logo: EBAY_LOGO, name: 'eBay', hint: ebayHint(), connected: !!ebayStatus.connected, configured: ebayStatus.configured !== false, store: 'ebay' }) +
-    storeCard({ logo: ALIEXPRESS_LOGO, name: 'AliExpress', hint: aliexpressHint(), connected: !!aliexpressStatus.connected, configured: aliexpressStatus.configured !== false, store: 'aliexpress' });
+    storeCard({ logo: ALIEXPRESS_LOGO, name: 'AliExpress', hint: aliexpressHint(), connected: !!aliexpressStatus.connected, configured: aliexpressStatus.configured !== false, store: 'aliexpress' }) +
+    storeCard({ logo: TIKTOK_LOGO, name: 'TikTok Shop', hint: tiktokHint(), connected: !!tiktokStatus.connected, configured: !!tiktokStatus.configured, store: 'tiktok', managed: true });
 }
 
 async function ensureRealSession() {
@@ -1222,7 +1244,7 @@ async function initCurrency() {
 
 (async function init() {
   await loadMe();
-  await Promise.all([fetchEbayStatus(), fetchAliexpressStatus()]);
+  await Promise.all([fetchEbayStatus(), fetchAliexpressStatus(), fetchTiktokStatus()]);
   renderStores();
   flashEbayResult();
   flashAliexpressResult();

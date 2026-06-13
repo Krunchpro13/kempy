@@ -11,6 +11,7 @@ import { sessionMiddleware } from './src/middleware/auth.js';
 import { notFound, errorHandler } from './src/middleware/error.js';
 import { searchProducts } from './src/services/research.js';
 import { scanSeller, checkScanBudget } from './src/services/seller-scan.js';
+import * as tiktokProvider from './src/services/providers/tiktok.js';
 import { initCache, isEnabled as cacheEnabled, getStats as cacheStats } from './src/services/cache.js';
 import { initDb, isEnabled as dbEnabled, ping as dbPing } from './src/services/db.js';
 
@@ -245,6 +246,12 @@ app.get('/api/seller-scan', requireSubscription, async (req, res, next) => {
     const { products, meta, cached } = await scanSeller(seller, source, {});
     res.json({ products, meta: { ...meta, ms: Date.now() - start, cached, budget: { used: budget.used, limit: budget.limit } } });
   } catch (err) { next(err); }
+});
+
+// ---- TikTok sourcing status (app-level EchoTik key; no per-user OAuth) ----
+app.get('/api/tiktok/status', (req, res) => {
+  const configured = tiktokProvider.isConfigured();
+  res.json({ configured, connected: configured, managed: true });
 });
 
 // ---- API routes ----
