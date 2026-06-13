@@ -337,7 +337,7 @@ async function loadUsers() {
     : 'Read-only — only the owner can change roles.';
 
   const rows = (data.users || []).map(u => {
-    const isSelf = u.id === selfId;
+    const isSelf = String(u.id) === String(selfId);
     let action = '';
     if (u.role === 'owner') action = '<span class="muted">owner</span>';
     else if (isSelf) action = '<span class="muted">you</span>';

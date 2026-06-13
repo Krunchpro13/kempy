@@ -44,7 +44,7 @@ router.put('/users/:id/role', requireDb, requireOwner, async (req, res) => {
   if (!['admin', 'member'].includes(role)) {
     return res.status(400).json({ error: "Role must be 'admin' or 'member' (owner is assigned via SQL)." });
   }
-  const selfId = req.user.id || req.user.user_id;
+  const selfId = Number(req.user.id || req.user.user_id);   // BIGINT ids arrive as strings — compare numerically
   if (targetId === selfId) return res.status(400).json({ error: "You can't change your own role." });
 
   try {
