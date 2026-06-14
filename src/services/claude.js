@@ -228,11 +228,14 @@ For EACH eBay listing, return the index of the Amazon candidate that is the SAME
 
 const SOURCE_SYSTEM_PROMPT = `You match a SOURCE product (sold on Amazon/AliExpress/TikTok) to its resale \
 listings on eBay for a dropshipping research tool. A correct match is the SAME product — same model number, \
-same SKU, same configuration. Colour and size variants of the same model are acceptable matches. Different \
-models, different generations, single-vs-multipack with very different value, or "compatible with X" \
-accessories are NOT matches. Be strict: a wrong match produces a wrong resale price and a bad business \
-decision. When no eBay listing is genuinely the same product, returning an empty match list is the correct, \
-expected answer.`;
+same SKU, same configuration. Colour variants of the same model are acceptable matches. Different \
+models, different generations, or "compatible with X" accessories are NOT matches. \
+CRUCIALLY, pay attention to PACK SIZE and UNIT QUANTITY: a single unit is NOT the same as a multipack, and \
+different volumes/weights are NOT the same product (e.g. "5L" vs "60L", "1 x 140g" vs "16 x 140g", \
+"pack of 6" vs a single). A different pack size is NOT a match — it sells for a totally different price and \
+costs a different amount to fulfil. Be strict: a wrong match produces a wrong resale price and a bad business \
+decision. When no eBay listing is genuinely the same product (same model AND same pack size), returning an \
+empty match list is the correct, expected answer.`;
 
 const SOURCE_MATCH_SCHEMA = {
   type: 'object',

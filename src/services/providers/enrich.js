@@ -22,6 +22,7 @@ import { searchEbay } from '../ebay.js';
 import { finalizeMock } from '../mock-sources.js';
 import { matchEbayBatch } from '../claude.js';
 import { scoreCandidate } from '../match-local.js';
+import { parseQuantity, reconcile } from '../unit-normalize.js';
 import { ECONOMICS, SEARCH } from '../../config.js';
 
 const CONF_MIN = SEARCH.MATCH_CONFIDENCE_MIN;
@@ -164,7 +165,18 @@ export async function enrichWithEbay(products, { sourceName, supplierUrlBase } =
       matched = listings; via = 'ebay-browse';
     }
 
-    const ebay = priceFromListings(matched);
+    // Prefer eBay listings that are the SAME pack size as the source for the
+    // price median — otherwise mixing 5 L and 60 L listings poisons the sell
+    // price. If a same-size subset exists, price from it; the chosen reference
+    // listing then drives an honest match-quality flag downstream.
+    let priceSet = matched;
+    const srcParsed = parseQuantity(p.name);
+    if (srcParsed && matched.length > 1) {
+      const sameSize = matched.filter((l) => reconcile(srcParsed, parseQuantity(l.name)).quality === 'confirmed');
+      if (sameSize.length) priceSet = sameSize;
+    }
+
+    const ebay = priceFromListings(priceSet);
     if (!ebay) return null;
 
     const card = finalizeMock(

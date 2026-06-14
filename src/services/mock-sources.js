@@ -10,6 +10,7 @@
 // every mock card gets real fees/profit/ROI (not blanks).
 
 import { ECONOMICS } from '../config.js';
+import { parseQuantity, reconcile } from './unit-normalize.js';
 
 const FEE = ECONOMICS.EBAY_FEE_RATE;
 const PACK = ECONOMICS.PACKAGING_COST;
@@ -23,9 +24,20 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
   const supplierPrice = Number(p.supplierPrice != null ? p.supplierPrice : p.amazonPrice) || 0;
   const shipping = p.shipping != null ? p.shipping : ECONOMICS.DEFAULT_SHIPPING;
   const packaging = p.packaging != null ? p.packaging : PACK;
+
+  // ---- Pack-size reconciliation (CR: Amazon→eBay match anomalies) ----
+  // The eBay SALE side and the source COST side may be different pack sizes
+  // (5 L vs 60 L; 1× vs 16×). Reconcile the parsed quantities so profit is the
+  // TRUE cost to fulfil one eBay sale, not the price of a single small pack.
+  const srcQ = parseQuantity(p.sourceTitle || p.name);
+  const dstQ = parseQuantity(p.ebayTitle || p.name);
+  const recon = p.recon || reconcile(srcQ, dstQ);
+  const packMultiplier = recon.multiplier > 1 ? recon.multiplier : 1;
+  const effectiveCost = r2(supplierPrice * packMultiplier);   // cost × pack-multiple to fulfil
+
   const fees = r2(ebayPrice * FEE);
-  const profit = r2(ebayPrice - supplierPrice - fees - shipping - packaging);
-  const roi = supplierPrice > 0 ? r2((profit / supplierPrice) * 100) : 0;
+  const profit = r2(ebayPrice - effectiveCost - fees - shipping - packaging);
+  const roi = effectiveCost > 0 ? r2((profit / effectiveCost) * 100) : 0;
 
   const label = sourceName || 'Amazon.co.uk';
   const sourceUrl = p.supplierUrl || (supplierUrlBase ? supplierUrlBase + encodeURIComponent(p.name) : null);
@@ -78,6 +90,14 @@ export function finalizeMock(p, { sourceName, supplierUrlBase } = {}) {
     // ---- FR-4 quality signals ----
     prime: p.prime ?? null,        // Amazon buy-box Prime eligibility (true | null); only set when Prime-only on
     promoWarning,                  // true = source price looks like a promo, ROI is a lead not a guarantee
+
+    // ---- Pack-size match quality (CR: match anomalies) ----
+    matchQuality: recon.quality,           // 'na' | 'confirmed' | 'unverified' | 'mismatch'
+    mismatchReason: recon.reason || null,  // e.g. 'pack 12× — cost ×12 to fulfil'
+    packMultiplier,                        // ≥2 when cost was scaled to fulfil a multipack sale
+    effectiveCost,                         // true replenishment cost the profit/ROI use
+    sourceQty: srcQ ? srcQ.label : null,   // parsed source size, e.g. '5L' / '1×140g'
+    ebayQty: dstQ ? dstQ.label : null,     // parsed eBay size, e.g. '60L' / '16×140g'
 
     // ---- FR-3 seller-scan anchor ----
     seller: p.seller || null,      // eBay seller username (enables "Scan this seller's store")

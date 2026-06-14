@@ -12,6 +12,8 @@
 // (honestly-labelled) estimate.
 // =============================================================================
 
+import { reconcileTitles } from './unit-normalize.js';
+
 // Filler words that carry no identity signal on a marketplace listing.
 const STOPWORDS = new Set([
   'new', 'sealed', 'brand', 'genuine', 'authentic', 'official', 'oem', 'open',
@@ -64,7 +66,16 @@ export function scoreCandidate(ebayTitle, candidate) {
   }
 
   const overlap = shared / eTokens.length;        // 0..1
-  return overlap + (modelMatch ? 0.4 : 0);        // model-number agreement is a big boost
+  const raw = overlap + (modelMatch ? 0.4 : 0);   // model-number agreement is a big boost
+
+  // Size/pack guard: if both titles carry a quantity and they differ (different
+  // units, or a non-trivial pack-multiple like 5L vs 60L / 1× vs 16×), this is NOT
+  // a like-for-like pair. Cap the score below the caller's confidence thresholds
+  // (LOCAL_SKIP_CONF 0.65, CONF_MIN 0.6) so it can't auto-confirm as a match.
+  const recon = reconcileTitles(candidate.title || '', ebayTitle);
+  if (recon.quality === 'mismatch') return Math.min(raw, 0.45);
+
+  return raw;
 }
 
 /**

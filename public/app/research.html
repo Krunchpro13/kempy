@@ -457,6 +457,14 @@ html.sb-collapsed .nav-item:hover::after {
 /* FR-4 card badges */
 .rc-prime { display: inline-flex; align-items: center; font-size: 9px; font-family: var(--font-mono); color: #1ea7e1; border: 1px solid #1ea7e1; padding: 1px 6px; border-radius: 100px; margin-left: 6px; letter-spacing: 0.5px; }
 .rc-promo { font-size: 10px; color: var(--amber); margin-top: 3px; font-family: var(--font-mono); }
+/* Pack-size match-quality chip (CR: match anomalies) */
+.mq { font-size: 9px; font-family: var(--font-mono); margin-left: 6px; padding: 1px 6px; border-radius: 100px; letter-spacing: 0.3px; vertical-align: 1px; display: inline-block; }
+.mq.ok { color: var(--green); border: 1px solid rgba(0,255,157,0.4); }
+.mq.warn { color: var(--amber); border: 1px solid rgba(255,184,0,0.4); }
+.mq.bad { color: var(--red); border: 1px solid rgba(255,77,109,0.4); }
+.research-card.flagged { opacity: 0.72; border-color: rgba(255,77,109,0.25); }
+.mismatch-toggle { background: none; border: none; color: var(--amber); cursor: pointer; font-family: var(--font-mono); font-size: inherit; padding: 0; text-decoration: underline; }
+.mismatch-toggle:hover { color: var(--text); }
 
 /* Results meta strip */
 .results-meta {
@@ -956,6 +964,7 @@ async function fetchAliexpressConnected() {
 const PAGE_SIZE = 8;          // pagination: cards rendered per page
 let visibleCount = PAGE_SIZE; // how many of the filtered set are currently shown
 let filteredProducts = [];    // last filtered+sorted set (for load-more)
+let showMismatches = false;   // reveal size-mismatched / unverified pairs (hidden by default)
 
 // ---- Recent searches (stored locally, auto-expire after 7 days) ----
 const RECENT_KEY = 'kempy_recent_searches';
@@ -1001,6 +1010,16 @@ function verdictFor(roi) {
   if (roi >= 10) return { label: 'Marginal — needs volume', cls: 'medium' };
   return { label: 'Skip — ROI too low', cls: 'poor' };
 }
+// A pair whose source/eBay pack sizes don't reconcile (different size, odd ratio,
+// or size listed on one side only) is NOT a like-for-like opportunity — it never
+// earns an opportunity badge and is hidden from results by default.
+function isFlagged(p) { return p.matchQuality === 'mismatch' || p.matchQuality === 'unverified'; }
+function mqChip(p) {
+  if (p.matchQuality === 'mismatch') return `<span class="mq bad" title="${escapeAttr(p.mismatchReason || 'pack size mismatch')}">✕ ${escapeHtml(p.mismatchReason || 'size mismatch')}</span>`;
+  if (p.matchQuality === 'unverified') return `<span class="mq warn" title="${escapeAttr(p.mismatchReason || 'size unverified')}">⚠ verify size</span>`;
+  if (p.matchQuality === 'confirmed' && (p.sourceQty || p.ebayQty)) return `<span class="mq ok" title="Pack size matches">✓ ${escapeHtml(p.ebayQty || p.sourceQty)}</span>`;
+  return '';
+}
 
 // ---- FR-1 dual-platform card panels + FR-2 identifier chips ----
 function rcThumb(img, alt) {
@@ -1020,18 +1039,21 @@ function srcPanel(p) {
       <div class="sp" style="color:var(--text-muted);">~${fmt$(p.sourcePrice)} <span style="font-size:9px;">est.</span></div>
     </div></div>`;
   }
+  const qty = p.sourceQty ? ` · <b style="color:var(--text-dim);font-weight:600;">${escapeHtml(p.sourceQty)}</b>` : '';
   return `<div class="rc-side src">${rcThumb(p.sourceImage, p.sourceTitle)}<div style="min-width:0;flex:1;">
-    <div class="sl">${label} · cost</div>
+    <div class="sl">${label} · cost${qty}</div>
     <div class="st">${escapeHtml(p.sourceTitle || p.name)}</div>
     <div class="sp">${fmt$(p.sourcePrice != null ? p.sourcePrice : p.amazonPrice)}${go}</div>
+    ${p.packMultiplier > 1 ? `<div class="rc-promo">⚠ ${escapeHtml(p.mismatchReason || ('cost ×' + p.packMultiplier))} = ${fmt$(p.effectiveCost)}</div>` : ''}
     ${p.promoWarning ? '<div class="rc-promo">⚠ promo price — verify real bulk cost</div>' : ''}
   </div></div>`;
 }
 function dstPanel(p) {
   const img = p.ebayImage || p.image;
   const go = p.ebayUrl ? `<a class="go" href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">View ↗</a>` : '';
+  const qty = p.ebayQty ? ` · <b style="color:var(--text-dim);font-weight:600;">${escapeHtml(p.ebayQty)}</b>` : '';
   return `<div class="rc-side dest">${rcThumb(img, p.ebayTitle)}<div style="min-width:0;flex:1;">
-    <div class="sl">eBay.co.uk · sale</div>
+    <div class="sl">eBay.co.uk · sale${qty}</div>
     <div class="st">${escapeHtml(p.ebayTitle || p.name)}</div>
     <div class="sp">${fmt$(p.ebayPrice)}${go}</div>
   </div></div>`;
@@ -1090,6 +1112,17 @@ function applyFiltersAndRender() {
   if (sellMin > 0 || sellMax < Infinity) products = products.filter(p => within(p.ebayPrice, sellMin, sellMax));
   if (costMin > 0 || costMax < Infinity) products = products.filter(p => within(p.sourcePrice != null ? p.sourcePrice : p.amazonPrice, costMin, costMax));
 
+  // Hide size-mismatched / unverified pairs by default (CR: match anomalies) —
+  // a 5 L tub matched to a 60 L listing isn't a real opportunity. Count them so
+  // we can offer a "show anyway" reveal rather than silently dropping them.
+  const hiddenCount = products.filter(isFlagged).length;
+  if (!showMismatches) products = products.filter(p => !isFlagged(p));
+  const toggleHTML = hiddenCount
+    ? (showMismatches
+        ? ` · <button class="mismatch-toggle" data-toggle-mismatch>hide ${hiddenCount} size-mismatched</button>`
+        : ` · <button class="mismatch-toggle" data-toggle-mismatch>${hiddenCount} hidden (size mismatch) — show anyway</button>`)
+    : '';
+
   // Sort
   const sort = filterSort.value;
   products.sort((a, b) => {
@@ -1111,26 +1144,40 @@ function applyFiltersAndRender() {
       <span class="v">${products.length}</span> results
       · avg ROI <span class="v">${avgRoi.toFixed(1)}%</span>
       · best profit <span class="${bestProfit < 0 ? 'neg' : 'pos'}">${fmt$(bestProfit)}</span>
-    `;
+    ` + toggleHTML;
   } else {
-    filterStats.innerHTML = '<span class="v">0</span> results';
+    filterStats.innerHTML = '<span class="v">0</span> results' + toggleHTML;
   }
 
   // Render cards
   if (!products.length) {
-    resultsEl.innerHTML = `
-      <div class="empty-state">
-        <span class="icon">${window.KEMPY ? window.KEMPY.icon('inbox','42px') : ''}</span>
-        <h3>No matches with these filters</h3>
-        <p>Try widening your filter range, or run a different search.</p>
-      </div>`;
+    // Distinguish "nothing found" from "everything was a size mismatch" so the
+    // reveal toggle stays reachable instead of looking like an empty search.
+    resultsEl.innerHTML = hiddenCount
+      ? `<div class="empty-state">
+          <span class="icon">${window.KEMPY ? window.KEMPY.icon('inbox','42px') : ''}</span>
+          <h3>${hiddenCount} result${hiddenCount === 1 ? '' : 's'} hidden — pack-size mismatch</h3>
+          <p>Every match here pairs a different pack size (e.g. a single vs a multipack), so none are like-for-like opportunities. Use the “show anyway” link above to inspect them.</p>
+        </div>`
+      : `<div class="empty-state">
+          <span class="icon">${window.KEMPY ? window.KEMPY.icon('inbox','42px') : ''}</span>
+          <h3>No matches with these filters</h3>
+          <p>Try widening your filter range, or run a different search.</p>
+        </div>`;
     document.getElementById('load-more-wrap').hidden = true;
     return;
   }
 
   resultsEl.innerHTML = products.slice(0, visibleCount).map(p => {
+    const flagged = isFlagged(p);
     const v = verdictFor(p.roi || 0);
-    const cardCls = (p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '';
+    // A flagged (size-mismatch/unverified) pair never wears an opportunity badge,
+    // even if its raw ROI is high — the high ROI is the bug, not an opportunity.
+    const tagCls = flagged ? 'poor' : v.cls;
+    const tagLabel = flagged
+      ? (p.matchQuality === 'mismatch' ? '✕ Size mismatch' : '⚠ Verify size')
+      : (p.estimated ? 'Estimated ROI' : v.label);
+    const cardCls = flagged ? 'flagged' : ((p.roi || 0) >= 30 ? 'excellent' : (p.roi || 0) < 10 ? 'poor' : '');
     const ebayLink = p.ebayUrl ? `<a href="${escapeHtml(p.ebayUrl)}" target="_blank" rel="noopener">↗</a>` : '';
     const amazonLink = p.amazonUrl ? `<a href="${escapeHtml(p.amazonUrl)}" target="_blank" rel="noopener">↗</a>` : '';
     const matchBadge = p.matchVia && p.matchVia.indexOf('claude') === 0 && p.matchConfidence != null
@@ -1144,7 +1191,7 @@ function applyFiltersAndRender() {
         <div>
           <div class="head">
             <div style="min-width:0;flex:1;">
-              <div class="rc-name">${escapeHtml(p.name)}${matchBadge}${p.prime === true ? '<span class="rc-prime">✓ Prime</span>' : ''}</div>
+              <div class="rc-name">${escapeHtml(p.name)}${matchBadge}${mqChip(p)}${p.prime === true ? '<span class="rc-prime">✓ Prime</span>' : ''}</div>
               <div class="rc-cat">${escapeHtml(p.cat || '')} · ${escapeHtml(p.vol || '?')}/mo · ${escapeHtml(p.comp || '?')} comp · ${escapeHtml(p.trend || '?')}</div>
             </div>
           </div>
@@ -1156,8 +1203,8 @@ function applyFiltersAndRender() {
           <div class="rc-ids">${idsRow(p)}</div>
         </div>
         <div class="rc-verdict">
-          <div class="rc-roi ${v.cls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
-          <div class="rc-tag ${v.cls}">${p.estimated ? 'Estimated ROI' : v.label}</div>
+          <div class="rc-roi ${tagCls}">${p.roi != null ? p.roi.toFixed(1) + '%' : '—'}</div>
+          <div class="rc-tag ${tagCls}">${tagLabel}</div>
           <button class="rc-save ${isSaved ? 'saved' : ''}" data-action="save" ${isSaved ? 'disabled' : ''}>
             ${isSaved ? 'Saved' : (window.KEMPY ? window.KEMPY.icon('watchlist','14px') : '') + ' Save'}
           </button>
@@ -1327,6 +1374,15 @@ function saveLocal(items) {
 
 // Seed savedAsins from localStorage too, so the Save button knows what's already saved
 loadLocal().forEach(i => { const k = i.asin || i.ebayItemId; if (k) savedAsins.add(k); });
+
+// Reveal / re-hide size-mismatched pairs (CR: match anomalies). filterStats is a
+// persistent element, so a delegated listener survives innerHTML re-renders.
+filterStats.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-toggle-mismatch]')) return;
+  showMismatches = !showMismatches;
+  visibleCount = PAGE_SIZE;
+  applyFiltersAndRender();
+});
 
 // List on eBay → open the shared modal with the full product object.
 // FR-2: copy an identifier (ASIN / source id / eBay item # / GTIN) to clipboard.

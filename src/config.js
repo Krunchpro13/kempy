@@ -25,5 +25,13 @@ export const SEARCH = {
   ENRICH_CONCURRENCY: num(process.env.ENRICH_CONCURRENCY, 8),
 };
 
+// Pack-size / unit-quantity normalisation (see services/unit-normalize.js).
+// Guards against matching a small Amazon pack to a large eBay multipack and
+// pricing the sale against a single small cost.
+export const NORMALIZE = {
+  RATIO_TOLERANCE: num(process.env.MATCH_SIZE_TOLERANCE, 0.1),  // ±10% counts as the same size
+  PACK_CAP: num(process.env.MATCH_PACK_CAP, 60),               // max plausible pack-multiple to auto-cost
+};
+
 // Supported display currencies (mirrors the client config in public/assets/js/theme.js).
 export const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
